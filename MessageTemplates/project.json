@@ -1,0 +1,51 @@
+﻿{
+    "version": "1.0.0-*",
+    "description": "",
+    "authors": [ "Serilog Contributors" ],
+    "tags": [ "serilog message template" ],
+    "projectUrl": "",
+    "licenseUrl": "",
+    "dependencies": {
+    },
+    "frameworks": {
+        "net40": {
+            "compilationOptions": {
+                "define": [ "USE_READONLY_COLLECTION_40", "USE_REFLECTION_40", "USE_DYNAMIC" ]
+            }
+        },
+        "net45": {
+        },
+        ".NETPortable,Version=v4.0,Profile=Profile136": {
+            "compilationOptions": {
+                "define": [ "USE_READONLY_COLLECTION_40", "USE_REFLECTION_40" ]
+            },
+            "frameworkAssemblies": {
+                "mscorlib": "",
+                "System": "",
+                "System.Core": ""
+            }
+        },
+        ".NETPortable,Version=v4.5,Profile=Profile259": {
+            "frameworkAssemblies": {
+                "Microsoft.CSharp": "",
+                "System.IO": "",
+                "System.Collections": "",
+                "System.Globalization": "",
+                "System.Linq": "",
+                "System.ObjectModel": "",
+                "System.Dynamic.Runtime": "",
+                "System.Reflection": "",
+                "System.Reflection.Primitives": "",
+                "System.Reflection.Extensions":  "",
+                "System.Runtime": "",
+                "System.Runtime.Extensions": "",
+                "System.Text.Encoding": "",
+                "System.Resources.ResourceManager": "",
+                "System.Threading.Tasks": ""
+            },
+            "compilationOptions": {
+                "define": [ ]
+            }
+        }
+    }
+}
