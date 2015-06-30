@@ -3,7 +3,7 @@ os: Visual Studio 2015 RC
 configuration: Release
 platform: Any CPU
 before_build:
-- nuget restore
+- nuget restore MessageTemplates.sln
 build:
   project: MessageTemplates.sln
   publish_nuget: true
