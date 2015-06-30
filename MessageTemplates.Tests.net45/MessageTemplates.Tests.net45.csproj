@@ -31,6 +31,8 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
+    <DocumentationFile>bin\Debug\MessageTemplates.Tests.XML</DocumentationFile>
+    <NoWarn>1591</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -42,9 +44,8 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="MessageTemplates, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\artifacts\bin\MessageTemplates\Debug\MessageTemplates.dll</HintPath>
+    <Reference Include="MessageTemplates">
+      <HintPath>..\artifacts\bin\MessageTemplates\Release\net45\MessageTemplates.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core">
