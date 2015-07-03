@@ -6,7 +6,6 @@ An implementation of named string replacements, which allows formatting, parsing
 [![Build status](https://ci.appveyor.com/api/projects/status/i0y2e205vask3425?svg=true)](https://ci.appveyor.com/project/adamchester/messagetemplates)
 
 ### Message Template Syntax (PROPOSED)
-(this is copied from [Serilog](https://github.com/serilog/serilog/wiki/Writing-Log-Events))
 
 Message templates are a superset of standard .NET format strings, so any format string acceptable to `string.Format()` will also be correctly processed by `MessageTemplates`.
 

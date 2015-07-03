@@ -5,7 +5,7 @@ platform: Any CPU
 before_build:
 - nuget restore MessageTemplates.sln
 build:
-  project: MessageTemplates.sln
+  project: MessageTemplates-VS2013.sln
   publish_nuget: true
   publish_nuget_symbols: true
   parallel: true
