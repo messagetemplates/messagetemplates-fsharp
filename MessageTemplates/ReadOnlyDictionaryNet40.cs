@@ -2,6 +2,7 @@
 
 namespace System.Collections.Generic
 {
+#pragma warning disable 1591
 #if USE_READONLY_COLLECTION_40
     public interface IReadOnlyCollection<out T> : IEnumerable<T>, IEnumerable
     {
@@ -105,4 +106,5 @@ namespace System.Collections.Generic
 #endif
         }
     }
+#pragma warning restore 1591
 }
