@@ -17,15 +17,15 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using Serilog.Core;
-using Serilog.Debugging;
-using Serilog.Events;
-using Serilog.Parsing;
-using Serilog.Policies;
+using MessageTemplates.Core;
+using MessageTemplates.Debugging;
+using MessageTemplates.Events;
+using MessageTemplates.Parsing;
+using MessageTemplates.Policies;
 
-namespace Serilog.Parameters
+namespace MessageTemplates.Parameters
 {
-    // Values in Serilog are simplified down into a lowest-common-denominator internal
+    // Values in MessageTemplates are simplified down into a lowest-common-denominator internal
     // type system so that there is a better chance of code written with one sink in
     // mind working correctly with any other. This technique also makes the programmer
     // writing a log event (roughly) in control of the cost of recording that event.

@@ -17,9 +17,9 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
 using System.IO;
-using Serilog.Events;
+using MessageTemplates.Events;
 
-namespace Serilog.Parsing
+namespace MessageTemplates.Parsing
 {
     /// <summary>
     /// A message template token representing a log event property.

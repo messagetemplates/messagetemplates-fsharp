@@ -17,7 +17,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-namespace Serilog.Events
+namespace MessageTemplates.Events
 {
     /// <summary>
     /// A value represented as a collection of name-value properties.

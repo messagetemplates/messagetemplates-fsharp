@@ -16,10 +16,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Serilog.Debugging;
-using Serilog.Parsing;
+using MessageTemplates.Debugging;
+using MessageTemplates.Parsing;
 
-namespace Serilog.Events
+namespace MessageTemplates.Events
 {
     /// <summary>
     /// Represents a message template passed to a log method. The template
@@ -48,7 +48,7 @@ namespace Serilog.Events
         /// <summary>
         /// Construct a message template using manually-defined text and property tokens.
         /// </summary>
-        /// <param name="text">The full text of the template; used by Serilog internally to avoid unneeded
+        /// <param name="text">The full text of the template; used by MessageTemplates internally to avoid unneeded
         /// string concatenation.</param>
         /// <param name="tokens">The text and property tokens defining the template.</param>
         public MessageTemplate(string text, IEnumerable<MessageTemplateToken> tokens)

@@ -13,10 +13,10 @@
 // limitations under the License.
 
 using System.Linq;
-using Serilog.Core;
-using Serilog.Events;
+using MessageTemplates.Core;
+using MessageTemplates.Events;
 
-namespace Serilog.Policies
+namespace MessageTemplates.Policies
 {
     // Byte arrays, when logged, need to be copied so that they are
     // safe from concurrent modification when written to asynchronous

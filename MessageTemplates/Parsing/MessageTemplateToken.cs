@@ -15,9 +15,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Serilog.Events;
+using MessageTemplates.Events;
 
-namespace Serilog.Parsing
+namespace MessageTemplates.Parsing
 {
     /// <summary>
     /// An element parsed from a message template string.

@@ -13,10 +13,10 @@
 // limitations under the License.
 
 using System.Reflection;
-using Serilog.Core;
-using Serilog.Events;
+using MessageTemplates.Core;
+using MessageTemplates.Events;
 
-namespace Serilog.Policies
+namespace MessageTemplates.Policies
 {
     class EnumScalarConversionPolicy : IScalarConversionPolicy
     {

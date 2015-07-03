@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-using Serilog.Core;
-using Serilog.Debugging;
-using Serilog.Events;
-using Serilog.Parsing;
+using MessageTemplates.Core;
+using MessageTemplates.Debugging;
+using MessageTemplates.Events;
+using MessageTemplates.Parsing;
 
-namespace Serilog.Parameters
+namespace MessageTemplates.Parameters
 {
     partial class PropertyValueConverter
     {

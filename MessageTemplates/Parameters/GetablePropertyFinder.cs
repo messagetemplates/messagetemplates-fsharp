@@ -17,7 +17,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
-namespace Serilog.Parameters
+namespace MessageTemplates.Parameters
 {
 #if !USE_REFLECTION_40
     static class GetablePropertyFinder

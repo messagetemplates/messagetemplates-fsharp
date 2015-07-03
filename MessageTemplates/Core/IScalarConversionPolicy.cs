@@ -1,6 +1,6 @@
-﻿using Serilog.Events;
+﻿using MessageTemplates.Events;
 
-namespace Serilog.Core
+namespace MessageTemplates.Core
 {
     /// <summary>
     /// Determine how a simple value is carried through the logging

@@ -15,7 +15,7 @@
 using System;
 using System.IO;
 
-namespace Serilog.Events
+namespace MessageTemplates.Events
 {
     /// <summary>
     /// The value associated with a <see cref="LogEventProperty"/>. Divided into scalar,

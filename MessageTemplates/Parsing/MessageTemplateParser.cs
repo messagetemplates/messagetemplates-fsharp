@@ -15,10 +15,10 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using Serilog.Core;
-using Serilog.Events;
+using MessageTemplates.Core;
+using MessageTemplates.Events;
 
-namespace Serilog.Parsing
+namespace MessageTemplates.Parsing
 {
     /// <summary>
     /// Parses message template strings into sequences of text or property

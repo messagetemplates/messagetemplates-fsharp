@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-using Serilog.Events;
+using MessageTemplates.Events;
 
-namespace Serilog.Core
+namespace MessageTemplates.Core
 {
     /// <summary>
     /// Creates log event properties from regular .NET objects, applying policies as

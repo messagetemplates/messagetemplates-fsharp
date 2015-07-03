@@ -15,11 +15,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Serilog.Debugging;
-using Serilog.Events;
-using Serilog.Parsing;
+using MessageTemplates.Debugging;
+using MessageTemplates.Events;
+using MessageTemplates.Parsing;
 
-namespace Serilog.Parameters
+namespace MessageTemplates.Parameters
 {
     // Performance relevant - on the hot path when creating log events from existing templates.
     class PropertyBinder

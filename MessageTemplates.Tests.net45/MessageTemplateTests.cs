@@ -3,12 +3,12 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
-using Serilog.Core;
-using Serilog.Parameters;
-using Serilog.Parsing;
+using MessageTemplates.Core;
+using MessageTemplates.Parameters;
+using MessageTemplates.Parsing;
 using Xunit;
 
-namespace Serilog.Tests.Core
+namespace T
 {
     public class MessageTemplateTests
     {

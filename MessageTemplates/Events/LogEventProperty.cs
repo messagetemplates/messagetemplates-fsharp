@@ -14,7 +14,7 @@
 
 using System;
 
-namespace Serilog.Events
+namespace MessageTemplates.Events
 {
     /// <summary>
     /// A property associated with a <see cref="LogEvent"/>.

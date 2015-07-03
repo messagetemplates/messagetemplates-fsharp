@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-namespace Serilog.Parsing
+namespace MessageTemplates.Parsing
 {
     /// <summary>
     /// Defines the direction of the alignment.

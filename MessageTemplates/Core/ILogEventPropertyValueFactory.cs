@@ -1,6 +1,6 @@
-﻿using Serilog.Events;
+﻿using MessageTemplates.Events;
 
-namespace Serilog.Core
+namespace MessageTemplates.Core
 {
     /// <summary>
     /// Supports the policy-driven construction of <see cref="LogEventPropertyValue"/>s given
