@@ -4,6 +4,7 @@ configuration: Release
 platform: Any CPU
 install:
 - set PATH=C:\Program Files (x86)\MSBuild\14.0\Bin;%PATH%
+- dnvm install latest
 before_build:
 - nuget restore MessageTemplates.sln
 build:
