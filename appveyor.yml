@@ -8,6 +8,7 @@ install:
 - powershell -NoProfile -ExecutionPolicy unrestricted -Command "&{iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/aspnet/Home/dev/dnvminstall.ps1'))}"
 - dnvm list
 - dnvm install latest
+- dnvm install -r coreclr latest
 before_build:
 - nuget restore MessageTemplates.sln
 build:
