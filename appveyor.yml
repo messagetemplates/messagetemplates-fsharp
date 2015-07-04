@@ -11,6 +11,7 @@ install:
 - dnvm list
 before_build:
 - nuget restore MessageTemplates.sln
+- dnvm use 1.0.0-beta5
 build:
   verbosity: diagnostic
   project: MessageTemplates.sln
