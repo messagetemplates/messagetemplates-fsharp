@@ -11,7 +11,7 @@ before_build:
 - C:\users\appveyor\.dnx\bin\dnvm.cmd install latest
 - C:\users\appveyor\.dnx\bin\dnvm.cmd list
 build:
-  verbosity: normal
+  verbosity: diagnostic
   project: MessageTemplates.sln
   publish_nuget: true
   publish_nuget_symbols: true
