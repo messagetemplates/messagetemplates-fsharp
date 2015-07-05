@@ -6,12 +6,12 @@ install:
 before_build:
 - nuget restore MessageTemplates.sln
 - powershell -NoProfile -ExecutionPolicy unrestricted -Command "&{iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/aspnet/Home/dev/dnvminstall.ps1'))}"
-- dnvm list
-- dnvm install latest
-- dnvm install -r coreclr latest
-- dnvm list
+- %USERPROFILE%\.dnx\bin\dnvm.cmd list
+- %USERPROFILE%\.dnx\bin\dnvm.cmd install latest
+- %USERPROFILE%\.dnx\bin\dnvm.cmd install -r coreclr latest
+- %USERPROFILE%\.dnx\bin\dnvm.cmd list
 build:
-  verbosity: diagnostic
+  verbosity: normal
   project: MessageTemplates.sln
   publish_nuget: true
   publish_nuget_symbols: true
