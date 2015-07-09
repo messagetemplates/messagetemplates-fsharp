@@ -1,7 +1,7 @@
 version: 1.0.{build}
 configuration: Release
 platform: Any CPU
-os: Visual Studio 2015 RC
+# os: Visual Studio 2015 RC
 environment:
   VisualStudioVersion: 14.0
   DNX_FEED: https://www.nuget.org/api/v2
