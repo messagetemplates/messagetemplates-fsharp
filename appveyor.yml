@@ -1,7 +1,6 @@
 version: 1.0.{build}
 configuration: Release
 platform: Any CPU
-os: Default Azure
 environment:
   VisualStudioVersion: 14.0
   DNX_FEED: https://www.nuget.org/api/v2
