@@ -1,5 +1,10 @@
 version: 1.0.{build}
 configuration: Release
+os:
+- Default Azure
+- Windows Server 2012 R2
+- Visual Studio 2015 RC
+- Unstable
 platform: Any CPU
 environment:
   VisualStudioVersion: 14.0
