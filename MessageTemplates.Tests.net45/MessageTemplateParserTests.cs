@@ -10,13 +10,6 @@ namespace T
 {
     public class MessageTemplateParserTests
     {
-        [Fact]
-        public void Test()
-        {
-            MessageTemplates.Core.IDestructuringPolicy p = new MessageTemplates.Policies.DelegateDestructuringPolicy();
-            p.test();
-        }
-
         static MessageTemplateToken[] Parse(string messsageTemplate)
         {
             return new MessageTemplateParser().Parse(messsageTemplate).Tokens.ToArray();
