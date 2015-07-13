@@ -9,66 +9,39 @@
 open FsMessageTemplates.MessageTemplates
 
 type TestItem = { Template: string
-                  Values: System.Collections.IEnumerable
+                  Values: System.Collections.IEnumerable // eeew
                   Expected: Token list
                   ExpectedString: string }
-
-let emptyProp = { Name=""; Index=0; Align=None; DestructuringHint=None; Format=None; }
-
-/// Named property token with an index
-let np name index =
-    PropertyToken({ emptyProp with
-                        Name = name
-                        Index = index })
-
-/// Destructured Named property token with an index
-let dnp name index =
-    PropertyToken({ emptyProp with
-                        Name = name
-                        DestructuringHint = Some Destructure.Destructure
-                        Index = index })
-
-/// Stringify Named property token with an index
-let snp name index =
-    PropertyToken({ emptyProp with
-                        Name = name
-                        DestructuringHint = Some Destructure.Stringify
-                        Index = index })
-
-/// Positional property token with an index
-let pp (position:int) index =
-    PropertyToken({ emptyProp with
-                        Name = sprintf "%i" position
-                        Index = index })
-
-/// Text token with an index
-let tx text index = TextToken({ Text = text; Index = index })
-
+    
 let testData = [
     { Template =        "test {test}";          Values = [123]
       ExpectedString =  "test 123"
-      Expected =        [ tx "test " 0
-                          np "test" 5 ] }
+      Expected =        [ Tk.text 0 "test "
+                          Tk.prop 5 "{test}" "test" ] }
 
     { Template =        "test {test}{test}.";   Values = [123;456]
       ExpectedString =  "test 123456."
-      Expected =        [ tx "test " 0
-                          np "test" 5
-                          np "test" 11
-                          tx "." 17 ] }
+      Expected =        [ Tk.text 0 "test "
+                          Tk.prop 5 "{test}" "test"
+                          Tk.prop 11 "{test}" "test"
+                          Tk.text 17 "." ] }
 
     { Template =        "test {@test};{$test};test";   Values = [543;567]
       ExpectedString =  "test 543;567;test"
-      Expected =        [ tx "test " 0
-                          dnp "test" 5; tx ";" 12
-                          snp "test" 13; tx ";test" 20 ] }
+      Expected =        [ Tk.text 0 "test "
+                          Tk.propd 5 "{@test}" "test"
+                          Tk.text 12 ";"
+                          Tk.propds 13 "{$test}" "test"
+                          Tk.text 20 ";test"] }
 
     { Template =        "test {0};{1};{2}";   Values = [box "a"; box 1; box "z"]
       ExpectedString =  "test a;1;z"
-      Expected =        [ tx "test " 0
-                          pp 0 5; tx ";" 8
-                          pp 1 9; tx ";" 12
-                          pp 2 13 ] }
+      Expected =        [ Tk.text 0 "test "
+                          Tk.propp 5 0
+                          Tk.text 8 ";"
+                          Tk.propp 9 1 
+                          Tk.text 12 ";"
+                          Tk.propp 13 2 ] }
 ]
 
 let castToArray = Seq.cast<obj> >> Seq.toArray
@@ -79,15 +52,16 @@ let formatEnumerable template enumerable =
 
 let runParseTest data =
     let template = parse data.Template
-    printfn "TEST\n Expected = %s\n Actual   = %s" data.Template template.FormatString 
+    printfn "PARSE TEST\n Expected = %s\n Actual   = %s" data.Template template.FormatString 
     Xunit.Assert.Equal(data.Template, template.FormatString)
-//    printfn "Expected=%A" data.Expected
-//    printfn "Actual=%A" template.Tokens
-    Xunit.Assert.Equal<Token list>(data.Expected, template.Tokens)
+    let expectedArray = data.Expected |> List.toArray
+    let actualArray = template.Tokens |> List.toArray
+    Xunit.Assert.Equal<Token>(expectedArray, actualArray)
 
 let runFormatTest data =
     let template = parse data.Template
     let actual = formatEnumerable template data.Values
+    printfn "FMT TEST\n Expected = %s\n Actual   = %s" data.Template actual 
     Xunit.Assert.Equal(data.ExpectedString, actual)
 
 testData |> List.iter runParseTest

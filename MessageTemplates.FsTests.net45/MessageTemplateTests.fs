@@ -2,43 +2,7 @@
 
 open Xunit
 open MessageTemplates.Parsing
-
-type DestructureKind = Default = 0 | Stringify = 1 | Destrcuture = 2
-
-type TokenData = { StartIndex:int
-                   Text: string }
-    with static member Empty = { StartIndex = 0; Text = "" }
-         override x.ToString() = x.Text
-
-type Direction = Left = 0 | Right = 1
-
-type AlignInfo = { Direction: Direction
-                   Width: int }
-    with static member Default = { Direction=Direction.Left; Width=(0) }
-
-type PropertyData = { Name: string
-                      Pos: int option
-                      Destr: DestructureKind
-                      Align: AlignInfo option
-                      Format: string option }
-    with
-        member x.IsPositional with get() = x.Pos.IsSome
-        static member Empty = { Name=""; Pos=None; Destr=DestructureKind.Default; Align=None; Format=None }
-        override x.ToString() = sprintf "{%s%s%s%s%s}"
-                                        (match x.Destr with | DestructureKind.Default -> "" | d -> d.ToString())
-                                        x.Name
-                                        (match x.Pos with | Some p -> string p | _ -> "")
-                                        (match x.Align with | Some a -> string a | _ -> "")
-                                        (match x.Format with | Some f -> f | _ -> "")
-
-type Token =
-| Text of t: TokenData
-| Prop of t: TokenData * p: PropertyData
-    with static member EmptyText = Text(TokenData.Empty)
-         static member EmptyProp = Prop(TokenData.Empty, PropertyData.Empty)
-         override x.ToString() = match x with
-                                 | Text t -> t.Text
-                                 | Prop (t, p) -> sprintf "%s->%s" (string t) (string p)
+open FsMessageTemplates.MessageTemplates
 
 let (|Null|Value|) (x: _ System.Nullable) = if x.HasValue then Value x.Value else Null
 let textToToken (tt: TextToken) = Token.Text({ StartIndex=tt.StartIndex; Text=tt.Text })
@@ -59,13 +23,9 @@ let propToToken (pr: PropertyToken) =
                 | Value v -> Some { Direction = (getDirection v.Direction)
                                     Width = v.Width }
                 | Null _ -> None
-    let format = match pr.Format with
-                 | null -> None
-                 | s -> Some s
-
-    Token.Prop(
-        t=({ StartIndex=pr.StartIndex; Text=pr.ToString() }),
-        p={ Name=pr.PropertyName; Pos=pos; Destr=destr; Align=align; Format=format; })
+    let format = match pr.Format with | null -> None | s -> Some s
+    Token.Prop({ StartIndex=pr.StartIndex; Text=pr.ToString() },
+               { Name=pr.PropertyName; Pos=pos; Destr=destr; Align=align; Format=format; })
 
 let mttToToken (mtt: MessageTemplateToken) : Token =
     match mtt with
@@ -82,18 +42,6 @@ let tokensToString tokens =
     let strings = tokens |> Seq.cast<Token> |> Seq.map (function | Text t -> t.ToString() | Prop (_, p) -> p.ToString()) |> Seq.toArray
     System.String.Join("\n", strings)
 
-let tt idx  raw = Token.Text({ Text=raw; StartIndex=idx })
-let pr idx nme raw = Token.Prop({ Text=raw; StartIndex=idx },
-                                { PropertyData.Empty with Name=nme })
-let prf idx nme format raw = Token.Prop({ Text=raw; StartIndex=idx },
-                                { PropertyData.Empty with Name=nme; Format=format })
-let prd idx nme destr raw = Token.Prop({ Text=raw; StartIndex=idx },
-                                { PropertyData.Empty with Name=nme; Destr=destr })
-
-let pp idx num =
-    let snum = string num
-    Token.Prop({ Text="{"+snum+"}"; StartIndex=idx; },
-               { PropertyData.Empty with Name=snum; Pos=Some num })
 
 let test = Swensen.Unquote.Assertions.test
 
@@ -104,120 +52,120 @@ let assertParsedAs message (expectedTokens: System.Collections.IEnumerable) =
 
 [<Fact>]
 let ``an empty message is a single text token`` () = 
-    assertParsedAs "" [tt 0 ""]
+    assertParsedAs "" [Tk.text 0 ""]
 
 [<Fact>]
 let ``a message without properties is a single text token`` () =
     assertParsedAs "Hello, world!"
-                   [tt 0 "Hello, world!"]
+                   [Tk.text 0 "Hello, world!"]
 
 [<Fact>]
 let ``a message with property only is a single property token`` () =
     let template = "{Hello}"
     assertParsedAs template
-                   [pr 0 "Hello" template]
+                   [Tk.prop 0 template "Hello"]
 
 [<Fact>]
 let ``doubled left brackets are parsed as a single bracket`` () =
     let template = "{{ Hi! }"
     assertParsedAs template
-                   [tt 0 "{ Hi! }"]
+                   [Tk.text 0 "{ Hi! }"]
 
 [<Fact>]
 let ``doubled left brackets are parsed as a single bracket inside text`` () =
     let template = "Well, {{ Hi!"
     assertParsedAs template
-                   [tt 0 "Well, { Hi!"]
+                   [Tk.text 0 "Well, { Hi!"]
 
 [<Fact>]
 let ``doubled right brackets are parsed as a single bracket`` () =
     let template = "Nice }}-: mo"
     assertParsedAs template
-                   [tt 0 "Nice }-: mo"]
+                   [Tk.text 0 "Nice }-: mo"]
 
 [<Fact>]
 let ``a malformed property tag is parsed as text`` () =
     let template = "{0 space}"
     assertParsedAs template
-                   [tt 0 "{0 space}"]
+                   [Tk.text 0 template]
 
 [<Fact>]
 let ``an integer property name is parsed as positional property`` () =
     let template = "{0}"
     assertParsedAs template
-                   [pp 0 0]
+                   [Tk.propp 0 0]
     
 [<Fact>]
 let ``formats can contain colons`` () =
     let template = "{Time:hh:mm}"
     assertParsedAs template
-                   [prf 0 "Time" (Some "hh:mm") template ]
+                   [Tk.propf 0 template "Time" "hh:mm" ]
 
 [<Fact>]
 let ``zero values alignment is parsed as text`` () =
     let template1 = "{Hello,-0}"
     assertParsedAs template1
-                   [tt 0 template1]
+                   [Tk.text 0 template1]
 
     let template2 = "{Hello,0}"
     assertParsedAs template2
-                   [tt 0 template2]
+                   [Tk.text 0 template2]
  
  
 [<Fact>]
 let ``non-number alignment is parsed as text`` () =
     let t1 = "{Hello,-aa}"
-    assertParsedAs t1 [tt 0 t1]
+    assertParsedAs t1 [Tk.text 0 t1]
 
     let t2 = "{Hello,aa}"
-    assertParsedAs t2 [tt 0 t2]
+    assertParsedAs t2 [Tk.text 0 t2]
 
     let t3 = "{Hello,-10-1}"
-    assertParsedAs t3 [tt 0 t3]
+    assertParsedAs t3 [Tk.text 0 t3]
 
     let t4 = "{Hello,10-1}"
-    assertParsedAs t4 [tt 0 t4]
+    assertParsedAs t4 [Tk.text 0 t4]
 
 [<Fact>]
 let ``empty alignment is parsed as text`` () =
     let t1 = "{Hello,}"
-    assertParsedAs t1 [tt 0 t1]
+    assertParsedAs t1 [Tk.text 0 t1]
 
     let t2 = "{Hello,:format}"
-    assertParsedAs t2 [tt 0 t2]
+    assertParsedAs t2 [Tk.text 0 t2]
 
 [<Fact>]
 let ``multiple tokens have the correct indexes`` () =
     let template = "{Greeting}, {Name}!"
     assertParsedAs template
-                   [pr 0 "Greeting" "{Greeting}"
-                    tt 10 ", "
-                    pr 12 "Name" "{Name}"
-                    tt 18 "!" ]
+                   [Tk.prop 0 "{Greeting}" "Greeting"
+                    Tk.text 10 ", "
+                    Tk.prop 12 "{Name}" "Name"
+                    Tk.text 18 "!" ]
 
 [<Fact>]
 let ``missing right bracket is parsed as text`` () =
     let template = "{Hello"
-    assertParsedAs template [tt 0 template]
+    assertParsedAs template [Tk.text 0 template]
 
 [<Fact>]
 let ``destructure hint is parsed correctly`` () =
     let template = "{@Hello}"
-    assertParsedAs template [prd 0 "Hello" DestructureKind.Destrcuture template]
+    assertParsedAs template [Tk.propd 0 template "Hello"]
 
 [<Fact>]
 let ``stringify hint is parsed correctly`` () =
     let template = "{$Hello}"
-    assertParsedAs template [prd 0 "Hello" DestructureKind.Stringify template]
+    assertParsedAs template [Tk.propds 0 template "Hello"]
 
 [<Fact>]
 let ``destructuring with empty property name is parsed as text`` () =
     let template = "{@}"
-    assertParsedAs template [tt 0 template]
+    assertParsedAs template [Tk.text 0 template]
     
 [<Fact>]
 let ``underscores are valid in property names`` () =
-    assertParsedAs "{_123_Hello}" [pr 0 "_123_Hello" "{_123_Hello}"]
+    assertParsedAs "{_123_Hello}" [Tk.prop 0 "{_123_Hello}" "_123_Hello"]
 
 
 (** TODO
