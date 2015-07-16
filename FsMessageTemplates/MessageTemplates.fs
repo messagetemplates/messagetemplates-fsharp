@@ -1,6 +1,6 @@
 ﻿module FsMessageTemplates.MessageTemplates
 
-type DestructureKind = Default = 0 | Stringify = 1 | Destrcuture = 2
+type DestructureKind = Default = 0 | Stringify = 1 | Destructure = 2
 
 type TokenData = { StartIndex:int
                    Text: string }
@@ -23,7 +23,7 @@ type PropertyData = { Name: string
         static member Empty = { Name=""; Pos=None; Destr=DestructureKind.Default; Align=None; Format=None }
         override x.ToString() = sprintf "{%s%s%s%s}"
                                         (match x.Destr with
-                                         | DestructureKind.Destrcuture -> "@"
+                                         | DestructureKind.Destructure -> "@"
                                          | DestructureKind.Stringify -> "$"
                                          | DestructureKind.Default
                                          | _ -> "")
@@ -56,7 +56,7 @@ module Tk =
 
     let propd tindex raw name = Token.Prop({ Text=raw; StartIndex=tindex; },
                                           { PropertyData.Empty with Name=name
-                                                                    Destr = DestructureKind.Destrcuture })
+                                                                    Destr = DestructureKind.Destructure })
     let propds tindex raw name = Token.Prop({ Text=raw; StartIndex=tindex; },
                                            { PropertyData.Empty with Name=name
                                                                      Destr = DestructureKind.Stringify })
@@ -137,7 +137,7 @@ let maybeMapPropertyInfo (m:Match) : PropertyData option =
         Some { Name = g.[GRP.PROPERTY].Value
                Pos = None
                Destr = match destrGroup.Success, destrGroup.Value with
-                        | true, "@" -> DestructureKind.Destrcuture
+                        | true, "@" -> DestructureKind.Destructure
                         | true, "$" -> DestructureKind.Stringify
                         | _, _ -> DestructureKind.Default
                Align = match ag.Success, agFirstChar, ag.Value with

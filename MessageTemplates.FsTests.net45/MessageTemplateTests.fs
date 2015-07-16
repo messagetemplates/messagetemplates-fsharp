@@ -12,7 +12,7 @@ let propToToken (pr: PropertyToken) =
               | false, _ -> None
     let destr = match pr.Destructuring with
                 | Destructuring.Default -> DestructureKind.Default
-                | Destructuring.Destructure -> DestructureKind.Destrcuture
+                | Destructuring.Destructure -> DestructureKind.Destructure
                 | Destructuring.Stringify -> DestructureKind.Stringify
                 | d -> failwithf "unknown destructure %A" d
     let getDirection d = match d with

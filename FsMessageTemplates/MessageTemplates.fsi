@@ -1,7 +1,7 @@
 ﻿module FsMessageTemplates.MessageTemplates
 
 /// A hint at how a property should be destructured.
-type DestructureKind = Default = 0 | Stringify = 1 | Destrcuture = 2
+type DestructureKind = Default = 0 | Stringify = 1 | Destructure = 2
 type TokenData = { StartIndex:int; Text: string }
 type Direction = Left = 0 | Right = 1
 type AlignInfo = { Direction: Direction; Width: int }
