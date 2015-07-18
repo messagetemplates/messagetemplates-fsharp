@@ -33,7 +33,7 @@
     </When>
     <Otherwise>
       <PropertyGroup>
-        <TargetFSharpCoreVersion>4.4.0.0</TargetFSharpCoreVersion>
+        <TargetFSharpCoreVersion>4.3.1.0</TargetFSharpCoreVersion>
       </PropertyGroup>
     </Otherwise>
   </Choose>
