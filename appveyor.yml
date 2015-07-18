@@ -1,11 +1,8 @@
 version: 1.0.{build}
 configuration: Release
-os: Default Azure
+os: Unstable
 platform: Any CPU
-environment:
-  VisualStudioVersion: 14.0
 install:
-  - set PATH=C:\Program Files (x86)\MSBuild\14.0\Bin;%PATH%
   - nuget restore MessageTemplates.sln
 build:
   verbosity: normal
