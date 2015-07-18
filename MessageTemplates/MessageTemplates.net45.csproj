@@ -49,6 +49,7 @@
     <Compile Include="Events\ScalarValue.cs" />
     <Compile Include="Events\SequenceValue.cs" />
     <Compile Include="Events\StructureValue.cs" />
+    <Compile Include="MessageTemplate.cs" />
     <Compile Include="Parameters\DepthLimiter.cs" />
     <Compile Include="Parameters\GetablePropertyFinder.cs" />
     <Compile Include="Parameters\PropertyBinder.cs" />
