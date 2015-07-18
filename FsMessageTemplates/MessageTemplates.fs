@@ -119,11 +119,14 @@ let internal parseRegexPattern = "
 let private parseRegex =
     System.Text.RegularExpressions.Regex(parseRegexPattern, regexOptions)
 
+let tryParseInt32 s =
+    System.Int32.TryParse(s, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture)
+
 let maybeMapPropertyInfo (m:Match) : PropertyData option =
     let g = m.Groups
     let isNullOrEmpty = System.String.IsNullOrEmpty
     let someIfSuccessAndNotEmpty (m:Group) =
-        if m.Success && not (isNullOrEmpty m.Value) then Some m.Value
+        if m.Success && not (isNullOrEmpty m.Value) then Some (m.Value.TrimStart(':'))
         else None
     if g.[GRP.DOUBLE_OPEN].Success || g.[GRP.DOUBLE_CLOSE].Success then
         None
@@ -132,64 +135,66 @@ let maybeMapPropertyInfo (m:Match) : PropertyData option =
     else
         let destrGroup = g.[GRP.DESTR]
         let ag = g.[GRP.ALIGN]
-        let agFirstChar = if ag.Value.Length > 0 then ag.Value.Chars(0) else ' '
+        match ag.Value with
+        | ",-0" | ",0" -> None
+        | _ ->
+            let agWithoutComma = if ag.Value.Length > 0 then (ag.Value.TrimStart(',')) else ""
+            let agFirstNumChar = if agWithoutComma.Length > 0 then agWithoutComma.Chars(0) else ' '
 
-        Some { Name = g.[GRP.PROPERTY].Value
-               Pos = None
-               Destr = match destrGroup.Success, destrGroup.Value with
-                        | true, "@" -> DestructureKind.Destructure
-                        | true, "$" -> DestructureKind.Stringify
-                        | _, _ -> DestructureKind.Default
-               Align = match ag.Success, agFirstChar, ag.Value with
-                       | true, '-', num -> Some { Direction = Direction.Right; Width = int num; }
-                       | true, _, num -> Some { Direction = Direction.Left; Width = int num; }
-                       | false, _, _ -> None
-               Format = someIfSuccessAndNotEmpty g.[GRP.FORMAT] }
+            let propName = g.[GRP.PROPERTY].Value
+            
+            Some { Name = propName
+                   Pos = match tryParseInt32 propName with true, p -> Some p | _ -> None
+                   Destr = match destrGroup.Success, destrGroup.Value with
+                           | true, "@" -> DestructureKind.Destructure
+                           | true, "$" -> DestructureKind.Stringify
+                           | _, _ -> DestructureKind.Default
+                   Align = match ag.Success, agFirstNumChar, agWithoutComma  with
+                           | true, '-', num -> Some { Direction = Direction.Right; Width = int num; }
+                           | true, _, num -> Some { Direction = Direction.Left; Width = int num; }
+                           | false, _, _ -> None
+                   Format = someIfSuccessAndNotEmpty g.[GRP.FORMAT] }
 
 let private parseTokens (s: string) : Token seq =
-    let matches = parseRegex.Matches(s)
-    if matches.Count = 0 then Seq.empty
-    else seq {
-        for m in matches do
-            let pi = maybeMapPropertyInfo m
-            let tkInfo = { Text = m.Value; StartIndex = m.Index }
-            if pi.IsSome then
-                yield Prop(tkInfo, pi.Value)
-            else
-                yield Text(tkInfo)
-    }
-
-let parseTemplateString messageTemplate = parseTokens messageTemplate
+    if s = "" then Seq.singleton (Text({ Text = ""; StartIndex = 0; }))
+    else
+        let matches = parseRegex.Matches(s)
+        if matches.Count = 0 then Seq.empty
+        else seq {
+            for m in matches do
+                let pi = maybeMapPropertyInfo m
+                let tkInfo = { Text = m.Value.Replace("{{", "{"); StartIndex = m.Index }
+                if pi.IsSome then
+                    yield Prop(tkInfo, pi.Value)
+                else
+                    yield Text(tkInfo)
+        }
 
 // Try this: > MessageTemplates.parse "wh {{ {0:abc} at the {@heck} #{$align,11:0}?";;
 
 let parse (s:string) =
-    let props = (parseTemplateString s) |> List.ofSeq
-    { FormatString = s; Tokens = props }
+    { FormatString = s; Tokens = s |> parseTokens |> List.ofSeq }
 
-let createStringFormat (t: Template) =
-    let mutable nextPropIndex = 0
-    let alignToFormat a = match a with
-                          | Some a ->
-                            match a.Direction with
-                            | Direction.Right -> ",-" + string a.Width
-                            | Direction.Left | _ -> "," + string a.Width
-                          | None -> ""
-    let formatPart fo = match fo with | Some "" | None -> "" | Some s -> ":" + s
-    let tokenToPositionalFormat token =
+/// Converts a template message in a System.String.Format (positional) template
+/// e.g. "abc {@def}" would become "abc {0}"
+let createPositionalFormat (t: Template) =
+    let tokenToPositionalFormat getNextPropPos token =
+        let formatOrEmpty = function Some "" | None -> "" | Some s -> ":" + s
+        let directionOrEmpty (width:int) =
+            function | Direction.Right -> ",-" + string width | Direction.Left | _ -> "," + string width
+        let alignToFormat = function Some a -> directionOrEmpty a.Width a.Direction | None -> ""
         match token with
         | Text ti -> ti.Text
-        | Prop (_, pi) ->
-            nextPropIndex <- nextPropIndex + 1
-            sprintf "{%i%s%s}" (nextPropIndex - 1) (alignToFormat pi.Align) (formatPart pi.Format)
+        | Prop (_, pi) -> sprintf "{%i%s%s}" (getNextPropPos()) (alignToFormat pi.Align) (formatOrEmpty pi.Format)
 
-    let strings = t.Tokens |> Seq.map tokenToPositionalFormat |> Seq.toArray
+    let nextPos =
+        let i = ref -1
+        fun () -> i := !i + 1; !i
+
+    let strings = t.Tokens |> Seq.map (tokenToPositionalFormat nextPos) |> Seq.toArray
     System.String.Join("", strings)
 
-let format (provider: System.IFormatProvider)
-           (t: Template)
-           ([<System.ParamArray>] values : obj []) =
-    let format = createStringFormat t
-    System.String.Format(provider=provider, format=format, args=values)
+let format provider template values =
+    System.String.Format(provider, createPositionalFormat template, values)
 
 

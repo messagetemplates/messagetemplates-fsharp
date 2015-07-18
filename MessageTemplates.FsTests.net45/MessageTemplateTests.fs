@@ -33,22 +33,29 @@ let mttToToken (mtt: MessageTemplateToken) : Token =
     | :? TextToken as tt -> textToToken tt
     | _ -> failwithf "unknown token %A" mtt
 
-let parse (message: string) =
-    let parser = MessageTemplates.Parsing.MessageTemplateParser()
-    let template = parser.Parse(message)
-    template.Tokens |> Seq.map mttToToken |> Seq.toArray
+open Swensen.Unquote.Assertions
+open System.Globalization
+
+let parse (messageTemplate: string) =
+    // C# version
+    let csParser = MessageTemplates.Parsing.MessageTemplateParser()
+    let csTemplate = csParser.Parse(messageTemplate)
+    let csTokens = csTemplate.Tokens |> Seq.map mttToToken |> List.ofSeq
+    // F# version
+    let fsTemplate = FsMessageTemplates.MessageTemplates.parse messageTemplate
+    let fsTokens = fsTemplate.Tokens
+    // Ensure they're the same
+    test <@ csTokens = fsTokens @>
+    csTokens
 
 let tokensToString tokens = 
     let strings = tokens |> Seq.cast<Token> |> Seq.map (function | Text t -> t.ToString() | Prop (_, p) -> p.ToString()) |> Seq.toArray
     System.String.Join("\n", strings)
 
-
-let test = Swensen.Unquote.Assertions.test
-
 let assertParsedAs message (expectedTokens: System.Collections.IEnumerable) =
     let parsed = parse message;
-    let expected = expectedTokens |> Seq.cast<Token> |> Seq.toArray
-    test <@ parsed = expected @>
+    let expected = expectedTokens |> Seq.cast<Token> |> Seq.toList
+    test <@ expected = parsed  @>
 
 [<Fact>]
 let ``an empty message is a single text token`` () = 
@@ -91,10 +98,14 @@ let ``a malformed property tag is parsed as text`` () =
 
 [<Fact>]
 let ``an integer property name is parsed as positional property`` () =
-    let template = "{0}"
+    let template = "{0} text {1} other text {2}"
     assertParsedAs template
-                   [Tk.propp 0 0]
-    
+                   [Tk.propp 0 0
+                    Tk.text 3 " text "
+                    Tk.propp 9 1
+                    Tk.text 12 " other text "
+                    Tk.propp 24 2]
+
 [<Fact>]
 let ``formats can contain colons`` () =
     let template = "{Time:hh:mm}"
@@ -167,52 +178,41 @@ let ``destructuring with empty property name is parsed as text`` () =
 let ``underscores are valid in property names`` () =
     assertParsedAs "{_123_Hello}" [Tk.prop 0 "{_123_Hello}" "_123_Hello"]
 
+let inline renderp provider template args =
+    let template = FsMessageTemplates.MessageTemplates.parse template
+    format provider template (args |> Seq.cast<obj> |> Seq.toArray)
+
+let inline render template args =
+    renderp System.Globalization.CultureInfo.InvariantCulture template args
+
+type Chair() =
+    member __.Back with get() = "straight"
+    member __.Legs with get() = [|1;2;3;4|]
+    override __.ToString() = "a chair"
+
+type Receipt() =
+    member __.Sum with get() = 12.345m
+    member __.When with get() = System.DateTime(2013, 5, 20, 16, 39, 0)
+    override __.ToString() = "a receipt"
+
+[<Fact>]
+let ``an object is rendered in simple notation`` () =
+    let m = render "I sat at {@Chair}" [Chair()]
+    test <@ m = "I sat at Chair { Back: \"straight\", Legs: [1, 2, 3, 4] }" @>
+
+[<Fact>]
+let ``an object is rendered in simple notation using format provider`` () =
+    let m = renderp (CultureInfo.GetCultureInfo("fr-FR")) "I received {@Receipt}" [Receipt()]
+    test <@ m = "I received Receipt { Sum: 12,345, When: 20/05/2013 16:39:00 }" @>
+
+type ChairRecord = { Back:string; Legs: int array }
+
+[<Fact>]
+let ``an anonymous object is rendered in simple notation without type`` () =
+    let m = render "I sat at {@Chair}" [{ Back="straight"; Legs=[|1;2;3;4|] }]
+    test <@ m = "I sat at { Back: \"straight\", Legs: [1, 2, 3, 4] }" @>
 
 (** TODO
-class Chair
-{
-    // ReSharper disable UnusedMember.Local
-    public string Back { get { return "straight"; } }
-    public int[] Legs { get { return new[] { 1, 2, 3, 4 }; } }
-    // ReSharper restore UnusedMember.Local
-    public override string ToString()
-    {
-        return "a chair";
-    }
-}
-
-class Receipt
-{
-    // ReSharper disable UnusedMember.Local
-    public decimal Sum { get { return 12.345m; } }
-    public DateTime When { get { return new DateTime(2013, 5, 20, 16, 39, 0); } }
-    // ReSharper restore UnusedMember.Local
-    public override string ToString()
-    {
-        return "a receipt";
-    }
-}
-
-[Fact]
-public void AnObjectIsRenderedInSimpleNotation()
-{
-    var m = Render("I sat at {@Chair}", new Chair());
-    Assert.Equal("I sat at Chair { Back: \"straight\", Legs: [1, 2, 3, 4] }", m);
-}
-
-[Fact]
-public void AnObjectIsRenderedInSimpleNotationUsingFormatProvider()
-{
-    var m = Render(CultureInfo.GetCultureInfo("fr-FR"), "I received {@Receipt}", new Receipt());
-    Assert.Equal("I received Receipt { Sum: 12,345, When: 20/05/2013 16:39:00 }", m);
-}
-
-[Fact]
-public void AnAnonymousObjectIsRenderedInSimpleNotationWithoutType()
-{
-    var m = Render("I sat at {@Chair}", new { Back = "straight", Legs = new[] { 1, 2, 3, 4 } });
-    Assert.Equal("I sat at { Back: \"straight\", Legs: [1, 2, 3, 4] }", m);
-}
 
 [Fact]
 public void AnAnonymousObjectIsRenderedInSimpleNotationWithoutTypeUsingFormatProvider()

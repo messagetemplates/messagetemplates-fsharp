@@ -9,7 +9,8 @@ type AlignInfo = { Direction: Direction; Width: int }
 type PropertyData = { Name: string; Pos: int option; Destr: DestructureKind
                       Align: AlignInfo option; Format: string option }
     with static member Empty: PropertyData
-/// A token with a template.
+
+/// A token parsed from a message template.
 type Token =
 /// A piece of text within a message template.
 | Text of TokenData
@@ -43,7 +44,7 @@ val parse: templateString:string -> Template
 
 /// Formats a message template as a string, replacing the properties
 /// with the provided values.
-val format: provider: System.IFormatProvider
-            -> t:Template
-            -> [<System.ParamArray>]values: obj[]
+val format: provider:System.IFormatProvider
+            -> template:Template
+            -> values:obj[]
             -> string

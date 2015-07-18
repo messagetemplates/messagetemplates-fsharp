@@ -1,6 +1,7 @@
 ﻿// Learn more about F# at http://fsharp.org. See the 'F# Tutorial' project
 // for more guidance on F# programming.
 
+#r "System.Runtime"
 #I "bin/Debug/"
 #r "FsMessageTemplates"
 #I "../packages/xunit.assert.2.0.0/lib/portable-net45+win+wpa81+wp80+monotouch+monoandroid+Xamarin.iOS/"
