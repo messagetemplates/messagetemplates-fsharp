@@ -110,6 +110,14 @@ let ``formats can contain colons`` (lang) =
                    [Tk.propf 0 template "Time" "hh:mm" ]
 
 [<LangTheory; LangCsFsData>]
+let ``formats can contain commas`` (lang) = 
+    let template = ",{CustomerId:0,0},"
+    assertParsedAs lang template
+                   [Tk.text 0 ","
+                    Tk.propf 1 "{CustomerId:0,0}" "CustomerId" "0,0"
+                    Tk.text 17 ","]
+
+[<LangTheory; LangCsFsData>]
 let ``zero values alignment is parsed as text`` (lang) =
     let template1 = "{Hello,-0}"
     assertParsedAs lang template1
@@ -260,7 +268,7 @@ let ``format strings are propagated`` (lang) =
 [<InlineData("F#", "Welcome, customer #{CustomerId,10}, pleasure to see you", "Welcome, customer #      1234, pleasure to see you")>]
 [<InlineData("F#", "Welcome, customer #{CustomerId,10:000000}, pleasure to see you", "Welcome, customer #    001234, pleasure to see you")>]
 [<InlineData("F#", "Welcome, customer #{CustomerId,10:0,0}, pleasure to see you", "Welcome, customer #     1,234, pleasure to see you")>]
-// TODO: is this right?! [<InlineData("F#", "Welcome, customer #{CustomerId:0,0}, pleasure to see you", "Welcome, customer #1,234, pleasure to see you")>]
+[<InlineData("F#", "Welcome, customer #{CustomerId:0,0}, pleasure to see you", "Welcome, customer #1,234, pleasure to see you")>]
 let ```alignment strings are propagated`` (lang:string) (template:string) (expected:string) =
     let m = render lang template [1234]
     test <@ m = expected @>

@@ -112,6 +112,9 @@ let parsePropertyToken (startAt:int) (messageTemplate:string) (callersNextIndex:
             let align = Some (tagContent.Substring (alIdx+1, fmtIdx - alIdx - 1))
             let fmt = Some (tagContent.Substring (fmtIdx + 1))
             true, tagContent.Substring(0, alIdx), fmt, align
+        | fmtIdx, alIdx when alIdx > fmtIdx -> // has format part, no align (but comma in format string)
+            let fmt = Some (tagContent.Substring (fmtIdx + 1))
+            true, tagContent.Substring(0, fmtIdx), fmt, None
         | _, _ -> false, "", None, None // hammer time; you can't split this
     
     let tryParseAlignInfo (s:string option) : bool * AlignInfo option =
