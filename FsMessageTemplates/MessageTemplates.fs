@@ -28,7 +28,6 @@ type PropertyData = { Name: string
                                          | DestructureKind.Default
                                          | _ -> "")
                                         x.Name
-                                        // (match x.Pos with | Some p -> string p | _ -> "") // already part of name ?
                                         (match x.Align with | Some a -> string a | _ -> "")
                                         (match x.Format with | Some f -> f | _ -> "")
 
@@ -43,137 +42,151 @@ type Token =
 
 type Template = { FormatString: string; Tokens: Token list }
 
-
 module Tk =
-    let text tindex raw = Token.Text({ Text = raw; StartIndex = tindex })        
+    let td tindex raw = { Text=raw; StartIndex=tindex }
+    let text tindex raw = Token.Text(td tindex raw)
+    let emptyProp = PropertyData.Empty
+    let prop tindex raw name = Token.Prop(td tindex raw, { emptyProp with Name=name })
+    let propf tindex raw name format = Token.Prop(td tindex raw, { emptyProp with Name=name; Format=Some format })
+    let propd tindex raw name = Token.Prop(td tindex raw, { emptyProp with Name=name; Destr = DestructureKind.Destructure })
+    let propds tindex raw name = Token.Prop(td tindex raw, { emptyProp with Name=name; Destr = DestructureKind.Stringify })
+    let propar tindex raw name rightWidth = Token.Prop(td tindex raw, { emptyProp with Name=name; Align=Some { Direction=Direction.Right; Width=rightWidth } })
+    let propal tindex raw name leftWidth = Token.Prop(td tindex raw, { emptyProp with Name=name; Align=Some { Direction=Direction.Left; Width=leftWidth } })
+    let propp tindex num = Token.Prop({ Text="{"+string num+"}"; StartIndex=tindex; }, { emptyProp with Name=string num; Pos=Some num })
 
-    let prop tindex raw name = Token.Prop({ Text=raw; StartIndex=tindex },
-                                         { PropertyData.Empty with Name=name })
-    let propf tindex raw name format =
-        Token.Prop({ Text=raw; StartIndex=tindex },
-                   { PropertyData.Empty with Name=name
-                                             Format=Some format })
+let tryParseInt32 s = System.Int32.TryParse(s, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture)
+let maybeInt32 s = match tryParseInt32 s with true, n -> Some n | false, _ -> None
 
-    let propd tindex raw name = Token.Prop({ Text=raw; StartIndex=tindex; },
-                                          { PropertyData.Empty with Name=name
-                                                                    Destr = DestructureKind.Destructure })
-    let propds tindex raw name = Token.Prop({ Text=raw; StartIndex=tindex; },
-                                           { PropertyData.Empty with Name=name
-                                                                     Destr = DestructureKind.Stringify })
-    let propar tindex raw name rightWidth =
-        Token.Prop({ Text=raw; StartIndex=tindex; },
-                   { PropertyData.Empty with Name=name
-                                             Align=Some { Direction=Direction.Right
-                                                          Width=rightWidth } })
+let parseTextToken (startAt:int) (template:string) (nextIndex: int byref) : Token =
+    let first = startAt
+    let mutable next = startAt
+    let accum = lazy System.Text.StringBuilder()
+    let mutable isDone = false
+    let moveToNextChar () = next <- next + 1
+    let addCharToThisTextToken (c:char) = accum.Force().Append(c) |> ignore
+    let isNextChar (c:char) = next+1 < template.Length && template.[next+1] = c
+    while not isDone do
+        let thisChar = template.[next]
+        if thisChar = '{' then
+            if isNextChar '{' then addCharToThisTextToken thisChar; moveToNextChar()
+            else
+                isDone <- true // maybe a property, stop here
+        else
+            addCharToThisTextToken thisChar
+            if thisChar = '}' && isNextChar '}' then moveToNextChar () // treat "}}" as "}"
 
-    let propal tindex raw name leftWidth =
-        Token.Prop({ Text=raw; StartIndex=tindex; },
-                   { PropertyData.Empty with Name=name
-                                             Align=Some { Direction=Direction.Left
-                                                          Width=leftWidth } })
-    let propp tindex num =
-        let snum = string num
-        Token.Prop({ Text="{"+snum+"}"; StartIndex=tindex; },
-               { PropertyData.Empty with Name=snum; Pos=Some num })
+        if thisChar <> '{' then moveToNextChar()
+        isDone <- isDone || next >= template.Length
 
-open System.Text.RegularExpressions
+    nextIndex <- next
+    if accum.IsValueCreated then Tk.text first (accum.Force().ToString())
+    else Token.EmptyText
 
-[<Literal>]
-let regexOptions =
-#if MT_PORTABLE
-    RegexOptions.Compiled |||
-#endif
-    RegexOptions.IgnorePatternWhitespace
+type ch = System.Char
+let parsePropertyToken (startAt:int) (messageTemplate:string) (nextIndex: int byref) : Token =
+    let first = startAt
+    let mutable thisChIdx = startAt
+    let peekThisCh() = messageTemplate.[thisChIdx]
+    let isValidInPropName c = c = '_' || ch.IsLetterOrDigit c
+    let isValidInDestrHint c = c = '@' || c = '$'
+    let isValidInAlignment c = c = '-' || ch.IsDigit c
+    let isValidInFormat c = c <> '}' && (c = ' ' || ch.IsDigit c || ch.IsPunctuation c)
+    let isValidCharInPropTag c = c = ':' || isValidInPropName c || isValidInFormat c || isValidInDestrHint c
+    let hasAnyInvlidChars (s:string) isValid = s.ToCharArray() |> Seq.exists (not << isValid)
 
-module GRP =
-    let DOUBLE_OPEN = "double_open"
-    let DOUBLE_CLOSE = "double_close"
-    let FULL_PROP = "fullprop"
-    let START_PROP = "start_prop"
-    let DESTR = "destr"
-    let PROPERTY = "property"
-    let ALIGN = "align"
-    let FORMAT = "format"
-    let END_PROP = "end_prop"
-    let OTHER_TEXT = "other_text"
+    /// "pname"                 > (valid=true, pnds="pname", format=None,             align=None        )
+    /// "@abc:000"              > (valid=true, pnds="@abc",  format=Some "000",       align=None        )
+    /// "$foo,-10:dd mmm yy"    > (valid=true, pnds="$foo",  format=Some "dd mmm yy", align=Some "-10"  )
+    let trySplitTagContent (tagContent: string) : bool * string * string option * string option =
+        match tagContent.IndexOf(':'), tagContent.IndexOf(',') with
+        | -1, -1 -> // neither align nor format 
+            true, tagContent, None, None
+        | fmtIdx, -1 -> // has format part, but does not have align part
+            true, tagContent.Substring(0, fmtIdx), Some (tagContent.Substring (fmtIdx+1)), None
+        | -1, alIdx -> // has align part, but does not have format part
+            true, tagContent.Substring(0, alIdx), None, Some (tagContent.Substring (alIdx+1))
+        | fmtIdx, alIdx when alIdx < fmtIdx && alIdx <> (fmtIdx - 1) -> // has both parts in correct order
+            let align = Some (tagContent.Substring (alIdx+1, fmtIdx - alIdx - 1))
+            let fmt = Some (tagContent.Substring (fmtIdx + 1))
+            true, tagContent.Substring(0, alIdx), fmt, align
+        | _, _ -> false, "", None, None // hammer time; you can't split this
+    
+    let tryParseAlignInfo (s:string option) : bool * AlignInfo option =
+        match s with
+        | None -> true, None
+        | Some s when (hasAnyInvlidChars s isValidInAlignment) -> false, None
+        | Some "" -> false, None
+        | Some s ->
+            let lastDashIdx = s.LastIndexOf('-')
+            let width = match lastDashIdx with
+                        | 0 -> int (s.Substring(1)) // skip dash for the numeric alignment
+                        | -1 -> int s // no dash, must be all numeric
+                        | _ -> 0 // dash is not allowed to be anywhere else
+            if width = 0 then false, None
+            else
+                let direction = match lastDashIdx with -1 -> Direction.Right | _ -> Direction.Left
+                true, Some { Direction = direction; Width=width; }
 
-// https://www.debuggex.com/r/4t9Y20IuC_lx0DJ7
-[<Literal>]
-let internal parseRegexPattern = "
-(?<double_open>\{\{)
-|
-(?<double_close>\}\})
-|
-(?<fullprop>
- (?<start_prop>\{)
- (?<destr>\@|\$)?
- (?<property>[\w\.\[\]]+)
- (?<align>,-?[\d]+)?
- (?<format>:[^}]+)?
- (?<end_prop>\})+
-)
-|
-(?<other_text>\{?[^\{]+)
-"
+    // skip over characters until we reach a character that is *NOT* a valid part of
+    // the property tag
+    while thisChIdx < messageTemplate.Length && isValidCharInPropTag(peekThisCh()) do
+        thisChIdx <- thisChIdx + 1
 
-let private parseRegex =
-    System.Text.RegularExpressions.Regex(parseRegexPattern, regexOptions)
-
-let tryParseInt32 s =
-    System.Int32.TryParse(s, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture)
-
-let maybeMapPropertyInfo (m:Match) : PropertyData option =
-    let g = m.Groups
-    let isNullOrEmpty = System.String.IsNullOrEmpty
-    let someIfSuccessAndNotEmpty (m:Group) =
-        if m.Success && not (isNullOrEmpty m.Value) then Some (m.Value.TrimStart(':'))
-        else None
-    if g.[GRP.DOUBLE_OPEN].Success || g.[GRP.DOUBLE_CLOSE].Success then
-        None
-    else if not (g.[GRP.FULL_PROP].Success) then
-        None
+    // if we stopped at the end of the string or the last char wasn't a close brace
+    // then we treat all the characters we found as a text token, and finish.
+    if thisChIdx = messageTemplate.Length || peekThisCh() <> '}' then
+        nextIndex <- thisChIdx
+        Tk.text first (messageTemplate.Substring(first, thisChIdx - first))
     else
-        let destrGroup = g.[GRP.DESTR]
-        let ag = g.[GRP.ALIGN]
-        match ag.Value with
-        | ",-0" | ",0" -> None
-        | _ ->
-            let agWithoutComma = if ag.Value.Length > 0 then (ag.Value.TrimStart(',')) else ""
-            let agFirstNumChar = if agWithoutComma.Length > 0 then agWithoutComma.Chars(0) else ' '
-
-            let propName = g.[GRP.PROPERTY].Value
-            
-            Some { Name = propName
-                   Pos = match tryParseInt32 propName with true, p -> Some p | _ -> None
-                   Destr = match destrGroup.Success, destrGroup.Value with
-                           | true, "@" -> DestructureKind.Destructure
-                           | true, "$" -> DestructureKind.Stringify
-                           | _, _ -> DestructureKind.Default
-                   Align = match ag.Success, agFirstNumChar, agWithoutComma  with
-                           | true, '-', num -> Some { Direction = Direction.Right; Width = int num; }
-                           | true, _, num -> Some { Direction = Direction.Left; Width = int num; }
-                           | false, _, _ -> None
-                   Format = someIfSuccessAndNotEmpty g.[GRP.FORMAT] }
-
-let private parseTokens (s: string) : Token seq =
-    if s = "" then Seq.singleton (Text({ Text = ""; StartIndex = 0; }))
-    else
-        let matches = parseRegex.Matches(s)
-        if matches.Count = 0 then Seq.empty
-        else seq {
-            for m in matches do
-                let pi = maybeMapPropertyInfo m
-                let tkInfo = { Text = m.Value.Replace("{{", "{"); StartIndex = m.Index }
-                if pi.IsSome then
-                    yield Prop(tkInfo, pi.Value)
+        nextIndex <- thisChIdx + 1 // tell the caller of the next char they should start parsing
+        let rawText = messageTemplate.Substring(first, nextIndex - first)
+        let tagContent = messageTemplate.Substring(first + 1, nextIndex - (first + 2))
+        match trySplitTagContent tagContent with
+        | true, nameAndDestr, format, align ->
+            let destr = match nameAndDestr.[0] with
+                        | '@' -> DestructureKind.Destructure
+                        | '$' -> DestructureKind.Stringify
+                        | _ -> DestructureKind.Default
+            let propertyName = match destr with
+                               | DestructureKind.Default -> nameAndDestr
+                               | _ -> nameAndDestr.Substring(1)
+            if propertyName = "" || (hasAnyInvlidChars propertyName isValidInPropName) then
+                Tk.text first rawText // not a valid property
+            else
+                if format.IsSome && (hasAnyInvlidChars format.Value isValidInFormat) then
+                    Tk.text first rawText
                 else
-                    yield Text(tkInfo)
-        }
+                    match tryParseAlignInfo align with
+                    | false, _ -> Tk.text first rawText
+                    | true, alignInfo ->
+                        Prop({ StartIndex=first; Text=rawText },
+                             { Name=propertyName; Format=format; Align=alignInfo; Pos=maybeInt32 propertyName; Destr=destr })
 
-// Try this: > MessageTemplates.parse "wh {{ {0:abc} at the {@heck} #{$align,11:0}?";;
+        | false, _, _, _ -> Tk.text first rawText
+
+let parseTokens messageTemplate = seq {
+    if messageTemplate = "" then yield Token.EmptyText
+    else
+        let mutable isDone = false
+        let mutable nextIndex = 0
+        while not isDone do
+            let beforeText = nextIndex
+            let tt = parseTextToken nextIndex messageTemplate &nextIndex
+            if nextIndex > beforeText then
+                yield tt
+            if nextIndex = messageTemplate.Length then
+                isDone <- true
+            if not isDone then
+                let beforeProp = nextIndex
+                let pt = parsePropertyToken nextIndex messageTemplate &nextIndex
+                if beforeProp < nextIndex then
+                    yield pt
+                if nextIndex = messageTemplate.Length then
+                    isDone <- true
+}
 
 let parse (s:string) =
-    { FormatString = s; Tokens = s |> parseTokens |> List.ofSeq }
+    { FormatString = s; Tokens = s |> parseTokens |> Seq.toList }
 
 let captureProperties (t:Template) (args:obj[]) : (PropertyData * obj) seq = Seq.empty // todo
 
@@ -189,6 +202,7 @@ let createPositionalFormat (t: Template) =
         | Text ti -> ti.Text
         | Prop (_, pi) -> sprintf "{%i%s%s}" (getNextPropPos()) (alignToFormat pi.Align) (formatOrEmpty pi.Format)
 
+    // generate numbers starting at zero, increasing +1 each call
     let nextPos =
         let i = ref -1
         fun () -> i := !i + 1; !i
