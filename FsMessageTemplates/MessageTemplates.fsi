@@ -40,7 +40,7 @@ module Tk =
     val propp: tindex:int -> num:int -> Token
 
 /// Parses a message template string.
-val parse: templateString:string -> Template
+val parse: template:string -> Template
 
 /// Formats a message template as a string, replacing the properties
 /// with the provided values.
@@ -48,3 +48,6 @@ val format: provider:System.IFormatProvider
             -> template:Template
             -> values:obj[]
             -> string
+
+/// Captures the properties as they are provided to a message template.
+val captureProperties: template:Template -> args:obj[] -> (PropertyData * obj) seq

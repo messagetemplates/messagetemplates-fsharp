@@ -175,6 +175,8 @@ let private parseTokens (s: string) : Token seq =
 let parse (s:string) =
     { FormatString = s; Tokens = s |> parseTokens |> List.ofSeq }
 
+let captureProperties (t:Template) (args:obj[]) : (PropertyData * obj) seq = Seq.empty // todo
+
 /// Converts a template message in a System.String.Format (positional) template
 /// e.g. "abc {@def}" would become "abc {0}"
 let createPositionalFormat (t: Template) =
