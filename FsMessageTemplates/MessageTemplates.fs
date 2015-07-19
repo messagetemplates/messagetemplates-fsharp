@@ -57,16 +57,16 @@ module Tk =
 let tryParseInt32 s = System.Int32.TryParse(s, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture)
 let maybeInt32 s = match tryParseInt32 s with true, n -> Some n | false, _ -> None
 
-let parseTextToken (startAt:int) (template:string) (nextIndex: int byref) : Token =
+let parseTextToken (startAt:int) (template:string) (callersNextIndex: int ref) : Token =
     let first = startAt
-    let mutable next = startAt
+    let next = ref startAt
+    let moveToNextChar() = next := !next + 1
     let accum = lazy System.Text.StringBuilder()
     let mutable isDone = false
-    let moveToNextChar () = next <- next + 1
     let addCharToThisTextToken (c:char) = accum.Force().Append(c) |> ignore
-    let isNextChar (c:char) = next+1 < template.Length && template.[next+1] = c
+    let isNextChar (c:char) = !next+1 < template.Length && template.[!next+1] = c
     while not isDone do
-        let thisChar = template.[next]
+        let thisChar = template.[!next]
         if thisChar = '{' then
             if isNextChar '{' then addCharToThisTextToken thisChar; moveToNextChar()
             else
@@ -76,17 +76,17 @@ let parseTextToken (startAt:int) (template:string) (nextIndex: int byref) : Toke
             if thisChar = '}' && isNextChar '}' then moveToNextChar () // treat "}}" as "}"
 
         if thisChar <> '{' then moveToNextChar()
-        isDone <- isDone || next >= template.Length
+        isDone <- isDone || !next >= template.Length
 
-    nextIndex <- next
+    callersNextIndex := !next
     if accum.IsValueCreated then Tk.text first (accum.Force().ToString())
     else Token.EmptyText
 
 type ch = System.Char
-let parsePropertyToken (startAt:int) (messageTemplate:string) (nextIndex: int byref) : Token =
+let parsePropertyToken (startAt:int) (messageTemplate:string) (callersNextIndex: int ref) : Token =
     let first = startAt
     let mutable thisChIdx = startAt
-    let peekThisCh() = messageTemplate.[thisChIdx]
+    let peekChAt (index) = messageTemplate.[index]
     let isValidInPropName c = c = '_' || ch.IsLetterOrDigit c
     let isValidInDestrHint c = c = '@' || c = '$'
     let isValidInAlignment c = c = '-' || ch.IsDigit c
@@ -129,16 +129,18 @@ let parsePropertyToken (startAt:int) (messageTemplate:string) (nextIndex: int by
 
     // skip over characters until we reach a character that is *NOT* a valid part of
     // the property tag
-    while thisChIdx < messageTemplate.Length && isValidCharInPropTag(peekThisCh()) do
+    while thisChIdx < messageTemplate.Length && isValidCharInPropTag(peekChAt thisChIdx) do
         thisChIdx <- thisChIdx + 1
 
     // if we stopped at the end of the string or the last char wasn't a close brace
     // then we treat all the characters we found as a text token, and finish.
-    if thisChIdx = messageTemplate.Length || peekThisCh() <> '}' then
-        nextIndex <- thisChIdx
+    if thisChIdx = messageTemplate.Length || peekChAt thisChIdx <> '}' then
+        callersNextIndex := thisChIdx
         Tk.text first (messageTemplate.Substring(first, thisChIdx - first))
     else
-        nextIndex <- thisChIdx + 1 // tell the caller of the next char they should start parsing
+        let nextIndex = thisChIdx + 1
+        callersNextIndex := nextIndex
+
         let rawText = messageTemplate.Substring(first, nextIndex - first)
         let tagContent = messageTemplate.Substring(first + 1, nextIndex - (first + 2))
         match trySplitTagContent tagContent with
@@ -167,22 +169,22 @@ let parsePropertyToken (startAt:int) (messageTemplate:string) (nextIndex: int by
 let parseTokens messageTemplate = seq {
     if messageTemplate = "" then yield Token.EmptyText
     else
-        let mutable isDone = false
-        let mutable nextIndex = 0
-        while not isDone do
-            let beforeText = nextIndex
-            let tt = parseTextToken nextIndex messageTemplate &nextIndex
-            if nextIndex > beforeText then
+        let isDone = ref false
+        let nextIndex = ref 0
+        while not !isDone do
+            let beforeText = !nextIndex
+            let tt = parseTextToken !nextIndex messageTemplate nextIndex
+            if !nextIndex > beforeText then
                 yield tt
-            if nextIndex = messageTemplate.Length then
-                isDone <- true
-            if not isDone then
+            if !nextIndex = messageTemplate.Length then
+                isDone := true
+            if not !isDone then
                 let beforeProp = nextIndex
-                let pt = parsePropertyToken nextIndex messageTemplate &nextIndex
+                let pt = parsePropertyToken !nextIndex messageTemplate nextIndex
                 if beforeProp < nextIndex then
                     yield pt
-                if nextIndex = messageTemplate.Length then
-                    isDone <- true
+                if !nextIndex = messageTemplate.Length then
+                    isDone := true
 }
 
 let parse (s:string) =
