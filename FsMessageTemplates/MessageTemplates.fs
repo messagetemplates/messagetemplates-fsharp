@@ -179,10 +179,10 @@ let parseTokens messageTemplate = seq {
             if !nextIndex = messageTemplate.Length then
                 isDone := true
             if not !isDone then
-                let beforeProp = nextIndex
+                let beforeProp = !nextIndex
                 let pt = parsePropertyToken !nextIndex messageTemplate nextIndex
-                if beforeProp < nextIndex then
-                    yield pt
+                if !nextIndex > beforeProp then
+                    yield pt // a property was parsed, since the nextIndex was moved forward
                 if !nextIndex = messageTemplate.Length then
                     isDone := true
 }
