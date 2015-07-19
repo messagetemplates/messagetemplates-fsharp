@@ -12,6 +12,9 @@ type Direction = Left = 0 | Right = 1
 type AlignInfo = { Direction: Direction
                    Width: int }
     with static member Default = { Direction=Direction.Left; Width=(0) }
+         override x.ToString() =
+            let dir = if x.Direction = Direction.Right then "-" else ""
+            dir + string x.Width
 
 type PropertyData = { Name: string
                       Pos: int option
@@ -28,8 +31,8 @@ type PropertyData = { Name: string
                                          | DestructureKind.Default
                                          | _ -> "")
                                         x.Name
-                                        (match x.Align with | Some a -> string a | _ -> "")
-                                        (match x.Format with | Some f -> f | _ -> "")
+                                        (match x.Align with | Some a -> "," + string a | _ -> "")
+                                        (match x.Format with | Some f -> ":" + f | _ -> "")
 
 type Token =
 | Text of TokenData
@@ -75,7 +78,7 @@ let parseTextToken (startAt:int) (template:string) (callersNextIndex: int ref) :
             addCharToThisTextToken thisChar
             if thisChar = '}' && isNextChar '}' then moveToNextChar () // treat "}}" as "}"
 
-        if thisChar <> '{' then moveToNextChar()
+        if not isDone || thisChar <> '{' then moveToNextChar()
         isDone <- isDone || !next >= template.Length
 
     callersNextIndex := !next
@@ -90,7 +93,7 @@ let parsePropertyToken (startAt:int) (messageTemplate:string) (callersNextIndex:
     let isValidInPropName c = c = '_' || ch.IsLetterOrDigit c
     let isValidInDestrHint c = c = '@' || c = '$'
     let isValidInAlignment c = c = '-' || ch.IsDigit c
-    let isValidInFormat c = c <> '}' && (c = ' ' || ch.IsDigit c || ch.IsPunctuation c)
+    let isValidInFormat c = c <> '}' && (c = ' ' || ch.IsLetterOrDigit c || ch.IsPunctuation c)
     let isValidCharInPropTag c = c = ':' || isValidInPropName c || isValidInFormat c || isValidInDestrHint c
     let hasAnyInvlidChars (s:string) isValid = s.ToCharArray() |> Seq.exists (not << isValid)
 
@@ -124,7 +127,7 @@ let parsePropertyToken (startAt:int) (messageTemplate:string) (callersNextIndex:
                         | _ -> 0 // dash is not allowed to be anywhere else
             if width = 0 then false, None
             else
-                let direction = match lastDashIdx with -1 -> Direction.Right | _ -> Direction.Left
+                let direction = match lastDashIdx with -1 -> Direction.Left | _ -> Direction.Right
                 true, Some { Direction = direction; Width=width; }
 
     // skip over characters until we reach a character that is *NOT* a valid part of
