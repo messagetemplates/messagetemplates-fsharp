@@ -1,19 +1,9 @@
 version: 1.0.{build}
 configuration: Release
-os:
-- Default Azure
-- Windows Server 2012 R2
-- Visual Studio 2015 RC
-- Unstable
+os: Unstable
 platform: Any CPU
-environment:
-  VisualStudioVersion: 14.0
-  DNX_FEED: https://www.nuget.org/api/v2
 install:
-  - set PATH=C:\Program Files (x86)\MSBuild\14.0\Bin;%PATH%
-  - powershell -NoProfile -ExecutionPolicy unrestricted -Command "&{iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/aspnet/Home/dev/dnvminstall.ps1'))}"
-  - dnvm install 1.0.0-beta5
-  - dnu restore
+  - nuget restore MessageTemplates.sln
 build:
   verbosity: normal
   project: MessageTemplates.sln

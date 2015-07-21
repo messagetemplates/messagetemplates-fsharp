@@ -24,6 +24,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <OutputPath>..\artifacts\bin\MessageTemplates\Debug\</OutputPath>
+    <DocumentationFile>..\artifacts\bin\MessageTemplates\Debug\MessageTemplates.XML</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -32,6 +33,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <OutputPath>..\artifacts\bin\MessageTemplates\Release\</OutputPath>
+    <DocumentationFile>..\artifacts\bin\MessageTemplates\Release\MessageTemplates.XML</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Core\IDestructuringPolicy.cs" />
@@ -47,6 +49,7 @@
     <Compile Include="Events\ScalarValue.cs" />
     <Compile Include="Events\SequenceValue.cs" />
     <Compile Include="Events\StructureValue.cs" />
+    <Compile Include="MessageTemplate.cs" />
     <Compile Include="Parameters\DepthLimiter.cs" />
     <Compile Include="Parameters\GetablePropertyFinder.cs" />
     <Compile Include="Parameters\PropertyBinder.cs" />
