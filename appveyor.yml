@@ -4,7 +4,7 @@ os: Visual Studio 2015
 platform: Any CPU
 install:
   - set PATH=%PROGRAMFILES(x86)%\MSBuild\14.0\Bin;%PATH%
-  - dnvm install latest -Persistent
+  - dnvm upgrade -alias default
   - nuget restore
   - dnu restore MessageTemplates
   - dnu restore MessageTemplates.Tests
@@ -13,3 +13,5 @@ build:
   verbosity: minimal
   publish_nuget: true
   publish_nuget_symbols: true
+artifacts:
+- path: artifacts\bin\MessageTemplates\Release\*.nupkg
