@@ -7,7 +7,7 @@ install:
   - dnvm install latest -Persistent
   - nuget restore
   - dnu restore MessageTemplates
-  - dnu restore MessagetTemplates.Tests
+  - dnu restore MessageTemplates.Tests
   - set DNX_BUILD_VERSION=%APPVEYOR_BUILD_NUMBER%
 build:
   verbosity: minimal
