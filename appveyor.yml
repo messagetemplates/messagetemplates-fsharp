@@ -7,7 +7,7 @@ init:
 # this turns of AppVeyor automatic searching for test-assemblies, not the actual testing
 test_script:
  - dnx MessageTemplates.Tests test
- - packages\xunit.runner.console.2.0.0\tools\xunit.console.exe FsMessageTemplates.Tests\bin\$(configuration)\FsMessageTemplates.Tests.dll
+ - packages\xunit.runner.console.2.0.0\tools\xunit.console.exe FsMessageTemplates.Tests\bin\Release\FsMessageTemplates.Tests.dll
 
 configuration: Release
 os: Visual Studio 2015
