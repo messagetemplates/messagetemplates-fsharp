@@ -3,7 +3,7 @@
 
 An implementation of named string replacements, which allows formatting, parsing, and capturing properties.
 
-[![Build status](https://ci.appveyor.com/api/projects/status/i0y2e205vask3425?svg=true)](https://ci.appveyor.com/project/adamchester/messagetemplates)
+[![Build status](https://ci.appveyor.com/api/projects/status/i0y2e205vask3425/branch/master?svg=true)](https://ci.appveyor.com/project/adamchester/messagetemplates/branch/master)
 
 ### Message Template Syntax (PROPOSED)
 
