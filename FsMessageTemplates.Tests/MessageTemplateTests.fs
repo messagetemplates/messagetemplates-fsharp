@@ -3,35 +3,35 @@
 open Xunit
 open FsMessageTemplates.MessageTemplates
 
-//open MessageTemplates.Parsing
-//let (|Null|Value|) (x: _ System.Nullable) = if x.HasValue then Value x.Value else Null
-//let textToToken (tt: TextToken) = Token.Text({ StartIndex=tt.StartIndex; Text=tt.Text })
-//let propToToken (pr: PropertyToken) =
-//    let pos = match pr.TryGetPositionalValue() with
-//              | true, i -> Some i
-//              | false, _ -> None
-//    let destr = match pr.Destructuring with
-//                | Destructuring.Default -> DestructureKind.Default
-//                | Destructuring.Destructure -> DestructureKind.Destructure
-//                | Destructuring.Stringify -> DestructureKind.Stringify
-//                | d -> failwithf "unknown destructure %A" d
-//    let getDirection d = match d with
-//                         | AlignmentDirection.Left -> Direction.Left
-//                         | AlignmentDirection.Right -> Direction.Right
-//                         | _ -> failwithf "unknown direction %A" d
-//    let align = match pr.Alignment with
-//                | Value v -> Some { Direction = (getDirection v.Direction)
-//                                    Width = v.Width }
-//                | Null _ -> None
-//    let format = match pr.Format with | null -> None | s -> Some s
-//    Token.Prop({ StartIndex=pr.StartIndex; Text=pr.ToString() },
-//               { Name=pr.PropertyName; Pos=pos; Destr=destr; Align=align; Format=format; })
-//
-//let mttToToken (mtt: MessageTemplateToken) : Token =
-//    match mtt with
-//    | :? PropertyToken as pt -> propToToken pt
-//    | :? TextToken as tt -> textToToken tt
-//    | _ -> failwithf "unknown token %A" mtt
+open MessageTemplates.Parsing
+let (|Null|Value|) (x: _ System.Nullable) = if x.HasValue then Value x.Value else Null
+let textToToken (tt: TextToken) = Token.Text({ StartIndex=tt.StartIndex; Text=tt.Text })
+let propToToken (pr: PropertyToken) =
+    let pos = match pr.TryGetPositionalValue() with
+              | true, i -> Some i
+              | false, _ -> None
+    let destr = match pr.Destructuring with
+                | Destructuring.Default -> DestructureKind.Default
+                | Destructuring.Destructure -> DestructureKind.Destructure
+                | Destructuring.Stringify -> DestructureKind.Stringify
+                | d -> failwithf "unknown destructure %A" d
+    let getDirection d = match d with
+                         | AlignmentDirection.Left -> Direction.Left
+                         | AlignmentDirection.Right -> Direction.Right
+                         | _ -> failwithf "unknown direction %A" d
+    let align = match pr.Alignment with
+                | Value v -> Some { Direction = (getDirection v.Direction)
+                                    Width = v.Width }
+                | Null _ -> None
+    let format = match pr.Format with | null -> None | s -> Some s
+    Token.Prop({ StartIndex=pr.StartIndex; Text=pr.ToString() },
+               { Name=pr.PropertyName; Pos=pos; Destr=destr; Align=align; Format=format; })
+
+let mttToToken (mtt: MessageTemplateToken) : Token =
+    match mtt with
+    | :? PropertyToken as pt -> propToToken pt
+    | :? TextToken as tt -> textToToken tt
+    | _ -> failwithf "unknown token %A" mtt
 
 open Swensen.Unquote.Assertions
 open System.Globalization
@@ -46,8 +46,8 @@ type LangCsFsDataAttribute() =
 let assertParsedAs lang message (expectedTokens: System.Collections.IEnumerable) =
     let parsed =
         match lang with
-//        | "C#" -> MessageTemplates.Template.Parse(message).Tokens
-//                  |> Seq.map mttToToken |> List.ofSeq
+        | "C#" -> MessageTemplates.Template.Parse(message).Tokens
+                  |> Seq.map mttToToken |> List.ofSeq
         | "F#" -> (FsMessageTemplates.MessageTemplates.parse message).Tokens
         | other -> failwithf "unexpected lang '%s'" other
 
@@ -186,7 +186,7 @@ let ``underscores are valid in property names`` (lang) =
 let renderp lang (provider:IFormatProvider) messageTemplate args =
     let argsArray = (args |> Seq.cast<obj> |> Seq.toArray) // force 'args' to be IEnumerable
     match lang with
-//    | "C#" -> MessageTemplates.Template.Format(provider, messageTemplate, argsArray)
+    | "C#" -> MessageTemplates.Template.Format(provider, messageTemplate, argsArray)
     | "F#" -> FsMessageTemplates.MessageTemplates.format provider
                                                         (FsMessageTemplates.MessageTemplates.parse messageTemplate)
                                                         argsArray
