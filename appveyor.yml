@@ -4,7 +4,7 @@ os: Visual Studio 2015
 platform: Any CPU
 install:
   - set PATH=%PROGRAMFILES(x86)%\MSBuild\14.0\Bin;%PATH%
-  - dnvm install latest -Unstable -Persistent
+  - dnvm install latest -Persistent
   - nuget restore
   - dnu restore MessageTemplates
   - dnu restore MessagetTemplates.Tests
