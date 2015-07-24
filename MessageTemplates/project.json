@@ -1,5 +1,6 @@
 ﻿{
     "version": "1.0.0-beta-*",
+    "title": "MessageTemplates",
     "description": "Message templates - the ability to format named string values, and capture the properties.",
     "authors": [ "Serilog Contributors, Adam Chester" ],
     "tags": [ "message template serilog" ],

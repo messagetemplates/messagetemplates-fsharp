@@ -5,7 +5,8 @@ init:
   - git config --global core.autocrlf input
 
 # this turns of AppVeyor automatic searching for test-assemblies, not the actual testing
-test: off
+test_script:
+ - dnx MessageTemplates.Tests test
 
 configuration: Release
 os: Visual Studio 2015
@@ -22,7 +23,6 @@ build:
   publish_nuget: true
   publish_nuget_symbols: true
   parallel: true
-
 
 artifacts:
 - path: artifacts\bin\MessageTemplates\$(configuration)\*.nupkg
