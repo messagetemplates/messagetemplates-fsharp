@@ -1,5 +1,6 @@
-version: 1.0.{build}
+version: 1.0.0-beta.{build}
 configuration: Release
+os: Visual Studio 2015
 platform: Any CPU
 install:
   - set PATH=%PROGRAMFILES(x86)%\MSBuild\14.0\Bin;%PATH%
@@ -7,6 +8,7 @@ install:
   - nuget restore
   - dnu restore MessageTemplates
   - dnu restore MessagetTemplates.Tests
+  - set DNX_BUILD_VERSION=%APPVEYOR_BUILD_NUMBER%
 build:
   verbosity: minimal
   publish_nuget: true
