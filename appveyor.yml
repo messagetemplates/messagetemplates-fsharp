@@ -1,11 +1,14 @@
 version: 1.0.{build}
 configuration: Release
-os: Unstable
+os: Visual Studio 2015
 platform: Any CPU
 install:
+  - set PATH=%PROGRAMFILES(x86)%\MSBuild\14.0\Bin;%PATH%
   - nuget restore MessageTemplates.sln
+  - dnu restore MessageTemplates
+  - dnu restore MessagetTemplates.Tests
 build:
-  verbosity: normal
+  verbosity: minimal
   project: MessageTemplates.sln
   publish_nuget: true
   publish_nuget_symbols: true
