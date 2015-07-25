@@ -29,7 +29,7 @@ namespace MessageTemplates.Parameters
     // type system so that there is a better chance of code written with one sink in
     // mind working correctly with any other. This technique also makes the programmer
     // writing a log event (roughly) in control of the cost of recording that event.
-    partial class PropertyValueConverter : ILogEventPropertyFactory, ILogEventPropertyValueFactory
+    partial class PropertyValueConverter : ITemplatePropertyFactory, ITemplatePropertyValueFactory
     {
         static readonly HashSet<Type> BuiltInScalarTypes = new HashSet<Type>
         {
@@ -71,22 +71,22 @@ namespace MessageTemplates.Parameters
                 .ToArray();
         }
 
-        public LogEventProperty CreateProperty(string name, object value, bool destructureObjects = false)
+        public TemplateProperty CreateProperty(string name, object value, bool destructureObjects = false)
         {
-            return new LogEventProperty(name, CreatePropertyValue(value, destructureObjects));
+            return new TemplateProperty(name, CreatePropertyValue(value, destructureObjects));
         }
 
-        public LogEventPropertyValue CreatePropertyValue(object value, bool destructureObjects = false)
+        public TemplatePropertyValue CreatePropertyValue(object value, bool destructureObjects = false)
         {
             return CreatePropertyValue(value, destructureObjects, 1);
         }
 
-        public LogEventPropertyValue CreatePropertyValue(object value, Destructuring destructuring)
+        public TemplatePropertyValue CreatePropertyValue(object value, Destructuring destructuring)
         {
             return CreatePropertyValue(value, destructuring, 1);
         }
 
-        LogEventPropertyValue CreatePropertyValue(object value, bool destructureObjects, int depth)
+        TemplatePropertyValue CreatePropertyValue(object value, bool destructureObjects, int depth)
         {
             return CreatePropertyValue(
                 value,
@@ -96,7 +96,7 @@ namespace MessageTemplates.Parameters
                 depth);
         }
 
-        LogEventPropertyValue CreatePropertyValue(object value, Destructuring destructuring, int depth)
+        TemplatePropertyValue CreatePropertyValue(object value, Destructuring destructuring, int depth)
         {
             if (value == null)
                 return new ScalarValue(null);
@@ -118,7 +118,7 @@ namespace MessageTemplates.Parameters
             {
                 foreach (var destructuringPolicy in _destructuringPolicies)
                 {
-                    LogEventPropertyValue result;
+                    TemplatePropertyValue result;
                     if (destructuringPolicy.TryDestructure(value, limiter, out result))
                         return result;
                 }
@@ -155,7 +155,7 @@ namespace MessageTemplates.Parameters
                         .Cast<object>()
                         .Where(o => o != null)
                         .Select(o => new { Key = getKey(o), Value = getValue(o) })
-                        .Select(o => new KeyValuePair<ScalarValue, LogEventPropertyValue>(
+                        .Select(o => new KeyValuePair<ScalarValue, TemplatePropertyValue>(
                             key: (ScalarValue)limiter.CreatePropertyValue(o.Key, destructuring),
                             value: limiter.CreatePropertyValue(o.Value, destructuring))
                         )
@@ -201,7 +201,7 @@ namespace MessageTemplates.Parameters
 #endif
         }
 
-        static IEnumerable<LogEventProperty> GetProperties(object value, ILogEventPropertyValueFactory recursive)
+        static IEnumerable<TemplateProperty> GetProperties(object value, ITemplatePropertyValueFactory recursive)
         {
             var properties =
 #if USE_REFLECTION_40
@@ -233,7 +233,7 @@ namespace MessageTemplates.Parameters
                     SelfLog.WriteLine("The property accessor {0} threw exception {1}", prop, ex);
                     propValue = "The property accessor threw an exception: " + ex.InnerException.GetType().Name;
                 }
-                yield return new LogEventProperty(prop.Name, recursive.CreatePropertyValue(propValue, true));
+                yield return new TemplateProperty(prop.Name, recursive.CreatePropertyValue(propValue, true));
             }
         }
     }

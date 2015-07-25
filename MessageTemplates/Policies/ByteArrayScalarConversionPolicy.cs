@@ -25,7 +25,7 @@ namespace MessageTemplates.Policies
     {
         const int MaximumByteArrayLength = 1024;
 
-        public bool TryConvertToScalar(object value, ILogEventPropertyValueFactory propertyValueFactory, out ScalarValue result)
+        public bool TryConvertToScalar(object value, ITemplatePropertyValueFactory propertyValueFactory, out ScalarValue result)
         {
             var bytes = value as byte[];
             if (bytes == null)

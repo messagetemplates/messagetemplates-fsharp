@@ -31,7 +31,7 @@ namespace MessageTemplates.Policies
             _projection = projection;
         }
 
-        public bool TryDestructure(object value, ILogEventPropertyValueFactory propertyValueFactory, out LogEventPropertyValue result)
+        public bool TryDestructure(object value, ITemplatePropertyValueFactory propertyValueFactory, out TemplatePropertyValue result)
         {
             if (value == null) throw new ArgumentNullException("value");
 

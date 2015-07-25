@@ -21,7 +21,7 @@ namespace MessageTemplates.Parameters
 {
     partial class PropertyValueConverter
     {
-        class DepthLimiter : ILogEventPropertyValueFactory
+        class DepthLimiter : ITemplatePropertyValueFactory
         {
             readonly int _maximumDestructuringDepth;
             readonly int _currentDepth;
@@ -34,19 +34,19 @@ namespace MessageTemplates.Parameters
                 _propertyValueConverter = propertyValueConverter;
             }
 
-            public LogEventPropertyValue CreatePropertyValue(object value, Destructuring destructuring)
+            public TemplatePropertyValue CreatePropertyValue(object value, Destructuring destructuring)
             {
                 return DefaultIfMaximumDepth() ??
                     _propertyValueConverter.CreatePropertyValue(value, destructuring, _currentDepth + 1);
             }
 
-            public LogEventPropertyValue CreatePropertyValue(object value, bool destructureObjects = false)
+            public TemplatePropertyValue CreatePropertyValue(object value, bool destructureObjects = false)
             {
                 return DefaultIfMaximumDepth() ??
                     _propertyValueConverter.CreatePropertyValue(value, destructureObjects, _currentDepth + 1);
             }
 
-            LogEventPropertyValue DefaultIfMaximumDepth()
+            TemplatePropertyValue DefaultIfMaximumDepth()
             {
                 if (_currentDepth == _maximumDestructuringDepth)
                 {

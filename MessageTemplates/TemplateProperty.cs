@@ -17,21 +17,21 @@ using System;
 namespace MessageTemplates.Events
 {
     /// <summary>
-    /// A property associated with a <see cref="LogEvent"/>.
+    /// A property associated with a <see cref="MessageTemplate"/>.
     /// </summary>
-    public class LogEventProperty
+    public class TemplateProperty
     {
         readonly string _name;
-        readonly LogEventPropertyValue _value;
+        readonly TemplatePropertyValue _value;
 
         /// <summary>
-        /// Construct a <see cref="LogEventProperty"/> with the specified name and value.
+        /// Construct a <see cref="TemplatePropertyValue"/> with the specified name and value.
         /// </summary>
         /// <param name="name">The name of the property.</param>
         /// <param name="value">The value of the property.</param>
         /// <exception cref="ArgumentException"></exception>
         /// <exception cref="ArgumentNullException"></exception>
-        public LogEventProperty(string name, LogEventPropertyValue value)
+        public TemplateProperty(string name, TemplatePropertyValue value)
         {
             if (value == null) throw new ArgumentNullException("value");
             if (!IsValidName(name))
@@ -52,7 +52,7 @@ namespace MessageTemplates.Events
         /// <summary>
         /// The value of the property.
         /// </summary>
-        public LogEventPropertyValue Value
+        public TemplatePropertyValue Value
         {
             get { return _value; }
         }

@@ -22,10 +22,10 @@ namespace MessageTemplates.Events
     /// <summary>
     /// A value represented as a collection of name-value properties.
     /// </summary>
-    public class StructureValue : LogEventPropertyValue
+    public class StructureValue : TemplatePropertyValue
     {
         readonly string _typeTag;
-        readonly LogEventProperty[] _properties;
+        readonly TemplateProperty[] _properties;
 
         /// <summary>
         /// Construct a <see cref="StructureValue"/> with the provided properties.
@@ -34,7 +34,7 @@ namespace MessageTemplates.Events
         /// structure.</param>
         /// <param name="properties">The properties of the structure.</param>
         /// <exception cref="ArgumentNullException"></exception>
-        public StructureValue(IEnumerable<LogEventProperty> properties, string typeTag = null)
+        public StructureValue(IEnumerable<TemplateProperty> properties, string typeTag = null)
         {
             if (properties == null) throw new ArgumentNullException("properties");
             _typeTag = typeTag;
@@ -53,7 +53,7 @@ namespace MessageTemplates.Events
         /// <remarks>Not presented as a dictionary because dictionary construction is
         /// relatively expensive; it is cheaper to build a dictionary over properties only
         /// when the structure is of interest.</remarks>
-        public IReadOnlyList<LogEventProperty> Properties { get { return _properties.ToListNet40(); } }
+        public IReadOnlyList<TemplateProperty> Properties { get { return _properties.ToListNet40(); } }
 
         /// <summary>
         /// Render the value to the output.
@@ -61,7 +61,7 @@ namespace MessageTemplates.Events
         /// <param name="output">The output.</param>
         /// <param name="format">A format string applied to the value, or null.</param>
         /// <param name="formatProvider">A format provider to apply to the value, or null to use the default.</param>
-        /// <seealso cref="LogEventPropertyValue.ToString(string, IFormatProvider)"/>.
+        /// <seealso cref="TemplatePropertyValue.ToString(string, IFormatProvider)"/>.
         public override void Render(TextWriter output, string format = null, IFormatProvider formatProvider = null)
         {
             if (output == null) throw new ArgumentNullException("output");
@@ -89,7 +89,7 @@ namespace MessageTemplates.Events
             output.Write(" }");
         }
 
-        static void Render(TextWriter output, LogEventProperty property, IFormatProvider formatProvider = null)
+        static void Render(TextWriter output, TemplateProperty property, IFormatProvider formatProvider = null)
         {
             output.Write(property.Name);
             output.Write(": ");

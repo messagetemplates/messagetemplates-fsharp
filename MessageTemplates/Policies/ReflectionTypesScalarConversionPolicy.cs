@@ -21,7 +21,7 @@ namespace MessageTemplates.Policies
 {
     class ReflectionTypesScalarConversionPolicy : IScalarConversionPolicy
     {
-        public bool TryConvertToScalar(object value, ILogEventPropertyValueFactory propertyValueFactory, out ScalarValue result)
+        public bool TryConvertToScalar(object value, ITemplatePropertyValueFactory propertyValueFactory, out ScalarValue result)
         {
             // These types and their subclasses are property-laden and deep;
             // most sinks will convert them to strings.

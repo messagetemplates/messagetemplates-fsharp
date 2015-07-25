@@ -21,12 +21,12 @@ using MessageTemplates.Parsing;
 
 namespace MessageTemplates.Parameters
 {
-    // Performance relevant - on the hot path when creating log events from existing templates.
+    // Performance relevant - on the hot path when creating from existing templates.
     class PropertyBinder
     {
         readonly PropertyValueConverter _valueConverter;
 
-        static readonly LogEventProperty[] NoProperties = new LogEventProperty[0];
+        static readonly TemplateProperty[] NoProperties = new TemplateProperty[0];
 
         public PropertyBinder(PropertyValueConverter valueConverter)
         {
@@ -41,7 +41,7 @@ namespace MessageTemplates.Parameters
         /// represented in the message template.</param>
         /// <returns>A list of properties; if the template is malformed then
         /// this will be empty.</returns>
-        public IEnumerable<LogEventProperty> ConstructProperties(MessageTemplate messageTemplate, object[] messageTemplateParameters)
+        public IEnumerable<TemplateProperty> ConstructProperties(MessageTemplate messageTemplate, object[] messageTemplateParameters)
         {
             if (messageTemplateParameters == null || messageTemplateParameters.Length == 0)
             {
@@ -57,14 +57,14 @@ namespace MessageTemplates.Parameters
             return ConstructNamedProperties(messageTemplate, messageTemplateParameters);
         }
 
-        IEnumerable<LogEventProperty> ConstructPositionalProperties(MessageTemplate template, object[] messageTemplateParameters)
+        IEnumerable<TemplateProperty> ConstructPositionalProperties(MessageTemplate template, object[] messageTemplateParameters)
         {
             var positionalProperties = template.PositionalProperties;
 
             if (positionalProperties.Length != messageTemplateParameters.Length)
                 SelfLog.WriteLine("Positional property count does not match parameter count: {0}", template);
 
-            var result = new LogEventProperty[messageTemplateParameters.Length];
+            var result = new TemplateProperty[messageTemplateParameters.Length];
             foreach (var property in positionalProperties)
             {
                 int position;
@@ -93,11 +93,11 @@ namespace MessageTemplates.Parameters
             return result;
         }
 
-        IEnumerable<LogEventProperty> ConstructNamedProperties(MessageTemplate template, object[] messageTemplateParameters)
+        IEnumerable<TemplateProperty> ConstructNamedProperties(MessageTemplate template, object[] messageTemplateParameters)
         {
             var namedProperties = template.NamedProperties;
             if (namedProperties == null)
-                return Enumerable.Empty<LogEventProperty>();
+                return Enumerable.Empty<TemplateProperty>();
 
             var matchedRun = namedProperties.Length;
             if (namedProperties.Length != messageTemplateParameters.Length)
@@ -106,7 +106,7 @@ namespace MessageTemplates.Parameters
                 SelfLog.WriteLine("Named property count does not match parameter count: {0}", template);
             }
 
-            var result = new LogEventProperty[matchedRun];
+            var result = new TemplateProperty[matchedRun];
             for (var i = 0; i < matchedRun; ++i)
             {
                 var property = template.NamedProperties[i];
@@ -117,9 +117,9 @@ namespace MessageTemplates.Parameters
             return result;
         }
 
-        LogEventProperty ConstructProperty(PropertyToken propertyToken, object value)
+        TemplateProperty ConstructProperty(PropertyToken propertyToken, object value)
         {
-            return new LogEventProperty(
+            return new TemplateProperty(
                         propertyToken.PropertyName,
                         _valueConverter.CreatePropertyValue(value, propertyToken.Destructuring));
         }

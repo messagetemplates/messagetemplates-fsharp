@@ -20,7 +20,7 @@ namespace MessageTemplates.Policies
 {
     class DelegateDestructuringPolicy : IDestructuringPolicy
     {
-        public bool TryDestructure(object value, ILogEventPropertyValueFactory propertyValueFactory, out LogEventPropertyValue result)
+        public bool TryDestructure(object value, ITemplatePropertyValueFactory propertyValueFactory, out TemplatePropertyValue result)
         {
             var del = value as Delegate;
             if (del != null)

@@ -90,12 +90,12 @@ namespace MessageTemplates.Parsing
         /// <param name="properties">Properties that may be represented by the token.</param>
         /// <param name="output">Output for the rendered string.</param>
         /// <param name="formatProvider">Supplies culture-specific formatting information, or null.</param>
-        public override void Render(IReadOnlyDictionary<string, LogEventPropertyValue> properties, TextWriter output, IFormatProvider formatProvider = null)
+        public override void Render(IReadOnlyDictionary<string, TemplatePropertyValue> properties, TextWriter output, IFormatProvider formatProvider = null)
         {
             if (properties == null) throw new ArgumentNullException("properties");
             if (output == null) throw new ArgumentNullException("output");
 
-            LogEventPropertyValue propertyValue;
+            TemplatePropertyValue propertyValue;
             if (!properties.TryGetValue(_propertyName, out propertyValue))
             {
                 output.Write(_rawText);

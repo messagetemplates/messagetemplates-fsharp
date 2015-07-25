@@ -17,13 +17,12 @@ using MessageTemplates.Events;
 namespace MessageTemplates.Core
 {
     /// <summary>
-    /// Creates log event properties from regular .NET objects, applying policies as
-    /// required.
+    /// Creates template properties from regular .NET objects, applying policies as required.
     /// </summary>
-    public interface ILogEventPropertyFactory
+    public interface ITemplatePropertyFactory
     {
         /// <summary>
-        /// Construct a <see cref="LogEventProperty"/> with the specified name and value.
+        /// Construct a <see cref="TemplateProperty"/> with the specified name and value.
         /// </summary>
         /// <param name="name">The name of the property.</param>
         /// <param name="value">The value of the property.</param>
@@ -31,6 +30,6 @@ namespace MessageTemplates.Core
         /// then the value will be converted to a structure; otherwise, unknown types will
         /// be converted to scalars, which are generally stored as strings.</param>
         /// <returns></returns>
-        LogEventProperty CreateProperty(string name, object value, bool destructureObjects = false);
+        TemplateProperty CreateProperty(string name, object value, bool destructureObjects = false);
     }
 }

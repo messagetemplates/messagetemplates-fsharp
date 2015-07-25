@@ -1,84 +1,157 @@
-﻿using MessageTemplates.Events;
-using MessageTemplates.Parsing;
+// Copyright 2014 Serilog Contributors
+// 
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+// 
+//     http://www.apache.org/licenses/LICENSE-2.0
+// 
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
+using MessageTemplates.Debugging;
+using MessageTemplates.Parsing;
 
-namespace MessageTemplates
+namespace MessageTemplates.Events
 {
     /// <summary>
-    /// The main user-facing API with methods for parsing, formatting, and
-    /// capturing properties from message templates.
+    /// Represents a message template passed to a log method. The template
+    /// can subsequently render the template in textual form given the list
+    /// of properties.
     /// </summary>
-    public static class Template
+    public class MessageTemplate
     {
+        readonly string _text;
+        readonly MessageTemplateToken[] _tokens;
+
+        // Optimisation for when the template is bound to
+        // property values.
+        readonly PropertyToken[] _positionalProperties;
+        readonly PropertyToken[] _namedProperties;
+
         /// <summary>
-        /// Parses a message template (e.g. "hello, {name}") into a 
-        /// <see cref="MessageTemplate"/> structure.
+        /// Construct a message template using manually-defined text and property tokens.
         /// </summary>
-        /// <param name="templateMessage">A message template (e.g. "hello, {name}")</param>
-        /// <returns>The parsed message template.</returns>
-        public static MessageTemplate Parse(string templateMessage)
+        /// <param name="tokens">The text and property tokens defining the template.</param>
+        public MessageTemplate(IEnumerable<MessageTemplateToken> tokens)
+            : this(string.Join("", tokens), tokens)
         {
-            return new MessageTemplateParser().Parse(templateMessage);
         }
 
         /// <summary>
-        /// Captures properties from the given message template and 
-        /// provided values.
+        /// Construct a message template using manually-defined text and property tokens.
         /// </summary>
-        public static IEnumerable<LogEventProperty> Capture(
-            MessageTemplate template, params object[] values)
+        /// <param name="text">The full text of the template; used by MessageTemplates internally to avoid unneeded
+        /// string concatenation.</param>
+        /// <param name="tokens">The text and property tokens defining the template.</param>
+        public MessageTemplate(string text, IEnumerable<MessageTemplateToken> tokens)
         {
-            var binder = new Parameters.PropertyBinder(
-                new Parameters.PropertyValueConverter(
-                    10,
-                    Enumerable.Empty<Type>(),
-                    Enumerable.Empty<Core.IDestructuringPolicy>()));
+            if (text == null) throw new ArgumentNullException("text");
+            if (tokens == null) throw new ArgumentNullException("tokens");
 
-            return binder.ConstructProperties(template, values);
+            _text = text;
+            _tokens = tokens.ToArray();
+
+            var propertyTokens = _tokens.OfType<PropertyToken>().ToArray();
+            if (propertyTokens.Length != 0)
+            {
+                var allPositional = true;
+                var anyPositional = false;
+                foreach (var propertyToken in propertyTokens)
+                {
+                    if (propertyToken.IsPositional)
+                        anyPositional = true;
+                    else
+                        allPositional = false;
+                }
+
+                if (allPositional)
+                {
+                    _positionalProperties = propertyTokens;
+                }
+                else
+                {
+                    if (anyPositional)
+                        SelfLog.WriteLine("Message template is malformed: {0}", text);
+
+                    _namedProperties = propertyTokens;
+                }
+            }
         }
 
         /// <summary>
-        /// Formats the message template as a string, written into the text
-        /// writer.
+        /// The raw text describing the template.
         /// </summary>
-        public static void Format(
-            IFormatProvider formatProvider,
-            TextWriter output,
-            string templateMessage,
-            params object[] values)
+        public string Text
         {
-            var template = Parse(templateMessage);
-            var props = Capture(template, values);
-            template.Render(props.ToDictionary40(x => x.Name, x => x.Value), output, formatProvider);
+            get { return _text; }
         }
 
         /// <summary>
-        /// Formats the message template as a string using the provided
-        /// format provider and values.
+        /// Render the template as a string.
         /// </summary>
-        public static string Format(
-            IFormatProvider formatProvider,
-            string templateMessage,
-            params object[] values)
+        /// <returns>The string representation of the template.</returns>
+        public override string ToString()
         {
-            var sw = new StringWriter(formatProvider);
-            Format(formatProvider, sw, templateMessage, values);
-            sw.Flush();
-            return sw.ToString();
+            return Text;
         }
 
         /// <summary>
-        /// Formats the message template as a string using the provided values.
+        /// The tokens parsed from the template.
         /// </summary>
-        public static string Format(
-            string templateMessage,
-            params object[] values)
+        public IEnumerable<MessageTemplateToken> Tokens
         {
-            return Format(CultureInfo.InvariantCulture, templateMessage, values);
+            get { return _tokens; }
+        }
+
+        internal PropertyToken[] NamedProperties
+        {
+            get { return _namedProperties; }
+        }
+
+        internal PropertyToken[] PositionalProperties
+        {
+            get { return _positionalProperties; }
+        }
+
+        /// <summary>
+        /// Convert the message template into a textual message, given the
+        /// properties matching the tokens in the message template.
+        /// </summary>
+        /// <param name="properties">Properties matching template tokens.</param>
+        /// <param name="formatProvider">Supplies culture-specific formatting information, or null.</param>
+        /// <returns>The message created from the template and properties. If the
+        /// properties are mismatched with the template, the template will be
+        /// returned with incomplete substitution.</returns>
+        public string Render(IReadOnlyDictionary<string, TemplatePropertyValue> properties, IFormatProvider formatProvider = null)
+        {
+            var writer = new StringWriter(formatProvider);
+            Render(properties, writer, formatProvider);
+            return writer.ToString();
+        }
+
+        /// <summary>
+        /// Convert the message template into a textual message, given the
+        /// properties matching the tokens in the message template.
+        /// </summary>
+        /// <param name="properties">Properties matching template tokens.</param>
+        /// <param name="output">The message created from the template and properties. If the
+        /// properties are mismatched with the template, the template will be
+        /// returned with incomplete substitution.</param>
+        /// <param name="formatProvider">Supplies culture-specific formatting information, or null.</param>
+        public void Render(IReadOnlyDictionary<string, TemplatePropertyValue> properties, TextWriter output, IFormatProvider formatProvider = null)
+        {
+            foreach (var token in _tokens)
+            {
+                token.Render(properties, output, formatProvider);
+            }
         }
     }
 }

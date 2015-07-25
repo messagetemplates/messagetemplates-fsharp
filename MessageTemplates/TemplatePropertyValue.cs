@@ -18,10 +18,10 @@ using System.IO;
 namespace MessageTemplates.Events
 {
     /// <summary>
-    /// The value associated with a <see cref="LogEventProperty"/>. Divided into scalar,
+    /// The value associated with a <see cref="TemplateProperty"/>. Divided into scalar,
     /// sequence and structure values to direct serialization into various formats.
     /// </summary>
-    public abstract class LogEventPropertyValue : IFormattable
+    public abstract class TemplatePropertyValue : IFormattable
     {
         /// <summary>
         /// Render the value to the output.
@@ -29,7 +29,7 @@ namespace MessageTemplates.Events
         /// <param name="output">The output.</param>
         /// <param name="format">A format string applied to the value, or null.</param>
         /// <param name="formatProvider">A format provider to apply to the value, or null to use the default.</param>
-        /// <seealso cref="LogEventPropertyValue.ToString(string, IFormatProvider)"/>.
+        /// <seealso cref="TemplatePropertyValue.ToString(string, IFormatProvider)"/>.
         public abstract void Render(TextWriter output, string format = null, IFormatProvider formatProvider = null);
 
         /// <summary>

@@ -17,8 +17,8 @@ using MessageTemplates.Events;
 namespace MessageTemplates.Core
 {
     /// <summary>
-    /// Determine how, when destructuring, a supplied value is represented
-    /// as a complex log event property.
+    /// Determines how, when destructuring, a supplied value is represented
+    /// as a destructured property value.
     /// </summary>
     public interface IDestructuringPolicy
     {
@@ -29,6 +29,6 @@ namespace MessageTemplates.Core
         /// <param name="propertyValueFactory">Recursively apply policies to destructure additional values.</param>
         /// <param name="result">The destructured value, or null.</param>
         /// <returns>True if the value could be destructured under this policy.</returns>
-        bool TryDestructure(object value, ILogEventPropertyValueFactory propertyValueFactory, out LogEventPropertyValue result);
+        bool TryDestructure(object value, ITemplatePropertyValueFactory propertyValueFactory, out TemplatePropertyValue result);
     }
 }

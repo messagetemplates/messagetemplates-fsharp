@@ -20,7 +20,7 @@ namespace MessageTemplates.Policies
 {
     class EnumScalarConversionPolicy : IScalarConversionPolicy
     {
-        public bool TryConvertToScalar(object value, ILogEventPropertyValueFactory propertyValueFactory, out ScalarValue result)
+        public bool TryConvertToScalar(object value, ITemplatePropertyValueFactory propertyValueFactory, out ScalarValue result)
         {
 #if USE_REFLECTION_40
             if (value.GetType().IsEnum)

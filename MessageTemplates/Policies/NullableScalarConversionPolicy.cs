@@ -20,7 +20,7 @@ namespace MessageTemplates.Policies
 {
     class NullableScalarConversionPolicy : IScalarConversionPolicy
     {
-        public bool TryConvertToScalar(object value, ILogEventPropertyValueFactory propertyValueFactory, out ScalarValue result)
+        public bool TryConvertToScalar(object value, ITemplatePropertyValueFactory propertyValueFactory, out ScalarValue result)
         {
             var type = value.GetType();
 #if USE_REFLECTION_40

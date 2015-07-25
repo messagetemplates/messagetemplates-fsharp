@@ -22,16 +22,16 @@ namespace MessageTemplates.Events
     /// <summary>
     /// A value represented as a mapping from keys to values.
     /// </summary>
-    public class DictionaryValue : LogEventPropertyValue
+    public class DictionaryValue : TemplatePropertyValue
     {
-        readonly IReadOnlyDictionary<ScalarValue, LogEventPropertyValue> _elements;
+        readonly IReadOnlyDictionary<ScalarValue, TemplatePropertyValue> _elements;
 
         /// <summary>
         /// Create a <see cref="DictionaryValue"/> with the provided <paramref name="elements"/>.
         /// </summary>
         /// <param name="elements">The key-value mappings represented in the dictionary.</param>
         /// <exception cref="ArgumentNullException"></exception>
-        public DictionaryValue(IEnumerable<KeyValuePair<ScalarValue, LogEventPropertyValue>> elements)
+        public DictionaryValue(IEnumerable<KeyValuePair<ScalarValue, TemplatePropertyValue>> elements)
         {
             if (elements == null) throw new ArgumentNullException("elements");
             _elements = elements.ToDictionary40(kvp => kvp.Key, kvp => kvp.Value);
@@ -40,7 +40,7 @@ namespace MessageTemplates.Events
         /// <summary>
         /// The dictionary mapping.
         /// </summary>
-        public IReadOnlyDictionary<ScalarValue, LogEventPropertyValue> Elements { get { return _elements; } }
+        public IReadOnlyDictionary<ScalarValue, TemplatePropertyValue> Elements { get { return _elements; } }
 
         /// <summary>
         /// Render the value to the output.
@@ -48,7 +48,7 @@ namespace MessageTemplates.Events
         /// <param name="output">The output.</param>
         /// <param name="format">A format string applied to the value, or null.</param>
         /// <param name="formatProvider">A format provider to apply to the value, or null to use the default.</param>
-        /// <seealso cref="LogEventPropertyValue.ToString(string, IFormatProvider)"/>.
+        /// <seealso cref="TemplatePropertyValue.ToString(string, IFormatProvider)"/>.
         public override void Render(TextWriter output, string format = null, IFormatProvider formatProvider = null)
         {
             if (output == null) throw new ArgumentNullException("output");

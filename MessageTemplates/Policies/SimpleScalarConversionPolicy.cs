@@ -28,7 +28,7 @@ namespace MessageTemplates.Policies
             _scalarTypes = new HashSet<Type>(scalarTypes);
         }
 
-        public bool TryConvertToScalar(object value, ILogEventPropertyValueFactory propertyValueFactory, out ScalarValue result)
+        public bool TryConvertToScalar(object value, ITemplatePropertyValueFactory propertyValueFactory, out ScalarValue result)
         {
             if (_scalarTypes.Contains(value.GetType()))
             {
