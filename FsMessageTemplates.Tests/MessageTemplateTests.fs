@@ -46,7 +46,7 @@ type LangCsFsDataAttribute() =
 let assertParsedAs lang message (expectedTokens: System.Collections.IEnumerable) =
     let parsed =
         match lang with
-        | "C#" -> MessageTemplates.Template.Parse(message).Tokens
+        | "C#" -> MessageTemplates.MessageTemplate.Parse(message).Tokens
                   |> Seq.map mttToToken |> List.ofSeq
         | "F#" -> (FsMessageTemplates.MessageTemplates.parse message).Tokens
         | other -> failwithf "unexpected lang '%s'" other
@@ -186,7 +186,7 @@ let ``underscores are valid in property names`` (lang) =
 let renderp lang (provider:IFormatProvider) messageTemplate args =
     let argsArray = (args |> Seq.cast<obj> |> Seq.toArray) // force 'args' to be IEnumerable
     match lang with
-    | "C#" -> MessageTemplates.Template.Format(provider, messageTemplate, argsArray)
+    | "C#" -> MessageTemplates.MessageTemplate.Format(provider, messageTemplate, argsArray)
     | "F#" -> FsMessageTemplates.MessageTemplates.format provider
                                                         (FsMessageTemplates.MessageTemplates.parse messageTemplate)
                                                         argsArray

@@ -126,7 +126,7 @@ namespace MessageTemplates.Tests
         static string Render(IFormatProvider formatProvider,
             string messageTemplate, params object[] properties)
         {
-            return Template.Format(formatProvider, messageTemplate, properties);
+            return MessageTemplate.Format(formatProvider, messageTemplate, properties);
         }
 
         [Fact]

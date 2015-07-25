@@ -14,7 +14,7 @@
 
 using System.Reflection;
 using MessageTemplates.Core;
-using MessageTemplates.Events;
+using MessageTemplates.Structure;
 
 namespace MessageTemplates.Policies
 {

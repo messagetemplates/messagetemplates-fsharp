@@ -14,7 +14,7 @@
 
 using System;
 
-namespace MessageTemplates.Events
+namespace MessageTemplates.Structure
 {
     /// <summary>
     /// A property associated with a <see cref="MessageTemplate"/>.

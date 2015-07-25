@@ -14,7 +14,7 @@
 
 using MessageTemplates.Core;
 using MessageTemplates.Debugging;
-using MessageTemplates.Events;
+using MessageTemplates.Structure;
 using MessageTemplates.Parsing;
 
 namespace MessageTemplates.Parameters

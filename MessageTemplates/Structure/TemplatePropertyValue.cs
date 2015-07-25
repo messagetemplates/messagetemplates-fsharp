@@ -15,7 +15,7 @@
 using System;
 using System.IO;
 
-namespace MessageTemplates.Events
+namespace MessageTemplates.Structure
 {
     /// <summary>
     /// The value associated with a <see cref="TemplateProperty"/>. Divided into scalar,

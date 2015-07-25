@@ -19,7 +19,7 @@ using System.Linq;
 using System.Reflection;
 using MessageTemplates.Core;
 using MessageTemplates.Debugging;
-using MessageTemplates.Events;
+using MessageTemplates.Structure;
 using MessageTemplates.Parsing;
 using MessageTemplates.Policies;
 

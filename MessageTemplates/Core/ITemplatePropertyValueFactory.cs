@@ -1,4 +1,4 @@
-﻿using MessageTemplates.Events;
+﻿using MessageTemplates.Structure;
 
 namespace MessageTemplates.Core
 {

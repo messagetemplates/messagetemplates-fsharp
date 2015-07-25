@@ -15,7 +15,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using MessageTemplates.Events;
+using MessageTemplates.Structure;
 
 namespace MessageTemplates.Parsing
 {

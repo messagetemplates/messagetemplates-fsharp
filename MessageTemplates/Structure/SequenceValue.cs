@@ -17,30 +17,36 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-namespace MessageTemplates.Events
+namespace MessageTemplates.Structure
 {
     /// <summary>
-    /// A value represented as a mapping from keys to values.
+    /// A value represented as an ordered sequence of values.
     /// </summary>
-    public class DictionaryValue : TemplatePropertyValue
+    public class SequenceValue : TemplatePropertyValue
     {
-        readonly IReadOnlyDictionary<ScalarValue, TemplatePropertyValue> _elements;
+        readonly TemplatePropertyValue[] _elements;
 
         /// <summary>
-        /// Create a <see cref="DictionaryValue"/> with the provided <paramref name="elements"/>.
+        /// Create a <see cref="SequenceValue"/> with the provided <paramref name="elements"/>.
         /// </summary>
-        /// <param name="elements">The key-value mappings represented in the dictionary.</param>
+        /// <param name="elements">The elements of the sequence.</param>
         /// <exception cref="ArgumentNullException"></exception>
-        public DictionaryValue(IEnumerable<KeyValuePair<ScalarValue, TemplatePropertyValue>> elements)
+        public SequenceValue(IEnumerable<TemplatePropertyValue> elements)
         {
             if (elements == null) throw new ArgumentNullException("elements");
-            _elements = elements.ToDictionary40(kvp => kvp.Key, kvp => kvp.Value);
+            _elements = elements.ToArray();
         }
 
         /// <summary>
-        /// The dictionary mapping.
+        /// The elements of the sequence.
         /// </summary>
-        public IReadOnlyDictionary<ScalarValue, TemplatePropertyValue> Elements { get { return _elements; } }
+        public IReadOnlyList<TemplatePropertyValue> Elements
+        {
+            get
+            {
+                return _elements.ToListNet40();
+            }
+        }
 
         /// <summary>
         /// Render the value to the output.
@@ -54,16 +60,15 @@ namespace MessageTemplates.Events
             if (output == null) throw new ArgumentNullException("output");
 
             output.Write('[');
-            var delim = "(";
-            foreach (var kvp in _elements)
+            var allButLast = _elements.Length - 1;
+            for (var i = 0; i < allButLast; ++i )
             {
-                output.Write(delim);
-                delim = ", (";
-                kvp.Key.Render(output, null, formatProvider);
-                output.Write(": ");
-                kvp.Value.Render(output, null, formatProvider);
-                output.Write(")");
+                _elements[i].Render(output, format, formatProvider);
+                output.Write(", ");
             }
+
+            if (_elements.Length > 0)
+                _elements[_elements.Length - 1].Render(output, format, formatProvider);
 
             output.Write(']');
         }

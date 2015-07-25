@@ -16,7 +16,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using MessageTemplates.Debugging;
-using MessageTemplates.Events;
+using MessageTemplates.Structure;
 using MessageTemplates.Parsing;
 
 namespace MessageTemplates.Parameters
