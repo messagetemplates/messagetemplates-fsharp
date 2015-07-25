@@ -1,11 +1,29 @@
-version: 1.0.{build}
+version: 1.0.0-beta.{build}
+
+# Fix line endings in Windows. (runs before repo cloning)
+init:
+  - git config --global core.autocrlf input
+
+# this turns of AppVeyor automatic searching for test-assemblies, not the actual testing
+test_script:
+ - dnx MessageTemplates.Tests test
+ - packages\xunit.runner.console.2.0.0\tools\xunit.console.exe FsMessageTemplates.Tests\bin\Release\FsMessageTemplates.Tests.dll
+
 configuration: Release
-os: Unstable
+os: Visual Studio 2015
 platform: Any CPU
 install:
-  - nuget restore MessageTemplates.sln
+  - set PATH=%PROGRAMFILES(x86)%\MSBuild\14.0\Bin;%PATH%
+  - dnvm upgrade -alias default
+  - nuget restore
+  - dnu restore MessageTemplates
+  - dnu restore MessageTemplates.Tests
+  - set DNX_BUILD_VERSION=%APPVEYOR_BUILD_NUMBER%
 build:
-  verbosity: normal
-  project: MessageTemplates.sln
+  verbosity: minimal
   publish_nuget: true
   publish_nuget_symbols: true
+  parallel: true
+
+artifacts:
+- path: artifacts\bin\MessageTemplates\$(configuration)\*.nupkg

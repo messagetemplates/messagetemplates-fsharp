@@ -1,9 +1,9 @@
 ﻿module FsTests
 
 open Xunit
-open MessageTemplates.Parsing
 open FsMessageTemplates.MessageTemplates
 
+open MessageTemplates.Parsing
 let (|Null|Value|) (x: _ System.Nullable) = if x.HasValue then Value x.Value else Null
 let textToToken (tt: TextToken) = Token.Text({ StartIndex=tt.StartIndex; Text=tt.Text })
 let propToToken (pr: PropertyToken) =

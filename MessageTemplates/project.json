@@ -1,13 +1,15 @@
 ﻿{
-    "version": "1.0.0-*",
-    "description": "",
-    "authors": [ "Serilog Contributors" ],
-    "tags": [ "serilog message template" ],
-    "projectUrl": "",
-    "licenseUrl": "",
+    "version": "1.0.0-beta-*",
+    "title": "MessageTemplates",
+    "description": "Message templates - the ability to format named string values, and capture the properties.",
+    "authors": [ "Serilog Contributors, Adam Chester" ],
+    "tags": [ "message template serilog" ],
+    "projectUrl": "https://github.com/adamchester/MessageTemplates/",
+    "licenseUrl": "http://www.apache.org/licenses/LICENSE-2.0",
     "dependencies": {
     },
     "frameworks": {
+        "dnx451": { },
         "net40": {
             "compilationOptions": {
                 "define": [ "USE_READONLY_COLLECTION_40", "USE_REFLECTION_40", "USE_DYNAMIC" ]
