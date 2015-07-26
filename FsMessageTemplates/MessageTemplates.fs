@@ -63,11 +63,11 @@ let maybeInt32 s = match tryParseInt32 s with true, n -> Some n | false, _ -> No
 let parseTextToken (startAt:int) (template:string) (callersNextIndex: int ref) : Token =
     let first = startAt
     let next = ref startAt
-    let moveToNextChar() = next := !next + 1
-    let accum = lazy System.Text.StringBuilder()
+    let inline moveToNextChar() = next := !next + 1
+    let accum = System.Text.StringBuilder()
     let mutable isDone = false
-    let addCharToThisTextToken (c:char) = accum.Force().Append(c) |> ignore
-    let isNextChar (c:char) = !next+1 < template.Length && template.[!next+1] = c
+    let inline addCharToThisTextToken (c:char) = accum.Append(c) |> ignore
+    let inline isNextChar (c:char) = !next+1 < template.Length && template.[!next+1] = c
     while not isDone do
         let thisChar = template.[!next]
         if thisChar = '{' then
@@ -82,10 +82,11 @@ let parseTextToken (startAt:int) (template:string) (callersNextIndex: int ref) :
         isDone <- isDone || !next >= template.Length
 
     callersNextIndex := !next
-    if accum.IsValueCreated then Tk.text first (accum.Force().ToString())
+    if accum.Length > 0 then Tk.text first (accum.ToString())
     else Token.EmptyText
 
 type ch = System.Char
+
 let parsePropertyToken (startAt:int) (messageTemplate:string) (callersNextIndex: int ref) : Token =
     let first = startAt
     let mutable thisChIdx = startAt
