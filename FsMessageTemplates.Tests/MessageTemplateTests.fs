@@ -82,6 +82,28 @@ let ``doubled left brackets are parsed as a single bracket inside text`` (lang) 
                    [Tk.text 0 "Well, { Hi!"]
 
 [<LangTheory; LangCsFsData>]
+let ``doubled left and right brackets inside a property are parsed as text`` (lang) =
+    let template = "Hello, {nam{{adam}}}, how's it going?"
+    assertParsedAs lang template
+                   [Tk.text 0 "Hello, " // <- Arguably, there should be a single text token for the whole input
+                    Tk.text 7 "{nam{{adam}" //<- the double-braces are "wrong"
+                    Tk.text 18 "}, how's it going?"]
+
+[<LangTheory; LangCsFsData>]
+let ``performance is good`` (lang) =
+    let template = "Hello, {nam{{adam}}}, how's {whatever,-10:00,0} it going?"
+    
+    let test =
+        match lang with
+        | "C#" -> fun s -> MessageTemplates.MessageTemplate.Parse s |> ignore
+        | "F#" -> fun s -> FsMessageTemplates.MessageTemplates.parse s |> ignore
+        | s -> failwithf "unexpected lang %s" s
+
+    for i in 1..100000 do
+        test(template)
+
+
+[<LangTheory; LangCsFsData>]
 let ``doubled right brackets are parsed as a single bracket`` (lang) =
     let template = "Nice }}-: mo"
     assertParsedAs lang template

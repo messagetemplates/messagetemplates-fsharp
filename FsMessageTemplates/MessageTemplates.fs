@@ -58,18 +58,21 @@ module Tk =
     let propp tindex num = Token.Prop({ Text="{"+string num+"}"; StartIndex=tindex; }, { emptyProp with Name=string num; Pos=Some num })
 
 let tryParseInt32 s = System.Int32.TryParse(s, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture)
-let maybeInt32 s = match tryParseInt32 s with true, n -> Some n | false, _ -> None
+let maybeInt32 s =
+    if System.String.IsNullOrEmpty(s) then None
+    else match tryParseInt32 s with true, n -> Some n | false, _ -> None
 
 let parseTextToken (startAt:int) (template:string) (callersNextIndex: int ref) : Token =
     let first = startAt
-    let next = ref startAt
-    let inline moveToNextChar() = next := !next + 1
+    let mutable next = startAt
+    let inline moveToNextChar() = next <- next + 1
     let accum = System.Text.StringBuilder()
     let mutable isDone = false
     let inline addCharToThisTextToken (c:char) = accum.Append(c) |> ignore
-    let inline isNextChar (c:char) = !next+1 < template.Length && template.[!next+1] = c
+    let inline isNextChar (c:char) = next+1 < template.Length && template.[next+1] = c
+
     while not isDone do
-        let thisChar = template.[!next]
+        let thisChar = template.[next]
         if thisChar = '{' then
             if isNextChar '{' then addCharToThisTextToken thisChar; moveToNextChar()
             else
@@ -79,29 +82,35 @@ let parseTextToken (startAt:int) (template:string) (callersNextIndex: int ref) :
             if thisChar = '}' && isNextChar '}' then moveToNextChar () // treat "}}" as "}"
 
         if not isDone || thisChar <> '{' then moveToNextChar()
-        isDone <- isDone || !next >= template.Length
+        isDone <- isDone || next >= template.Length
 
-    callersNextIndex := !next
+    callersNextIndex := next
     if accum.Length > 0 then Tk.text first (accum.ToString())
     else Token.EmptyText
-
-type ch = System.Char
 
 let parsePropertyToken (startAt:int) (messageTemplate:string) (callersNextIndex: int ref) : Token =
     let first = startAt
     let mutable thisChIdx = startAt
-    let peekChAt (index) = messageTemplate.[index]
-    let isValidInPropName c = c = '_' || ch.IsLetterOrDigit c
-    let isValidInDestrHint c = c = '@' || c = '$'
-    let isValidInAlignment c = c = '-' || ch.IsDigit c
-    let isValidInFormat c = c <> '}' && (c = ' ' || ch.IsLetterOrDigit c || ch.IsPunctuation c)
-    let isValidCharInPropTag c = c = ':' || isValidInPropName c || isValidInFormat c || isValidInDestrHint c
-    let hasAnyInvlidChars (s:string) isValid = s.ToCharArray() |> Seq.exists (not << isValid)
+    let inline peekChAt (index) = messageTemplate.[index]
+    let inline isLetter c = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
+    let inline isDigit c = (c >= '0' && c <= '9')
+    let inline isLetterOrDigit c = isDigit c || isLetter c
+    let inline isValidInPropName c = c = '_' || isLetterOrDigit c
+    let inline isValidInDestrHint c = c = '@' || c = '$'
+    let inline isValidInAlignment c = c = '-' || isDigit c
+    let inline isValidInFormat c = c <> '}' && (c = ' ' || isLetterOrDigit c || System.Char.IsPunctuation c)
+    let inline isValidCharInPropTag c = c = ':' || isValidInPropName c || isValidInFormat c || isValidInDestrHint c
+    let inline isAnyInvalid isValid (s:string) =
+        let len = s.Length
+        let rec go i =
+            if i >= len then false
+            else if (isValid s.[i]) = true then go (i+1) else true
+        go 0
 
     /// "pname"                 > (valid=true, pnds="pname", format=None,             align=None        )
     /// "@abc:000"              > (valid=true, pnds="@abc",  format=Some "000",       align=None        )
     /// "$foo,-10:dd mmm yy"    > (valid=true, pnds="$foo",  format=Some "dd mmm yy", align=Some "-10"  )
-    let trySplitTagContent (tagContent: string) : bool * string * string option * string option =
+    let inline trySplitTagContent (tagContent: string) : bool * string * string option * string option =
         match tagContent.IndexOf(':'), tagContent.IndexOf(',') with
         | -1, -1 -> // neither align nor format 
             true, tagContent, None, None
@@ -118,10 +127,10 @@ let parsePropertyToken (startAt:int) (messageTemplate:string) (callersNextIndex:
             true, tagContent.Substring(0, fmtIdx), fmt, None
         | _, _ -> false, "", None, None // hammer time; you can't split this
     
-    let tryParseAlignInfo (s:string option) : bool * AlignInfo option =
+    let inline tryParseAlignInfo (s:string option) : bool * AlignInfo option =
         match s with
         | None -> true, None
-        | Some s when (hasAnyInvlidChars s isValidInAlignment) -> false, None
+        | Some s when (isAnyInvalid isValidInAlignment s) -> false, None
         | Some "" -> false, None
         | Some s ->
             let lastDashIdx = s.LastIndexOf('-')
@@ -159,11 +168,11 @@ let parsePropertyToken (startAt:int) (messageTemplate:string) (callersNextIndex:
             let propertyName = match destr with
                                | DestructureKind.Default -> nameAndDestr
                                | _ -> nameAndDestr.Substring(1)
-            if propertyName = "" || (hasAnyInvlidChars propertyName isValidInPropName) then
+            if propertyName = "" || (isAnyInvalid isValidInPropName propertyName) then
                 Tk.text first rawText // not a valid property
             else
-                if format.IsSome && (hasAnyInvlidChars format.Value isValidInFormat) then
-                    Tk.text first rawText
+                if format.IsSome && (isAnyInvalid isValidInFormat format.Value) then
+                    Tk.text first rawText 
                 else
                     match tryParseAlignInfo align with
                     | false, _ -> Tk.text first rawText
@@ -209,12 +218,22 @@ let createPositionalFormat (t: Template) =
         let alignToFormat = function Some a -> directionOrEmpty a.Width a.Direction | None -> ""
         match token with
         | Text ti -> ti.Text
-        | Prop (_, pi) -> sprintf "{%i%s%s}" (getNextPropPos()) (alignToFormat pi.Align) (formatOrEmpty pi.Format)
+        | Prop (_, pi) ->
+            let sb = System.Text.StringBuilder()
+            let inline append (s:string) = sb.Append s |> ignore
+            append "{"
+            append (string (getNextPropPos()))
+            if pi.Align.IsSome then
+                append (alignToFormat pi.Align)
+            if pi.Format.IsSome then
+                append (formatOrEmpty pi.Format)
+            append ("}")
+            sb.ToString()
 
     // generate numbers starting at zero, increasing +1 each call
     let nextPos =
         let i = ref -1
-        fun () -> i := !i + 1; !i
+        fun () -> incr i; !i
 
     let strings = t.Tokens |> Seq.map (tokenToPositionalFormat nextPos) |> Seq.toArray
     System.String.Join("", strings)
