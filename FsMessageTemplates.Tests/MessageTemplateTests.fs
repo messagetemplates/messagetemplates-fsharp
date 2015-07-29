@@ -5,7 +5,7 @@ open FsMessageTemplates.MessageTemplates
 
 open MessageTemplates.Parsing
 let (|Null|Value|) (x: _ System.Nullable) = if x.HasValue then Value x.Value else Null
-let textToToken (tt: TextToken) = Token.Text({ StartIndex=tt.StartIndex; Text=tt.Text })
+let textToToken (tt: TextToken) = Token.Text(tt.StartIndex, tt.Text)
 let propToToken (pr: PropertyToken) =
     let pos = match pr.TryGetPositionalValue() with
               | true, i -> Some i
@@ -20,18 +20,28 @@ let propToToken (pr: PropertyToken) =
                          | AlignmentDirection.Right -> Direction.Right
                          | _ -> failwithf "unknown direction %A" d
     let align = match pr.Alignment with
-                | Value v -> Some { Direction = (getDirection v.Direction)
-                                    Width = v.Width }
+                | Value v -> Some (AlignInfo(getDirection v.Direction, v.Width))
                 | Null _ -> None
     let format = match pr.Format with | null -> None | s -> Some s
-    Token.Prop({ StartIndex=pr.StartIndex; Text=pr.ToString() },
-               { Name=pr.PropertyName; Pos=pos; Destr=destr; Align=align; Format=format; })
+    Token.Prop(pr.StartIndex, PropertyData(pr.PropertyName, pos, destr, align, format))
 
 let mttToToken (mtt: MessageTemplateToken) : Token =
     match mtt with
     | :? PropertyToken as pt -> propToToken pt
     | :? TextToken as tt -> textToToken tt
     | _ -> failwithf "unknown token %A" mtt
+
+module Tk =
+    // let td tindex raw = { Text=raw; StartIndex=tindex }
+    let text tindex raw = Token.Text(tindex, raw)
+    let desDef = DestructureKind.Default
+    let prop tindex raw name = Token.Prop(tindex, PropertyData(name, None, desDef, None, None))
+    let propf tindex raw name format = Token.Prop(tindex, PropertyData(name, None, desDef, None, Some format))
+    let propd tindex raw name = Token.Prop(tindex, PropertyData(name, None, DestructureKind.Destructure, None, None))
+    let propds tindex raw name = Token.Prop(tindex, PropertyData(name, None, DestructureKind.Stringify, None, None))
+    let propar tindex raw name rightWidth = Token.Prop(tindex, PropertyData(name, None, desDef, Some (AlignInfo(Direction.Right, rightWidth)), None))
+    let propal tindex raw name leftWidth = Token.Prop(tindex, PropertyData(name, None, desDef, Some (AlignInfo(Direction.Left, leftWidth)), None))
+    let propp tindex num = Token.Prop(tindex, PropertyData(string num, Some num, desDef, None, None))
 
 open Swensen.Unquote.Assertions
 open System.Globalization
@@ -101,7 +111,6 @@ let ``performance is good`` (lang) =
 
     for i in 1..100000 do
         test(template)
-
 
 [<LangTheory; LangCsFsData>]
 let ``doubled right brackets are parsed as a single bracket`` (lang) =

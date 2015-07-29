@@ -167,6 +167,26 @@ namespace MessageTemplates
         }
 
         /// <summary>
+        /// Render
+        /// </summary>
+        public void Format(IFormatProvider formatProvider, TextWriter output, params object[] values)
+        {
+            var props = Capture(this, values);
+            this.Render(props.ToDictionary40(x => x.Name, x => x.Value), output, formatProvider);
+        }
+
+        /// <summary>
+        /// Render
+        /// </summary>
+        public string Format(IFormatProvider formatProvider, params object[] values)
+        {
+            var sw = new StringWriter(formatProvider);
+            Format(formatProvider, sw, values);
+            sw.Flush();
+            return sw.ToString();
+        }
+
+        /// <summary>
         /// Captures properties from the given message template and 
         /// provided values.
         /// </summary>
@@ -193,8 +213,7 @@ namespace MessageTemplates
             params object[] values)
         {
             var template = Parse(templateMessage);
-            var props = Capture(template, values);
-            template.Render(props.ToDictionary40(x => x.Name, x => x.Value), output, formatProvider);
+            template.Format(formatProvider, output, values);
         }
 
         /// <summary>
