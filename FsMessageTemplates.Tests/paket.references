@@ -1,0 +1,6 @@
+FsCheck
+MSBuild.Extension.Pack
+Unquote
+xunit
+xunit.runner.console
+xunit.runner.visualstudio
