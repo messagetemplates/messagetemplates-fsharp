@@ -27,7 +27,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessageTemplates.Profile344
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessageTemplates.PerfTests", "MessageTemplates.PerfTests\MessageTemplates.PerfTests.csproj", "{F93409C0-8D85-41C2-9D4A-137CF75059B9}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FsMessagetTemplates.Tests", "FsMessageTemplates.Tests\FsMessagetTemplates.Tests.fsproj", "{18EF9026-D9CC-4BE7-86E9-F7E1BF69845F}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FsMessageTemplates.Tests", "FsMessageTemplates.Tests\FsMessageTemplates.Tests.fsproj", "{18EF9026-D9CC-4BE7-86E9-F7E1BF69845F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

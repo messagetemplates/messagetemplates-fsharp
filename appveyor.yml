@@ -13,7 +13,8 @@ platform: Any CPU
 install:
   - set PATH=%PROGRAMFILES(x86)%\MSBuild\14.0\Bin;%PATH%
   - dnvm upgrade -alias default
-  - nuget restore
+  - .paket\paket.bootstrapper.exe
+  - .paket\paket.exe restore
   - dnu restore MessageTemplates
   - dnu restore MessageTemplates.Tests
   - set DNX_BUILD_VERSION=%APPVEYOR_BUILD_NUMBER%
