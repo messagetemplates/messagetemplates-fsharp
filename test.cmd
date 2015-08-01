@@ -1,5 +1,6 @@
 dnx MessageTemplates.Tests test
-xunit.console.clr4 FsMessageTemplates.Tests\bin\Release\FsMessageTemplates.Tests.dll /appveyor
+
+packages\xunit.runner.console\tools\xunit.console.x86.exe FsMessageTemplates.Tests\bin\Release\FsMessageTemplates.Tests.dll
 
 IF ['%APPVEYOR%'] == ['True'] (
 	vstest.console /Logger:AppVeyor MessageTemplates.PerfTests\bin\Release\MessageTemplates.PerfTests.dll
