@@ -5,7 +5,7 @@ init:
   - git config --global core.autocrlf input
 
 # this turns of AppVeyor automatic searching for test-assemblies, not the actual testing
-test_script: test.cmd
+# test_script: test.cmd
 
 configuration: Release
 os: Visual Studio 2015
