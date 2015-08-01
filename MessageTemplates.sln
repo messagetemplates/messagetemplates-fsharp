@@ -21,6 +21,11 @@ Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "MessageTemplates", "Message
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FsMessageTemplates", "FsMessageTemplates\FsMessageTemplates.fsproj", "{A3FFE923-B675-4E01-A085-6BB7C669CCFF}"
 EndProject
+<<<<<<< HEAD
+=======
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FsMessageTemplates.Tests", "FsMessageTemplates.Tests\FsMessageTemplates.Tests.fsproj", "{18EF9026-D9CC-4BE7-86E9-F7E1BF69845F}"
+EndProject
+>>>>>>> begin capturing/destructuring
 Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "MessageTemplates.Tests", "MessageTemplates.Tests\MessageTemplates.Tests.xproj", "{76BFEDD6-E686-47E6-BD7E-7062E0FA252F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessageTemplates.Profile344", "MessageTemplates\MessageTemplates.Profile344.csproj", "{EA4E4A86-AE2F-4A35-A2B1-BA7894CE3F95}"

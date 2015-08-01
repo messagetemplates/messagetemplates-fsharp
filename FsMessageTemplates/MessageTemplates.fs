@@ -20,7 +20,7 @@ type AlignInfo(d:Direction, w:int) =
             dir + string x.Width
 
 [<Struct>]
-type PropertyData(name:string, pos:int option, destr:DestructureKind, align: AlignInfo option, format: string option) =
+type PropertyToken(name:string, pos:int option, destr:DestructureKind, align: AlignInfo option, format: string option) =
     member __.Name = name
     member __.Pos = pos
     member __.Destr = destr
@@ -28,7 +28,7 @@ type PropertyData(name:string, pos:int option, destr:DestructureKind, align: Ali
     member __.Format = format
     with
         member x.IsPositional with get() = x.Pos.IsSome
-        static member Empty = PropertyData("", None, DestructureKind.Default, None, None)
+        static member Empty = PropertyToken("", None, DestructureKind.Default, None, None)
         override x.ToString() =
             let sb = System.Text.StringBuilder()
             let append (s:string) = sb.Append(s) |> ignore
@@ -42,17 +42,14 @@ type PropertyData(name:string, pos:int option, destr:DestructureKind, align: Ali
 
 type Token =
 | Text of startIndex:int * text:string
-| Prop of startIndex:int * PropertyData
+| Prop of startIndex:int * PropertyToken
     with static member EmptyText = Text(emptyTokenData)
-         static member EmptyProp = Prop(0, PropertyData.Empty)
+         static member EmptyProp = Prop(0, PropertyToken.Empty)
          override x.ToString() = match x with
                                  | Text (_, s) -> s
                                  | Prop (_, pd) -> (string pd)
 
 type Template = { FormatString: string; Tokens: Token list }
-
-module Tk =
-    let text tindex raw = Token.Text(tindex, raw)
 
 let tryParseInt32 s = System.Int32.TryParse(s, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture)
 let maybeInt32 s =
@@ -60,21 +57,22 @@ let maybeInt32 s =
     else match tryParseInt32 s with true, n -> Some n | false, _ -> None
 
 let parseTextToken (startAt:int) (template:string) : int*Token =
-    let tlen = template.Length
+    let chars = template
+    let tlen = chars.Length
     let sb = System.Text.StringBuilder()
     let inline append (ch:char) = sb.Append(ch) |> ignore
     let rec go i =
         if i >= tlen then tlen, Text(startAt, sb.ToString())
         else
-            let c = template.[i]
+            let c = chars.[i]
             match c with
             | '{' ->
-                if (i+1) < tlen && template.[i+1] = '{' then append c; go (i+2) (*c::acc*) // treat "{{" and a single "{"
+                if (i+1) < tlen && chars.[i+1] = '{' then append c; go (i+2) (*c::acc*) // treat "{{" and a single "{"
                 else
                     // start of a property, bail out here
                     if i = startAt then startAt, Token.EmptyText
                     else i, Text(startAt, sb.ToString())
-            | '}' when (i+1) < tlen && template.[i+1] = '}' -> // treat "}}" as a single "}"
+            | '}' when (i+1) < tlen && chars.[i+1] = '}' -> // treat "}}" as a single "}"
                 append c
                 go (i+2) (*c::acc*) 
             | _ ->
@@ -83,12 +81,10 @@ let parseTextToken (startAt:int) (template:string) : int*Token =
                 go (i+1) (*c::acc*)
     go startAt
 
-let inline isLetter c = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
-let inline isDigit c = (c >= '0' && c <= '9')
-let inline isLetterOrDigit c = isDigit c || isLetter c
+let inline isLetterOrDigit c = System.Char.IsLetterOrDigit(c)
 let inline isValidInPropName c = c = '_' || isLetterOrDigit c
 let inline isValidInDestrHint c = c = '@' || c = '$'
-let inline isValidInAlignment c = c = '-' || isDigit c
+let inline isValidInAlignment c = c = '-' || System.Char.IsDigit(c)
 let inline isValidInFormat c = c <> '}' && (c = ' ' || isLetterOrDigit c || System.Char.IsPunctuation c)
 let inline isValidCharInPropTag c = c = ':' || isValidInPropName c || isValidInFormat c || isValidInDestrHint c
 let inline tryGetFirstChar predicate (s:string) first =
@@ -99,11 +95,16 @@ let inline tryGetFirstChar predicate (s:string) first =
     go first
 
 [<Struct>]
-type Range(startPos:int, endPos:int) =
-    member __.Start = startPos
-    member __.End = endPos
-    member __.GetSubString (s:string) = s.Substring(startPos, (endPos - startPos) + 1)
-    override __.ToString() = (string startPos) + ", " + (string endPos)
+type Range(startIndex:int, endIndex:int) =
+    member this.Start = startIndex
+    member this.End = endIndex
+    member this.Length = (endIndex - startIndex) + 1
+    member this.GetSubString (s:string) = s.Substring(startIndex, this.Length)
+    member this.IncreaseBy startNum endNum = Range(startIndex+startNum, endIndex+endNum)
+    member this.Right (startFromIndex:int) =
+        if startFromIndex < startIndex then invalidArg "startFromIndex" "startFromIndex must be >= Start"
+        Range(startIndex, this.End)
+    override __.ToString() = (string startIndex) + ", " + (string endIndex)
 
 let tryGetFirstCharRng predicate (s:string) (rng:Range) =
     let rec go i =
@@ -181,29 +182,33 @@ let tryGetPropInSubString (t:string) (within : Range) : Token option =
              | true, alignInfo ->
                 let format = formatRange |> Option.map (fun rng -> rng.GetSubString t)
                 Some (Prop(within.Start - 1, 
-                           PropertyData(propertyName, maybeInt32 propertyName, destr, alignInfo, format)))
+                           PropertyToken(propertyName, maybeInt32 propertyName, destr, alignInfo, format)))
 
 let parsePropertyToken (startAt:int) (messageTemplate:string) : int*Token =
     let tlen = messageTemplate.Length
+    let inline getc idx = messageTemplate.[idx]
     let first = startAt
-    
-    // skip over characters until we reach a character that is *NOT* a valid part of
-    // the property tag
-    let nextInvalidIdx = match tryGetFirstChar (not << isValidCharInPropTag) messageTemplate (first+1) with
-                         | Some idx -> idx
-                         | None _ -> tlen
+
+    // skip over characters after the open-brace, until we reach a character that
+    // is *NOT* a valid part of the property tag. this will be the close brace character
+    // if the template is actually a well-formed property tag.
+    let tryGetFirstInvalidInProp = tryGetFirstChar (not << isValidCharInPropTag)
+    let nextInvalidCharIndex =
+        match tryGetFirstInvalidInProp messageTemplate (first+1) with
+        | Some idx -> idx
+        | None -> tlen
 
     // if we stopped at the end of the string or the last char wasn't a close brace
     // then we treat all the characters we found as a text token, and finish.
-    if nextInvalidIdx = tlen || messageTemplate.[nextInvalidIdx] <> '}' then
-        nextInvalidIdx, Tk.text first (messageTemplate.Substring(first, nextInvalidIdx - first))
+    if nextInvalidCharIndex = tlen || getc nextInvalidCharIndex <> '}' then
+        nextInvalidCharIndex, Token.Text(first, messageTemplate.Substring(first, nextInvalidCharIndex - first))
     else
         // skip over the trailing "}" close prop tag
-        let nextIndex = nextInvalidIdx + 1
+        let nextIndex = nextInvalidCharIndex + 1
         let propInsidesRng = Range(first + 1, nextIndex - 2)
         match tryGetPropInSubString messageTemplate propInsidesRng with
         | Some p -> nextIndex, p
-        | None _ -> nextIndex, Tk.text first (messageTemplate.Substring(first, nextIndex - first))
+        | None _ -> nextIndex, Token.Text(first, (messageTemplate.Substring(first, nextIndex - first)))
 
 let emptyTextTokenList = [ Token.EmptyText ]
 
@@ -230,7 +235,40 @@ let parseTokens (template:string) : Token list =
 
 let parse (s:string) = { FormatString = s; Tokens = s |> parseTokens }
 
-let captureProperties (t:Template) (args:obj[]) : (PropertyData * obj) seq = Seq.empty // todo
+/// A simple value type.
+type Scalar =
+| Bool of bool | Char of char | Byte of byte
+| Int16 of int16 | UInt16 of uint16
+| Int32 of int32 | UInt32 of uint32
+| Int64 of int64 | UInt64 of uint64
+| Single of single | Double of double
+| Decimal of decimal | String of string
+| DateTime of System.DateTime | DateTimeOffset of System.DateTimeOffset
+| TimeSpan of System.TimeSpan | Guid of System.Guid | Uri of System.Uri
+| Custom of obj // Is this necessary? Looks like C# supports it via destr. policies?
+
+type ScalarKeyValuePair = Scalar * obj
+
+type TemplatePropertyValue =
+| ScalarValue of Scalar
+| SequenceValue of TemplatePropertyValue seq
+| StructureValue of typeTag:string option * values:(string*obj) seq
+| DictionaryValue of data: ScalarKeyValuePair seq
+
+type PropertyAndValue = PropertyToken * TemplatePropertyValue
+
+/// Describes the number of objects depth
+[<Measure>] type ObjsDeep
+
+/// Destructures an object 
+type Destructurer = DestructureKind -> int<ObjsDeep> -> obj -> PropertyAndValue
+
+/// Extracts the properties for a template from the array of objects.
+let captureProperties (destructure: Destructurer)
+                      (template:Template)
+                      (args:obj[])
+                      : PropertyAndValue seq =
+    Seq.empty 
 
 /// Converts a template message in a System.String.Format (positional) template
 /// e.g. "abc {@def}" would become "abc {0}"

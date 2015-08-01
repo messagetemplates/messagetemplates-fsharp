@@ -3,45 +3,50 @@
 open Xunit
 open FsMessageTemplates.MessageTemplates
 
-open MessageTemplates.Parsing
+type CsTextToken = MessageTemplates.Parsing.TextToken
+type CsPropertyToken = MessageTemplates.Parsing.PropertyToken
+type CsDestructuring = MessageTemplates.Parsing.Destructuring
+type CsAlignmentDirection = MessageTemplates.Parsing.AlignmentDirection
+type CsMessageTemplateToken = MessageTemplates.Parsing.MessageTemplateToken
+
 let (|Null|Value|) (x: _ System.Nullable) = if x.HasValue then Value x.Value else Null
-let textToToken (tt: TextToken) = Token.Text(tt.StartIndex, tt.Text)
-let propToToken (pr: PropertyToken) =
+let textToToken (tt: CsTextToken) = Token.Text(tt.StartIndex, tt.Text)
+let propToToken (pr: CsPropertyToken) =
     let pos = match pr.TryGetPositionalValue() with
               | true, i -> Some i
               | false, _ -> None
     let destr = match pr.Destructuring with
-                | Destructuring.Default -> DestructureKind.Default
-                | Destructuring.Destructure -> DestructureKind.Destructure
-                | Destructuring.Stringify -> DestructureKind.Stringify
+                | CsDestructuring.Default -> DestructureKind.Default
+                | CsDestructuring.Destructure -> DestructureKind.Destructure
+                | CsDestructuring.Stringify -> DestructureKind.Stringify
                 | d -> failwithf "unknown destructure %A" d
     let getDirection d = match d with
-                         | AlignmentDirection.Left -> Direction.Left
-                         | AlignmentDirection.Right -> Direction.Right
+                         | CsAlignmentDirection.Left -> Direction.Left
+                         | CsAlignmentDirection.Right -> Direction.Right
                          | _ -> failwithf "unknown direction %A" d
     let align = match pr.Alignment with
                 | Value v -> Some (AlignInfo(getDirection v.Direction, v.Width))
                 | Null _ -> None
     let format = match pr.Format with | null -> None | s -> Some s
-    Token.Prop(pr.StartIndex, PropertyData(pr.PropertyName, pos, destr, align, format))
+    Token.Prop(pr.StartIndex, PropertyToken(pr.PropertyName, pos, destr, align, format))
 
-let mttToToken (mtt: MessageTemplateToken) : Token =
+let mttToToken (mtt: CsMessageTemplateToken) : Token =
     match mtt with
-    | :? PropertyToken as pt -> propToToken pt
-    | :? TextToken as tt -> textToToken tt
+    | :? CsPropertyToken as pt -> propToToken pt
+    | :? CsTextToken as tt -> textToToken tt
     | _ -> failwithf "unknown token %A" mtt
 
 module Tk =
     // let td tindex raw = { Text=raw; StartIndex=tindex }
     let text tindex raw = Token.Text(tindex, raw)
     let desDef = DestructureKind.Default
-    let prop tindex raw name = Token.Prop(tindex, PropertyData(name, None, desDef, None, None))
-    let propf tindex raw name format = Token.Prop(tindex, PropertyData(name, None, desDef, None, Some format))
-    let propd tindex raw name = Token.Prop(tindex, PropertyData(name, None, DestructureKind.Destructure, None, None))
-    let propds tindex raw name = Token.Prop(tindex, PropertyData(name, None, DestructureKind.Stringify, None, None))
-    let propar tindex raw name rightWidth = Token.Prop(tindex, PropertyData(name, None, desDef, Some (AlignInfo(Direction.Right, rightWidth)), None))
-    let propal tindex raw name leftWidth = Token.Prop(tindex, PropertyData(name, None, desDef, Some (AlignInfo(Direction.Left, leftWidth)), None))
-    let propp tindex num = Token.Prop(tindex, PropertyData(string num, Some num, desDef, None, None))
+    let prop tindex (_:string) name = Token.Prop(tindex, PropertyToken(name, None, desDef, None, None))
+    let propf tindex (_:string) name format = Token.Prop(tindex, PropertyToken(name, None, desDef, None, Some format))
+    let propd tindex (_:string) name = Token.Prop(tindex, PropertyToken(name, None, DestructureKind.Destructure, None, None))
+    let propds tindex (_:string) name = Token.Prop(tindex, PropertyToken(name, None, DestructureKind.Stringify, None, None))
+    let propar tindex (_:string) name rightWidth = Token.Prop(tindex, PropertyToken(name, None, desDef, Some (AlignInfo(Direction.Right, rightWidth)), None))
+    let propal tindex (_:string) name leftWidth = Token.Prop(tindex, PropertyToken(name, None, desDef, Some (AlignInfo(Direction.Left, leftWidth)), None))
+    let propp tindex num = Token.Prop(tindex, PropertyToken(string num, Some num, desDef, None, None))
 
 open Swensen.Unquote.Assertions
 open System.Globalization
@@ -109,7 +114,7 @@ let ``performance is good`` (lang) =
         | "F#" -> fun s -> FsMessageTemplates.MessageTemplates.parse s |> ignore
         | s -> failwithf "unexpected lang %s" s
 
-    for i in 1..100000 do
+    for _ in 1..100000 do
         test(template)
 
 [<LangTheory; LangCsFsData>]
