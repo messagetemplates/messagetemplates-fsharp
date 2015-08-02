@@ -9,7 +9,7 @@
 [<Literal>]
 let template = "Hello, namasdf,asdfadam, how's it {going}?"
 [<Literal>]
-let iterations = 2000000
+let iterations = 200000
 
 System.GC.Collect(3, System.GCCollectionMode.Forced, blocking=true)
 let p = System.Globalization.CultureInfo.InvariantCulture

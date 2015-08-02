@@ -22,7 +22,7 @@ namespace MessageTemplates.PerfTests
             "Welcome, customer #{CustomerId:0,0}, pleasure to see you",
         };
 
-        const int TEST_ITERATIONS = 30000;
+        const int TEST_ITERATIONS = 3000;
 
         [TestMethod]
         public void CSharpPerformanceIsGoodFor30kParseRounds()
