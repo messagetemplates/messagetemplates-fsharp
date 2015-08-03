@@ -1,11 +1,9 @@
 ﻿module FsMessageTemplates.MessageTemplates
 
+open System
+
 type DestructureKind = Default = 0 | Stringify = 1 | Destructure = 2
-let getDestrFromChar = function
-                       | '@' -> DestructureKind.Destructure
-                       | '$' -> DestructureKind.Stringify
-                       | _ -> DestructureKind.Default
-        
+
 let emptyTokenData = (0, "")
 
 type Direction = Left = 0 | Right = 1
@@ -15,7 +13,7 @@ type AlignInfo(d:Direction, w:int) =
     member __.Direction = d
     member __.Width = w
     with static member Default = AlignInfo(Direction.Left, 0)
-         override x.ToString() =
+            override x.ToString() =
             let dir = if x.Direction = Direction.Right then "-" else ""
             dir + string x.Width
 
@@ -44,12 +42,41 @@ type Token =
 | Text of startIndex:int * text:string
 | Prop of startIndex:int * PropertyToken
     with static member EmptyText = Text(emptyTokenData)
-         static member EmptyProp = Prop(0, PropertyToken.Empty)
-         override x.ToString() = match x with
-                                 | Text (_, s) -> s
-                                 | Prop (_, pd) -> (string pd)
+            static member EmptyProp = Prop(0, PropertyToken.Empty)
+            override x.ToString() = match x with
+                                    | Text (_, s) -> s
+                                    | Prop (_, pd) -> (string pd)
 
 type Template = { FormatString: string; Tokens: Token list }
+
+/// A simple value type.
+type Scalar =
+| [<CompilationRepresentation(CompilationRepresentationFlags.UseNullAsTrueValue)>] Null
+| Bool of bool | Char of char | Byte of byte
+| Int16 of int16 | UInt16 of uint16
+| Int32 of int32 | UInt32 of uint32
+| Int64 of int64 | UInt64 of uint64
+| Single of single | Double of double
+| Decimal of decimal | String of string
+| DateTime of System.DateTime | DateTimeOffset of System.DateTimeOffset
+| TimeSpan of System.TimeSpan | Guid of System.Guid | Uri of System.Uri
+| Custom of obj // Is this necessary? Looks like C# supports it via destr. policies?
+
+type ScalarKeyValuePair = Scalar * obj
+type PropertyNameAndValue = string * TemplatePropertyValue
+and TemplatePropertyValue =
+| ScalarValue of Scalar
+| SequenceValue of TemplatePropertyValue seq
+| StructureValue of typeTag:string option * values:PropertyNameAndValue list
+| DictionaryValue of data: ScalarKeyValuePair seq
+
+type Destructurer = DestructureRequest -> PropertyNameAndValue option
+and DestructureRequest = { tryDestructure:Destructurer; Kind:DestructureKind; Value:obj }
+
+let getDestrFromChar = function
+                       | '@' -> DestructureKind.Destructure
+                       | '$' -> DestructureKind.Stringify
+                       | _ -> DestructureKind.Default
 
 let tryParseInt32 s = System.Int32.TryParse(s, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture)
 let maybeInt32 s =
@@ -235,52 +262,76 @@ let parseTokens (template:string) : Token list =
 
 let parse (s:string) = { FormatString = s; Tokens = s |> parseTokens }
 
-/// A simple value type.
-type Scalar =
-| Bool of bool | Char of char | Byte of byte
-| Int16 of int16 | UInt16 of uint16
-| Int32 of int32 | UInt32 of uint32
-| Int64 of int64 | UInt64 of uint64
-| Single of single | Double of double
-| Decimal of decimal | String of string
-| DateTime of System.DateTime | DateTimeOffset of System.DateTimeOffset
-| TimeSpan of System.TimeSpan | Guid of System.Guid | Uri of System.Uri
-| Custom of obj // Is this necessary? Looks like C# supports it via destr. policies?
+type DtOffset = System.DateTimeOffset
+let builtInScalarTypeFactories : (System.Type * (obj->Scalar option)) array =
+    [|
+         typedefof<bool>,       function :? bool as v -> Some (Scalar.Bool v)               | _ -> None
+         typedefof<char>,       function :? char as v -> Some (Scalar.Char v)               | _ -> None
+         typedefof<byte>,       function :? byte as v -> Some (Scalar.Byte v)               | _ -> None
+         typedefof<int16>,      function :? int16 as v -> Some (Scalar.Int16 v)             | _ -> None
+         typedefof<uint16>,     function :? uint16 as v -> Some (Scalar.UInt16 v)           | _ -> None
+         typedefof<int32>,      function :? int as v -> Some (Scalar.Int32 v)               | _ -> None
+         typedefof<uint32>,     function :? uint32 as v -> Some (Scalar.UInt32 v)           | _ -> None
+         typedefof<int64>,      function :? int64 as v -> Some (Scalar.Int64 v)             | _ -> None
+         typedefof<uint64>,     function :? uint64 as v -> Some (Scalar.UInt64 v)           | _ -> None
+         typedefof<single>,     function :? single as v -> Some (Scalar.Single v)           | _ -> None
+         typedefof<double>,     function :? double as v -> Some (Scalar.Double v)           | _ -> None
+         typedefof<decimal>,    function :? decimal as v -> Some (Scalar.Decimal v)         | _ -> None
+         typedefof<string>,     function :? string as v -> Some (Scalar.String v)           | _ -> None
+         typedefof<DateTime>,   function :? DateTime as v -> Some (Scalar.DateTime v)       | _ -> None
+         typedefof<DtOffset>,   function :? DtOffset as v -> Some (Scalar.DateTimeOffset v) | _ -> None
+         typedefof<TimeSpan>,   function :? TimeSpan as v -> Some (Scalar.TimeSpan v)       | _ -> None
+         typedefof<Guid>,       function :? Guid as v -> Some (Scalar.Guid v)               | _ -> None
+         typedefof<Uri>,        function :? Uri as v -> Some (Scalar.Uri v)                 | _ -> None
+    |]
 
-type ScalarKeyValuePair = Scalar * obj
+let builtInScalarDictionary = builtInScalarTypeFactories |> dict
+let builtInTryConvertToScalar (value:obj) = 
+    if value = null then None
+    else
+        match builtInScalarDictionary.TryGetValue (value.GetType()) with
+        | false, _ -> None
+        | true, tryGetFn ->
+            match tryGetFn value with
+            | Some v -> Some (ScalarValue v)
+            | _ -> None
 
-type TemplatePropertyValue =
-| ScalarValue of Scalar
-| SequenceValue of TemplatePropertyValue seq
-| StructureValue of typeTag:string option * values:(string*obj) seq
-| DictionaryValue of data: ScalarKeyValuePair seq
-
-type PropertyAndValue = PropertyToken * TemplatePropertyValue
-
-/// Describes the number of objects depth
-[<Measure>] type ObjsDeep
-
-/// Destructures an object 
-type Destructurer = DestructureKind -> int<ObjsDeep> -> obj -> PropertyAndValue
+let defaultDestructure (req: DestructureRequest)
+                       (name: string)
+                       : PropertyNameAndValue option =
+    let typeOrNone o = match o with null -> None | v -> Some (v.GetType())
+    match req.Value, typeOrNone req.Value, req.Kind with
+    | null, _, _                                -> Some (name, ScalarValue Scalar.Null)
+    | value, Some ty, DestructureKind.Stringify -> Some (name, ScalarValue (String (value.ToString())))
+    | value, Some ty, destr -> req.tryDestructure req // TODO:
+    | _, _, _ -> None
 
 /// Extracts the properties for a template from the array of objects.
 let captureProperties (destructure: Destructurer)
                       (template:Template)
                       (args:obj[])
-                      : PropertyAndValue seq =
-    Seq.empty 
+                      : (PropertyToken * PropertyNameAndValue option) seq =
+    let extractPropertyTokens = function Prop (_, pd) -> Some pd | _ -> None
+
+    template.Tokens
+    |> Seq.choose extractPropertyTokens
+    |> Seq.zip args
+    |> Seq.map (fun (value, prop) ->
+        let req = { tryDestructure=destructure; Kind=DestructureKind.Destructure; Value=value; }
+        prop, defaultDestructure req prop.Name
+    )
 
 /// Converts a template message in a System.String.Format (positional) template
 /// e.g. "abc {@def}" would become "abc {0}"
-let createPositionalFormat (t: Template) =
-    let sb = System.Text.StringBuilder()
-    let inline append (s:string) = sb.Append s |> ignore
+let writeTokens (p:IFormatProvider) (tw: IO.TextWriter) (t: Template) =
+    let inline appendFormat (format:string) (v:obj) = tw.Write(format, [|v|])
+    let inline append (s:string) = tw.Write(s)
     let formatOrEmpty = function Some "" | None -> "" | Some s -> ":" + s
     let directionOrEmpty (width:int) =
         function | Direction.Right -> ",-" + string width | Direction.Left | _ -> "," + string width
     let alignToFormat = function Some (a:AlignInfo) -> directionOrEmpty a.Width a.Direction | None -> ""
 
-    let rec appendAllPositional (items:Token list) nextPosNum =
+    let rec appendAllPositional (items:PropertyAndValue list) nextPosNum =
         match items.Head with
         | Text (_, s) ->
             append s

@@ -18,11 +18,11 @@ type AlignInfo =
 type PropertyToken =
     /// Constructs a new instance of a template property.
     new: name:string
-         * pos:int option
-         * destr:DestructureKind
-         * align: AlignInfo option
-         * format: string option
-         -> PropertyToken
+            * pos:int option
+            * destr:DestructureKind
+            * align: AlignInfo option
+            * format: string option
+            -> PropertyToken
     /// The name of the property.
     member Name:string
     /// If the property was positional (i.e. {0} or {1}, instead of {name}), this
@@ -53,18 +53,10 @@ type Token =
 /// A template, including the message and parsed properties.
 type Template = { FormatString: string; Tokens: Token list }
 
-/// Parses a message template string.
-val parse: template:string -> Template
-
-/// Formats a message template as a string, replacing the properties
-/// with the provided values.
-val format: provider:System.IFormatProvider
-            -> template:Template
-            -> values:obj[]
-            -> string
-
 /// A simple value type.
 type Scalar =
+| [<CompilationRepresentation(CompilationRepresentationFlags.UseNullAsTrueValue)>]
+  Null
 | Bool of bool | Char of char | Byte of byte
 | Int16 of int16 | UInt16 of uint16
 | Int32 of int32 | UInt32 of uint32
@@ -75,24 +67,36 @@ type Scalar =
 | TimeSpan of System.TimeSpan | Guid of System.Guid | Uri of System.Uri
 | Custom of obj // Is this necessary? Looks like C# supports it via destr. policies?
 
+/// A key and value pair, used as part of <see cref="TemplatePropertyValue.DictionaryValue" />.
 type ScalarKeyValuePair = Scalar * obj
 
+/// Describes the kinds of destructured property values captured from a message template.
 type TemplatePropertyValue =
 | ScalarValue of Scalar
 | SequenceValue of TemplatePropertyValue seq
-| StructureValue of typeTag:string option * values:(string*obj) seq
+| StructureValue of typeTag:string option * values:(string*TemplatePropertyValue) list
 | DictionaryValue of data: ScalarKeyValuePair seq
 
-type PropertyAndValue = PropertyToken * TemplatePropertyValue
+/// A property and it's associated destructured value.
+type PropertyNameAndValue = string * TemplatePropertyValue
 
-/// Describes the number of objects depth
-[<Measure>] type ObjsDeep
+/// A function that attempts to destructure an object into a 
+/// more friendly (and immutable) <see cref="TemplatePropertyValue" />.
+type Destructurer = DestructureRequest -> PropertyNameAndValue option
+and DestructureRequest = { tryDestructure:Destructurer; Kind:DestructureKind; Value:obj }
 
-/// Destructures an object 
-type Destructurer = DestructureKind -> int<ObjsDeep> -> obj -> PropertyAndValue
+/// Parses a message template string.
+val parse: template:string -> Template
+
+/// Formats a message template as a string, replacing the properties
+/// with the provided values.
+val format: provider:System.IFormatProvider
+            -> template:Template
+            -> values:obj[]
+            -> string
 
 /// Extracts the properties for a template from the array of objects.
 val captureProperties: destructure: Destructurer
                        -> template:Template
                        -> args:obj[]
-                       -> PropertyAndValue seq
+                       -> PropertyNameAndValue seq

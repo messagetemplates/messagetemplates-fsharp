@@ -84,7 +84,11 @@
   <ItemGroup>
     <None Include="packages.config" />
     <None Include="App.config" />
-    <Compile Include="MessageTemplateTests.fs" />
+    <Compile Include="Tk.fs" />
+    <Compile Include="CsToFs.fs" />
+    <Compile Include="XunitSupport.fs" />
+    <Compile Include="FsTests.Parser.fs" />
+    <Compile Include="FsTests.CaptureFormat.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="FsCheck">
