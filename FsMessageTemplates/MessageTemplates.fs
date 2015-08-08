@@ -48,6 +48,12 @@ type Token =
                                     | Prop (_, pd) -> (string pd)
 
 type Template = { FormatString: string; Tokens: Token list }
+    with member this.GetPositionalProperties() =
+                    let choosePositionalPropertyToken t = match t with Token.Prop (_, pd) when pd.IsPositional -> Some pd | _ -> None
+                    this.Tokens |> Seq.choose choosePositionalPropertyToken |> Seq.toArray
+         member this.GetNamedProperties () =
+                    let chooseNonePositionalPropertyToken t = match t with Token.Prop (_, pd) when pd.IsPositional = false -> Some pd | _ -> None
+                    this.Tokens |> Seq.choose chooseNonePositionalPropertyToken |> Seq.toArray
 
 /// A simple value type.
 type Scalar =
@@ -61,7 +67,7 @@ type Scalar =
 | DateTime of System.DateTime | DateTimeOffset of System.DateTimeOffset
 | TimeSpan of System.TimeSpan | Guid of System.Guid | Uri of System.Uri
 | Custom of obj // Is this necessary? Looks like C# supports it via destr. policies?
-
+        
 type ScalarKeyValuePair = Scalar * obj
 type PropertyNameAndValue = string * TemplatePropertyValue
 and TemplatePropertyValue =
@@ -70,8 +76,11 @@ and TemplatePropertyValue =
 | StructureValue of typeTag:string option * values:PropertyNameAndValue list
 | DictionaryValue of data: ScalarKeyValuePair seq
 
-type Destructurer = DestructureRequest -> PropertyNameAndValue option
-and DestructureRequest = { tryDestructure:Destructurer; Kind:DestructureKind; Value:obj }
+type Destructurer = DestructureRequest -> TemplatePropertyValue option
+and DestructureRequest = {
+    Kind: DestructureKind
+    Value: obj
+    It: Destructurer }
 
 let getDestrFromChar = function
                        | '@' -> DestructureKind.Destructure
@@ -83,10 +92,14 @@ let maybeInt32 s =
     if System.String.IsNullOrEmpty(s) then None
     else match tryParseInt32 s with true, n -> Some n | false, _ -> None
 
+let getSb =
+    let sb = Text.StringBuilder()
+    fun () -> sb.Length <- 0;  sb
+
 let parseTextToken (startAt:int) (template:string) : int*Token =
     let chars = template
     let tlen = chars.Length
-    let sb = System.Text.StringBuilder()
+    let sb = getSb()
     let inline append (ch:char) = sb.Append(ch) |> ignore
     let rec go i =
         if i >= tlen then tlen, Text(startAt, sb.ToString())
@@ -262,94 +275,199 @@ let parseTokens (template:string) : Token list =
 
 let parse (s:string) = { FormatString = s; Tokens = s |> parseTokens }
 
+
+open System
 type DtOffset = System.DateTimeOffset
-let builtInScalarTypeFactories : (System.Type * (obj->Scalar option)) array =
-    [|
-         typedefof<bool>,       function :? bool as v -> Some (Scalar.Bool v)               | _ -> None
-         typedefof<char>,       function :? char as v -> Some (Scalar.Char v)               | _ -> None
-         typedefof<byte>,       function :? byte as v -> Some (Scalar.Byte v)               | _ -> None
-         typedefof<int16>,      function :? int16 as v -> Some (Scalar.Int16 v)             | _ -> None
-         typedefof<uint16>,     function :? uint16 as v -> Some (Scalar.UInt16 v)           | _ -> None
-         typedefof<int32>,      function :? int as v -> Some (Scalar.Int32 v)               | _ -> None
-         typedefof<uint32>,     function :? uint32 as v -> Some (Scalar.UInt32 v)           | _ -> None
-         typedefof<int64>,      function :? int64 as v -> Some (Scalar.Int64 v)             | _ -> None
-         typedefof<uint64>,     function :? uint64 as v -> Some (Scalar.UInt64 v)           | _ -> None
-         typedefof<single>,     function :? single as v -> Some (Scalar.Single v)           | _ -> None
-         typedefof<double>,     function :? double as v -> Some (Scalar.Double v)           | _ -> None
-         typedefof<decimal>,    function :? decimal as v -> Some (Scalar.Decimal v)         | _ -> None
-         typedefof<string>,     function :? string as v -> Some (Scalar.String v)           | _ -> None
-         typedefof<DateTime>,   function :? DateTime as v -> Some (Scalar.DateTime v)       | _ -> None
-         typedefof<DtOffset>,   function :? DtOffset as v -> Some (Scalar.DateTimeOffset v) | _ -> None
-         typedefof<TimeSpan>,   function :? TimeSpan as v -> Some (Scalar.TimeSpan v)       | _ -> None
-         typedefof<Guid>,       function :? Guid as v -> Some (Scalar.Guid v)               | _ -> None
-         typedefof<Uri>,        function :? Uri as v -> Some (Scalar.Uri v)                 | _ -> None
-    |]
 
-let builtInScalarDictionary = builtInScalarTypeFactories |> dict
-let builtInTryConvertToScalar (value:obj) = 
-    if value = null then None
-    else
-        match builtInScalarDictionary.TryGetValue (value.GetType()) with
-        | false, _ -> None
-        | true, tryGetFn ->
-            match tryGetFn value with
-            | Some v -> Some (ScalarValue v)
-            | _ -> None
+let private tryCastAs<'T> (o:obj) =  match o with | :? 'T as res -> Some res | _ -> None
+type private TypeScalarFactoryTuple = Type * (obj->Scalar option)
+let private builtInScalarTypeFactories : TypeScalarFactoryTuple list =
+    [
+            typedefof<bool>,       function :? bool as v -> Some (Scalar.Bool v)               | _ -> None
+            typedefof<char>,       function :? char as v -> Some (Scalar.Char v)               | _ -> None
+            typedefof<byte>,       function :? byte as v -> Some (Scalar.Byte v)               | _ -> None
+            typedefof<int16>,      function :? int16 as v -> Some (Scalar.Int16 v)             | _ -> None
+            typedefof<uint16>,     function :? uint16 as v -> Some (Scalar.UInt16 v)           | _ -> None
+            typedefof<int32>,      function :? int as v -> Some (Scalar.Int32 v)               | _ -> None
+            typedefof<uint32>,     function :? uint32 as v -> Some (Scalar.UInt32 v)           | _ -> None
+            typedefof<int64>,      function :? int64 as v -> Some (Scalar.Int64 v)             | _ -> None
+            typedefof<uint64>,     function :? uint64 as v -> Some (Scalar.UInt64 v)           | _ -> None
+            typedefof<single>,     function :? single as v -> Some (Scalar.Single v)           | _ -> None
+            typedefof<double>,     function :? double as v -> Some (Scalar.Double v)           | _ -> None
+            typedefof<decimal>,    function :? decimal as v -> Some (Scalar.Decimal v)         | _ -> None
+            typedefof<string>,     function :? string as v -> Some (Scalar.String v)           | _ -> None
+            typedefof<DateTime>,   function :? DateTime as v -> Some (Scalar.DateTime v)       | _ -> None
+            typedefof<DtOffset>,   function :? DtOffset as v -> Some (Scalar.DateTimeOffset v) | _ -> None
+            typedefof<TimeSpan>,   function :? TimeSpan as v -> Some (Scalar.TimeSpan v)       | _ -> None
+            typedefof<Guid>,       function :? Guid as v -> Some (Scalar.Guid v)               | _ -> None
+            typedefof<Uri>,        function :? Uri as v -> Some (Scalar.Uri v)                 | _ -> None
+    ]
 
-let defaultDestructure (req: DestructureRequest)
-                       (name: string)
-                       : PropertyNameAndValue option =
-    let typeOrNone o = match o with null -> None | v -> Some (v.GetType())
-    match req.Value, typeOrNone req.Value, req.Kind with
-    | null, _, _                                -> Some (name, ScalarValue Scalar.Null)
-    | value, Some ty, DestructureKind.Stringify -> Some (name, ScalarValue (String (value.ToString())))
-    | value, Some ty, destr -> req.tryDestructure req // TODO:
-    | _, _, _ -> None
+/// Given a Type, creates a tuple with the type itself, and a function that can convert
+/// an object to a Scalar of the given custom type.
+let private toCustomTypeScalarFactoryTuple (t:Type) : TypeScalarFactoryTuple =
+    let getIfTypeMatches (v:obj) = match v.GetType() with
+                                    | theType when theType.Equals(t) -> Some (Scalar.Custom v)
+                                    | _ -> None
+    t, getIfTypeMatches
+    
+/// Creates a <see cref="Destructurer" /> which combines the built-in scalar types
+/// with the provided 'otherScalarTypes' sequence.
+let private createScalarDestr (typesAndFactories: TypeScalarFactoryTuple list) : Destructurer =
+    let typeToScalarFactoryDict = typesAndFactories |> dict
+    fun (r:DestructureRequest) ->
+        match typeToScalarFactoryDict.TryGetValue (r.Value.GetType()) with
+        | true, factory -> match (factory r.Value) with
+                            | Some s -> Some (ScalarValue s)
+                            | None -> None
+        | _, _ -> None
 
-/// Extracts the properties for a template from the array of objects.
-let captureProperties (destructure: Destructurer)
-                      (template:Template)
-                      (args:obj[])
-                      : (PropertyToken * PropertyNameAndValue option) seq =
-    let extractPropertyTokens = function Prop (_, pd) -> Some pd | _ -> None
+let tryBuiltInTypes = createScalarDestr builtInScalarTypeFactories
 
-    template.Tokens
-    |> Seq.choose extractPropertyTokens
-    |> Seq.zip args
-    |> Seq.map (fun (value, prop) ->
-        let req = { tryDestructure=destructure; Kind=DestructureKind.Destructure; Value=value; }
-        prop, defaultDestructure req prop.Name
-    )
+let tryNullable (r:DestructureRequest) =
+    match tryCastAs<System.Nullable<_>>(r.Value) with
+    | Some n when n.HasValue -> r.It { r with Value=box n.Value } // re-destructure with the value inside
+    | Some n when (not n.HasValue) -> Some (ScalarValue (Scalar.Null))
+    | _ -> None
 
-/// Converts a template message in a System.String.Format (positional) template
-/// e.g. "abc {@def}" would become "abc {0}"
-let writeTokens (p:IFormatProvider) (tw: IO.TextWriter) (t: Template) =
-    let inline appendFormat (format:string) (v:obj) = tw.Write(format, [|v|])
-    let inline append (s:string) = tw.Write(s)
-    let formatOrEmpty = function Some "" | None -> "" | Some s -> ":" + s
-    let directionOrEmpty (width:int) =
-        function | Direction.Right -> ",-" + string width | Direction.Left | _ -> "," + string width
-    let alignToFormat = function Some (a:AlignInfo) -> directionOrEmpty a.Width a.Direction | None -> ""
+let tryEnum (r:DestructureRequest) = 
+    match tryCastAs<System.Enum>(r.Value) with
+    | Some e -> Some (ScalarValue (Scalar.Custom e))
+    | None -> None
 
-    let rec appendAllPositional (items:PropertyAndValue list) nextPosNum =
-        match items.Head with
-        | Text (_, s) ->
-            append s
-            if items.Tail.IsEmpty then ()
-            else appendAllPositional items.Tail nextPosNum
-        | Prop (_, pd) ->
-            append "{"
-            append (string nextPosNum)
-            if pd.Align.IsSome then append (alignToFormat pd.Align)
-            if pd.Format.IsSome then append (formatOrEmpty pd.Format)
-            append ("}")
-            if items.Tail.IsEmpty then ()
-            else appendAllPositional items.Tail (nextPosNum+1)
+let tryByteArrayMaxBytes (maxBytes:int) (r:DestructureRequest) =
+    match tryCastAs<System.Byte[]>(r.Value) with
+    | Some bytes when bytes.Length <= maxBytes -> Some (ScalarValue (Scalar.Custom(bytes)))
+    | Some bytes when bytes.Length > maxBytes ->
+        let toHexString (b:byte) = b.ToString("X2")
+        let start = bytes |> Seq.take maxBytes |> Seq.map toHexString |> String.Concat
+        let description = start + "... (" + string bytes.Length + " bytes)"
+        Some (ScalarValue (Scalar.Custom(description)))
+    | _ -> None
 
-    appendAllPositional t.Tokens 0
-    sb.ToString()
+let tryByteArray = tryByteArrayMaxBytes 1024
+
+let tryReflectionTypes (r:DestructureRequest) =
+    match r.Value with
+    | :? Type as t -> Some (ScalarValue (Scalar.Custom t))
+    | :? System.Reflection.MemberInfo as m -> Some (ScalarValue (Scalar.Custom m))
+    | _ -> None
+    
+let tryScalarDestructure (r:DestructureRequest) =
+    [ tryNullable; tryEnum; tryByteArray; tryReflectionTypes ]
+    |> List.tryPick (fun tryDestr -> tryDestr r)
+
+type SelfLogger = (string * obj[]) -> unit
+let nullLogger (format: string, values: obj[]) = ()
+
+let constructPosOrNamed (log: SelfLogger)
+                        (constructPositional)
+                        (constructNamed)
+                        (t:Template)
+                        (values: obj[])
+                        : TemplatePropertyValue seq = 
+    // log("Required properties not provided for: {0}", [|box t|])
+    match t.GetNamedProperties() with
+    | [|_|] as props -> constructNamed log t props values
+    | _ ->
+        match t.GetPositionalProperties() with
+        | [|_|] as props -> constructPositional log t props values
+        | _ -> failwithf "the template has no named or positional properties"
+
+let constructPositional (destr: Destructurer)
+                        (log: SelfLogger)
+                        (t: Template)
+                        (positional: PropertyToken[])
+                        (values: obj[]) =
+    match positional with
+    | null -> Seq.empty
+    | _ -> 
+        if positional.Length <> values.Length then
+            log("Positional property count does not match parameter count: {0}", [|box t|])
+        positional
+        |> Array.zip values
+        |> Array.map (fun (v, pt) -> destr { Kind=pt.Destr; Value=v; It=destr })
+        |> Seq.choose (Option.map id)
+
+let constructNamed (destr: Destructurer)
+                   (log: SelfLogger)
+                   (t: Template)
+                   (named: PropertyToken[])
+                   (values: obj[]) =
+    match named with
+    | null -> Seq.empty
+    | _ -> 
+        if named.Length <> values.Length then
+            log("Named property count does not match parameter count: {0}", [|box t|])
+        named
+        |> Array.zip values
+        |> Array.map (fun (v, pt) -> destr { Kind=pt.Destr; Value=v; It=destr })
+        |> Seq.choose (Option.map id)
+
+let tryNull (r:DestructureRequest) =
+    match r.Value with
+    | null -> Some (ScalarValue Scalar.Null)
+    | _ -> None
+
+let tryStringifyDestructurer (r:DestructureRequest) =
+    match r with
+    | { Kind=DestructureKind.Stringify; Value=null } -> Some (ScalarValue Scalar.Null)
+    | { Kind=DestructureKind.Stringify } -> Some (ScalarValue (Scalar.String (r.Value.ToString())))
+    | _ -> None
+
+let tryDestructuringDestr (r:DestructureRequest)  = None // TODO:
+let tryEnumerableDestr (r:DestructureRequest) = None // TODO:
+
+let scalarStringCatchAllDestr (r:DestructureRequest) = Some (ScalarValue (Scalar.String (r.Value.ToString())))
+
+let destrsInOrder = [tryNull; tryStringifyDestructurer;
+                     tryScalarDestructure; tryDestructuringDestr;
+                     tryEnumerableDestr; scalarStringCatchAllDestr ]
+
+let destr r = destrsInOrder |> List.tryPick (fun d -> d r)
+
+let capturePropertiesWith (d:Destructurer) (t:Template) (args: obj[]) =
+    constructPosOrNamed nullLogger (constructPositional d) (constructNamed d) t args
+
+let captureProperties (t:Template) (args:obj[]) = capturePropertiesWith destr t args
+
+let writePropToken (tw: IO.TextWriter)
+                   (pt: PropertyToken)
+                   (pv: TemplatePropertyValue) =
+    let ptFormatString = pt.ToString()
+    match pv with
+    | ScalarValue (Scalar.Null) -> tw.Write(format=ptFormatString, arg=[|null|])
+    | _ -> failwithf "Not yet implemented value %A" pv
+
+/// Converts template token and value into a rendered string.
+let writeToken (tw: IO.TextWriter)
+               (writePropToken)
+               (tokenAndPropValue: Token * TemplatePropertyValue option) =
+    match tokenAndPropValue with
+    | Token.Text (_, raw), None -> tw.Write(raw) |> ignore
+    | Token.Prop (_, pt), Some pv -> writePropToken tw pt pv
+    | Token.Prop (_, pt), None -> failwithf "unexpected property token %A and no associated value" pt
+    | Token.Text (_, raw), Some pv -> failwithf "unexpected text token %s with property value %A" raw pv
+
+/// Defines the signature of a method that matches property tokens to values
+type TokenPropertyValueMatcher = (Token list * obj[]) -> (Token * TemplatePropertyValue option) seq
+
+let defaultTokenPropertyValueMatcher : TokenPropertyValueMatcher =
+    (fun tokensAndObjs -> Seq.empty) // TODO
+
+let doFormat   (provider:IFormatProvider)
+               (matchTokensToPropertyValues: TokenPropertyValueMatcher)
+               (writePropToken)
+               (template:Template)
+               (values:obj[]) =
+
+    use tw = new IO.StringWriter(provider)
+    (matchTokensToPropertyValues (template.Tokens, values)) |> Seq.iter (writeToken tw writePropToken)
+    tw.ToString()
 
 let format provider template values =
-    System.String.Format(provider, createPositionalFormat template, values)
+    doFormat provider defaultTokenPropertyValueMatcher writePropToken template values
 
-
+let bprintn (sb:System.Text.StringBuilder) (template:string) (args:obj[]) = () // TODO:
+let sfprintn (p:System.IFormatProvider) (template:string) (args:obj[]) = "" // TODO:
+let fprintn (tw:System.IO.TextWriter) (template:string) (args:obj[]) = () // TODO:

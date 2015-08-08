@@ -52,6 +52,9 @@ type Token =
 
 /// A template, including the message and parsed properties.
 type Template = { FormatString: string; Tokens: Token list }
+    with
+        member GetPositionalProperties : unit -> PropertyToken[]
+        member GetNamedProperties : unit -> PropertyToken[]
 
 /// A simple value type.
 type Scalar =
@@ -74,16 +77,19 @@ type ScalarKeyValuePair = Scalar * obj
 type TemplatePropertyValue =
 | ScalarValue of Scalar
 | SequenceValue of TemplatePropertyValue seq
-| StructureValue of typeTag:string option * values:(string*TemplatePropertyValue) list
+| StructureValue of typeTag:string option * values:PropertyNameAndValue list
 | DictionaryValue of data: ScalarKeyValuePair seq
-
 /// A property and it's associated destructured value.
-type PropertyNameAndValue = string * TemplatePropertyValue
+and PropertyNameAndValue = string * TemplatePropertyValue
 
-/// A function that attempts to destructure an object into a 
-/// more friendly (and immutable) <see cref="TemplatePropertyValue" />.
-type Destructurer = DestructureRequest -> PropertyNameAndValue option
-and DestructureRequest = { tryDestructure:Destructurer; Kind:DestructureKind; Value:obj }
+/// A function that attempts to destructure a property and value object into a 
+/// more friendly (and immutable) <see cref="TemplatePropertyValue" />. This returns
+/// None if the conversion failed, otherwise Some.
+type Destructurer = DestructureRequest -> TemplatePropertyValue option
+and DestructureRequest = {
+    Kind: DestructureKind
+    Value: obj
+    It: Destructurer }
 
 /// Parses a message template string.
 val parse: template:string -> Template
@@ -96,7 +102,13 @@ val format: provider:System.IFormatProvider
             -> string
 
 /// Extracts the properties for a template from the array of objects.
-val captureProperties: destructure: Destructurer
-                       -> template:Template
-                       -> args:obj[]
-                       -> PropertyNameAndValue seq
+val captureProperties: template:Template -> args:obj[] -> TemplatePropertyValue seq
+
+/// Prints the message template to a string builder.
+val bprintn: sb:System.Text.StringBuilder -> template:string -> args:obj[] -> unit
+
+/// Prints the message template to a string.
+val sfprintn: provider:System.IFormatProvider -> template:string -> args:obj[] -> string
+
+/// Prints the message template a text writer.
+val fprintn: tw:System.IO.TextWriter -> template:string -> args:obj[] -> unit
