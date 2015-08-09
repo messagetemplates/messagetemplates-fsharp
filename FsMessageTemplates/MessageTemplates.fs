@@ -27,6 +27,17 @@ type PropertyToken(name:string, pos:int option, destr:DestructureKind, align: Al
     with
         member x.IsPositional with get() = x.Pos.IsSome
         static member Empty = PropertyToken("", None, DestructureKind.Default, None, None)
+        member x.ToStringFormatTemplate(fmtPos: int option) =
+            let fmtPos = defaultArg fmtPos 0
+            let sb = System.Text.StringBuilder()
+            let append (s:string) = sb.Append(s) |> ignore
+            append "{"
+            append (string fmtPos)
+            if x.Align <> None then append ","; append (string x.Align.Value)
+            if x.Format <> None then append ":"; append (string x.Format.Value)
+            append "}"
+            sb.ToString()
+
         override x.ToString() =
             let sb = System.Text.StringBuilder()
             let append (s:string) = sb.Append(s) |> ignore
@@ -49,7 +60,7 @@ type Token =
                                     | Prop (_, pd) -> (string pd)
 
 type Template = { FormatString: string; Tokens: Token list }
-    with member this.GetProperties() = 
+    with member this.GetProperties() =
             let choosePropertyTokens t = match t with Token.Prop (_, pd) -> Some pd | _ -> None
             this.Tokens |> Seq.choose choosePropertyTokens |> Seq.toArray
 
@@ -104,14 +115,10 @@ let maybeInt32 s =
     if System.String.IsNullOrEmpty(s) then None
     else match tryParseInt32 s with true, n -> Some n | false, _ -> None
 
-let getSb =
-    let sb = Text.StringBuilder()
-    fun () -> sb.Length <- 0;  sb
-
 let parseTextToken (startAt:int) (template:string) : int*Token =
     let chars = template
     let tlen = chars.Length
-    let sb = getSb()
+    let sb = Text.StringBuilder()
     let inline append (ch:char) = sb.Append(ch) |> ignore
     let rec go i =
         if i >= tlen then tlen, Text(startAt, sb.ToString())
@@ -126,7 +133,7 @@ let parseTextToken (startAt:int) (template:string) : int*Token =
                     else i, Text(startAt, sb.ToString())
             | '}' when (i+1) < tlen && chars.[i+1] = '}' -> // treat "}}" as a single "}"
                 append c
-                go (i+2) (*c::acc*) 
+                go (i+2) (*c::acc*)
             | _ ->
                 // append this char and keep going
                 append c
@@ -195,7 +202,7 @@ let tryParseAlignInfoRng (s:string) (rng:Range option) : bool * AlignInfo option
             true, Some (AlignInfo(direction, width))
 
 let tryGetPropInSubString (t:string) (within : Range) : Token option =
-    
+
     let rngIdxWithin = rngIndexOf t within
 
     /// Given a template such has "Hello, {@name,-10:abc}!" and a *within* range
@@ -233,7 +240,7 @@ let tryGetPropInSubString (t:string) (within : Range) : Token option =
              | false, _ -> None
              | true, alignInfo ->
                 let format = formatRange |> Option.map (fun rng -> rng.GetSubString t)
-                Some (Prop(within.Start - 1, 
+                Some (Prop(within.Start - 1,
                            PropertyToken(propertyName, maybeInt32 propertyName, destr, alignInfo, format)))
 
 let parsePropertyToken (startAt:int) (messageTemplate:string) : int*Token =
@@ -264,7 +271,7 @@ let parsePropertyToken (startAt:int) (messageTemplate:string) : int*Token =
 
 let emptyTextTokenList = [ Token.EmptyText ]
 
-let parseTokens (template:string) : Token list = 
+let parseTokens (template:string) : Token list =
     if System.String.IsNullOrEmpty(template) then emptyTextTokenList
     else
         let tlen =  template.Length
@@ -282,7 +289,7 @@ let parseTokens (template:string) : Token list =
                         List.rev acc // we are done here
                     | _, _ -> failwith "this is not possible - just keep F# compiler happy"
                 | _, _ -> failwith "this is not possible - just keep F# compiler happy"
-        
+
         go 0 []
 
 let parse (s:string) = { FormatString = s; Tokens = s |> parseTokens }
@@ -322,7 +329,7 @@ let private toCustomTypeScalarFactoryTuple (t:Type) : TypeScalarFactoryTuple =
                                     | theType when theType.Equals(t) -> Some (Scalar.Other v)
                                     | _ -> None
     t, getIfTypeMatches
-    
+
 /// Creates a <see cref="Destructurer" /> which combines the built-in scalar types
 /// with the provided 'otherScalarTypes' sequence.
 let private createScalarDestr (typesAndFactories: TypeScalarFactoryTuple list) : Destructurer =
@@ -347,7 +354,7 @@ let tryNullable (r:DestructureRequest) =
     else
         None
 
-let tryEnum (r:DestructureRequest) = 
+let tryEnum (r:DestructureRequest) =
     match tryCastAs<System.Enum>(r.Value) with
     | Some e -> Some (ScalarValue (Scalar.Other e))
     | None -> None
@@ -369,7 +376,7 @@ let tryReflectionTypes (r:DestructureRequest) =
     | :? Type as t -> Some (ScalarValue (Scalar.Other t))
     | :? System.Reflection.MemberInfo as m -> Some (ScalarValue (Scalar.Other m))
     | _ -> None
-    
+
 let tryScalarDestructure (r:DestructureRequest) =
     [ tryBuiltInTypes; tryNullable; tryEnum; tryByteArray; tryReflectionTypes ]
     |> List.tryPick (fun tryDestr -> tryDestr r)
@@ -382,7 +389,7 @@ let constructPosOrNamed (log: SelfLogger)
                         (constructNamed)
                         (t:Template)
                         (values: obj[])
-                        : PropertyNameAndValue seq = 
+                        : PropertyNameAndValue seq =
     // log("Required properties not provided for: {0}", [|box t|])
     let props = t.GetProperties()
     let construct = if props.Length > 0 && props.[0].IsPositional then constructPositional
@@ -408,7 +415,7 @@ let constructPositional (destr: Destructurer)
                         (values: obj[]) : PropertyNameAndValue seq =
     match positionals with
     | null -> Seq.empty
-    | _ -> 
+    | _ ->
         if positionals.Length <> values.Length then
             log("Positional property count does not match parameter count: {0}", [|box t|])
         zipDestr destr positionals values
@@ -420,7 +427,7 @@ let constructNamed (destr: Destructurer)
                    (values: obj[]) : PropertyNameAndValue seq =
     match named with
     | null -> Seq.empty
-    | _ -> 
+    | _ ->
         if named.Length <> values.Length then
             log("Named property count does not match parameter count: {0}", [|box t|])
         zipDestr destr named values
@@ -454,42 +461,62 @@ let captureProperties (t:Template) (args:obj[]) = capturePropertiesWith destr t 
 
 let captureMessageProperties (s:string) (args:obj[]) = s |> parse |> (fun templ -> captureProperties templ args)
 
-let writePropToken (tw: IO.TextWriter)
-                   (pt: PropertyToken)
-                   (pv: TemplatePropertyValue) =
-    let ptFormatString = pt.ToString()
+type Writer = { Append:string->unit
+                AppendFormat:string->obj[]->unit
+                Provider: IFormatProvider }
+
+let rec writePropToken  (w: Writer)
+                        (pt: PropertyToken)
+                        (pv: TemplatePropertyValue) =
+
     match pv with
-    | ScalarValue (Scalar.Null) -> tw.Write(format=ptFormatString, arg=[|null|])
-    | _ -> failwithf "Not yet implemented value %A" pv
+    | ScalarValue (Scalar.Null) -> w.Append "null"
+    | ScalarValue sv ->
+        let ptFormatString = pt.ToStringFormatTemplate(None)
+        match sv with
+        | Scalar.String s ->
+            w.Append "\""
+            w.AppendFormat ptFormatString [| s.Replace("\"", "\\\"") |]
+            w.Append "\""
+        | _ -> w.AppendFormat ptFormatString [| sv.GetValueAsObject() |]
+    | SequenceValue svs -> svs |> Seq.iter (fun sv -> writePropToken w pt sv)
+    | StructureValue(typeTag, values) ->
+        typeTag |> Option.iter (fun s -> w.Append s)
+        w.Append " { "
+        values |> Seq.iter (fun (n, v) ->
+             w.AppendFormat " {0} = " [|n|]
+             writePropToken w pt v
+             w.Append " "
+        )
+        w.Append " } "
+    | DictionaryValue(data) -> failwith "Not implemented yet"
 
 /// Converts template token and value into a rendered string.
-let writeToken (tw: IO.TextWriter)
+let writeToken (w: Writer)
                (writePropToken)
                (tokenAndPropValue: Token * TemplatePropertyValue option) =
     match tokenAndPropValue with
-    | Token.Text (_, raw), None -> tw.Write(raw) |> ignore
-    | Token.Prop (_, pt), Some pv -> writePropToken tw pt pv
+    | Token.Text (_, raw), None -> w.Append raw
+    | Token.Prop (_, pt), Some pv -> writePropToken w pt pv
     | Token.Prop (_, pt), None -> failwithf "unexpected property token %A and no associated value" pt
     | Token.Text (_, raw), Some pv -> failwithf "unexpected text token %s with property value %A" raw pv
 
-/// Defines the signature of a method that matches property tokens to values
-type TokenPropertyValueMatcher = (Token list * obj[]) -> (Token * TemplatePropertyValue option) seq
-
-let defaultTokenPropertyValueMatcher : TokenPropertyValueMatcher =
-    (fun tokensAndObjs -> Seq.empty) // TODO
-
-let doFormat   (provider:IFormatProvider)
-               (matchTokensToPropertyValues: TokenPropertyValueMatcher)
-               (writePropToken)
-               (template:Template)
-               (values:obj[]) =
-
-    use tw = new IO.StringWriter(provider)
-    (matchTokensToPropertyValues (template.Tokens, values)) |> Seq.iter (writeToken tw writePropToken)
-    tw.ToString()
+let doFormat (w: Writer)
+             (writePropToken)
+             (template:Template)
+             (values:obj[]) =
+    let valuesByPropName = captureProperties template values |> dict
+    template.Tokens
+    |> Seq.map (function
+                | Token.Text _ as tt -> tt, None
+                | Token.Prop (_, pd) as tp -> tp, Some (valuesByPropName.Item(pd.Name)))
+    |> Seq.iter (writeToken w writePropToken)
 
 let format provider template values =
-    doFormat provider defaultTokenPropertyValueMatcher writePropToken template values
+    use tw = new IO.StringWriter(formatProvider=provider)
+    let w = { Append=(fun s -> tw.Write(s)); AppendFormat=(fun f arg -> tw.Write(f, arg)); Provider=provider }
+    doFormat w writePropToken template values
+    tw.ToString()
 
 let bprintn (sb:System.Text.StringBuilder) (template:string) (args:obj[]) = () // TODO:
 let sfprintn (p:System.IFormatProvider) (template:string) (args:obj[]) = "" // TODO:
