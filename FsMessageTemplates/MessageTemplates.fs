@@ -36,6 +36,7 @@ type PropertyToken(name:string, pos:int option, destr:DestructureKind, align: Al
             append (x.Name)
             if x.Align <> None then append ","; append (string x.Align.Value)
             if x.Format <> None then append ":"; append (string x.Format.Value)
+            append "}"
             sb.ToString()
 
 type Token =
@@ -48,12 +49,9 @@ type Token =
                                     | Prop (_, pd) -> (string pd)
 
 type Template = { FormatString: string; Tokens: Token list }
-    with member this.GetPositionalProperties() =
-                    let choosePositionalPropertyToken t = match t with Token.Prop (_, pd) when pd.IsPositional -> Some pd | _ -> None
-                    this.Tokens |> Seq.choose choosePositionalPropertyToken |> Seq.toArray
-         member this.GetNamedProperties () =
-                    let chooseNonePositionalPropertyToken t = match t with Token.Prop (_, pd) when pd.IsPositional = false -> Some pd | _ -> None
-                    this.Tokens |> Seq.choose chooseNonePositionalPropertyToken |> Seq.toArray
+    with member this.GetProperties() = 
+            let choosePropertyTokens t = match t with Token.Prop (_, pd) -> Some pd | _ -> None
+            this.Tokens |> Seq.choose choosePropertyTokens |> Seq.toArray
 
 /// A simple value type.
 type Scalar =
@@ -66,10 +64,10 @@ type Scalar =
 | Decimal of decimal | String of string
 | DateTime of System.DateTime | DateTimeOffset of System.DateTimeOffset
 | TimeSpan of System.TimeSpan | Guid of System.Guid | Uri of System.Uri
-| Custom of obj // Is this necessary? Looks like C# supports it via destr. policies?
+| Other of obj
         
-type ScalarKeyValuePair = Scalar * obj
-type PropertyNameAndValue = string * TemplatePropertyValue
+type ScalarKeyValuePair = Scalar * TemplatePropertyValue
+and PropertyNameAndValue = string * TemplatePropertyValue
 and TemplatePropertyValue =
 | ScalarValue of Scalar
 | SequenceValue of TemplatePropertyValue seq
@@ -307,7 +305,7 @@ let private builtInScalarTypeFactories : TypeScalarFactoryTuple list =
 /// an object to a Scalar of the given custom type.
 let private toCustomTypeScalarFactoryTuple (t:Type) : TypeScalarFactoryTuple =
     let getIfTypeMatches (v:obj) = match v.GetType() with
-                                    | theType when theType.Equals(t) -> Some (Scalar.Custom v)
+                                    | theType when theType.Equals(t) -> Some (Scalar.Other v)
                                     | _ -> None
     t, getIfTypeMatches
     
@@ -325,32 +323,37 @@ let private createScalarDestr (typesAndFactories: TypeScalarFactoryTuple list) :
 let tryBuiltInTypes = createScalarDestr builtInScalarTypeFactories
 
 let tryNullable (r:DestructureRequest) =
-    match tryCastAs<System.Nullable<_>>(r.Value) with
-    | Some n when n.HasValue -> r.It { r with Value=box n.Value } // re-destructure with the value inside
-    | Some n when (not n.HasValue) -> Some (ScalarValue (Scalar.Null))
-    | _ -> None
+    let t = r.Value.GetType()
+    let isNullable = t.IsConstructedGenericType && t.GetGenericTypeDefinition() = typeof<Nullable<_>>
+    if isNullable then
+        match tryCastAs<System.Nullable<_>>() with
+        | Some n when n.HasValue -> r.It { r with Value=box (n.GetValueOrDefault()) } // re-destructure with the value inside
+        | Some n when (not n.HasValue) -> Some (ScalarValue (Scalar.Null))
+        | _ -> None
+    else
+        None
 
 let tryEnum (r:DestructureRequest) = 
     match tryCastAs<System.Enum>(r.Value) with
-    | Some e -> Some (ScalarValue (Scalar.Custom e))
+    | Some e -> Some (ScalarValue (Scalar.Other e))
     | None -> None
 
 let tryByteArrayMaxBytes (maxBytes:int) (r:DestructureRequest) =
     match tryCastAs<System.Byte[]>(r.Value) with
-    | Some bytes when bytes.Length <= maxBytes -> Some (ScalarValue (Scalar.Custom(bytes)))
+    | Some bytes when bytes.Length <= maxBytes -> Some (ScalarValue (Scalar.Other(bytes)))
     | Some bytes when bytes.Length > maxBytes ->
         let toHexString (b:byte) = b.ToString("X2")
         let start = bytes |> Seq.take maxBytes |> Seq.map toHexString |> String.Concat
         let description = start + "... (" + string bytes.Length + " bytes)"
-        Some (ScalarValue (Scalar.Custom(description)))
+        Some (ScalarValue (Scalar.Other(description)))
     | _ -> None
 
 let tryByteArray = tryByteArrayMaxBytes 1024
 
 let tryReflectionTypes (r:DestructureRequest) =
     match r.Value with
-    | :? Type as t -> Some (ScalarValue (Scalar.Custom t))
-    | :? System.Reflection.MemberInfo as m -> Some (ScalarValue (Scalar.Custom m))
+    | :? Type as t -> Some (ScalarValue (Scalar.Other t))
+    | :? System.Reflection.MemberInfo as m -> Some (ScalarValue (Scalar.Other m))
     | _ -> None
     
 let tryScalarDestructure (r:DestructureRequest) =
@@ -365,44 +368,48 @@ let constructPosOrNamed (log: SelfLogger)
                         (constructNamed)
                         (t:Template)
                         (values: obj[])
-                        : TemplatePropertyValue seq = 
+                        : PropertyNameAndValue seq = 
     // log("Required properties not provided for: {0}", [|box t|])
-    match t.GetNamedProperties() with
-    | [|_|] as props -> constructNamed log t props values
-    | _ ->
-        match t.GetPositionalProperties() with
-        | [|_|] as props -> constructPositional log t props values
-        | _ -> failwithf "the template has no named or positional properties"
+    let props = t.GetProperties()
+    let construct = if props.Length > 0 && props.[0].IsPositional then constructPositional
+                    else constructNamed
+    construct log t props values
+
+/// 'Zips' the propertes and values the destructure each value, only returning
+/// those that were destructured.
+let zipDestr (destr:Destructurer) (props:PropertyToken[]) values =
+    props
+    |> Seq.zip values
+    |> Seq.choose (fun (v, pt) ->
+        match destr { Kind=pt.Destr; Value=v; It=destr } with
+        | Some tpv -> Some (pt.Name, tpv)
+        | _ -> None
+    )
+    |> Seq.cache
 
 let constructPositional (destr: Destructurer)
                         (log: SelfLogger)
                         (t: Template)
-                        (positional: PropertyToken[])
-                        (values: obj[]) =
-    match positional with
+                        (positionals: PropertyToken[])
+                        (values: obj[]) : PropertyNameAndValue seq =
+    match positionals with
     | null -> Seq.empty
     | _ -> 
-        if positional.Length <> values.Length then
+        if positionals.Length <> values.Length then
             log("Positional property count does not match parameter count: {0}", [|box t|])
-        positional
-        |> Array.zip values
-        |> Array.map (fun (v, pt) -> destr { Kind=pt.Destr; Value=v; It=destr })
-        |> Seq.choose (Option.map id)
+        zipDestr destr positionals values
 
 let constructNamed (destr: Destructurer)
                    (log: SelfLogger)
                    (t: Template)
                    (named: PropertyToken[])
-                   (values: obj[]) =
+                   (values: obj[]) : PropertyNameAndValue seq =
     match named with
     | null -> Seq.empty
     | _ -> 
         if named.Length <> values.Length then
             log("Named property count does not match parameter count: {0}", [|box t|])
-        named
-        |> Array.zip values
-        |> Array.map (fun (v, pt) -> destr { Kind=pt.Destr; Value=v; It=destr })
-        |> Seq.choose (Option.map id)
+        zipDestr destr named values
 
 let tryNull (r:DestructureRequest) =
     match r.Value with
@@ -430,6 +437,8 @@ let capturePropertiesWith (d:Destructurer) (t:Template) (args: obj[]) =
     constructPosOrNamed nullLogger (constructPositional d) (constructNamed d) t args
 
 let captureProperties (t:Template) (args:obj[]) = capturePropertiesWith destr t args
+
+let captureMessageProperties (s:string) (args:obj[]) = s |> parse |> (fun templ -> captureProperties templ args)
 
 let writePropToken (tw: IO.TextWriter)
                    (pt: PropertyToken)

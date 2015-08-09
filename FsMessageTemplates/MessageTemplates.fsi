@@ -52,11 +52,10 @@ type Token =
 
 /// A template, including the message and parsed properties.
 type Template = { FormatString: string; Tokens: Token list }
-    with
-        member GetPositionalProperties : unit -> PropertyToken[]
-        member GetNamedProperties : unit -> PropertyToken[]
+    with member GetProperties : unit -> PropertyToken[]
 
 /// A simple value type.
+[<RequireQualifiedAccess>]
 type Scalar =
 | [<CompilationRepresentation(CompilationRepresentationFlags.UseNullAsTrueValue)>]
   Null
@@ -68,13 +67,12 @@ type Scalar =
 | Decimal of decimal | String of string
 | DateTime of System.DateTime | DateTimeOffset of System.DateTimeOffset
 | TimeSpan of System.TimeSpan | Guid of System.Guid | Uri of System.Uri
-| Custom of obj // Is this necessary? Looks like C# supports it via destr. policies?
+| Other of obj // Is this necessary? Looks like C# supports it via destr. policies?
 
 /// A key and value pair, used as part of <see cref="TemplatePropertyValue.DictionaryValue" />.
-type ScalarKeyValuePair = Scalar * obj
-
+type ScalarKeyValuePair = Scalar * TemplatePropertyValue
 /// Describes the kinds of destructured property values captured from a message template.
-type TemplatePropertyValue =
+and TemplatePropertyValue =
 | ScalarValue of Scalar
 | SequenceValue of TemplatePropertyValue seq
 | StructureValue of typeTag:string option * values:PropertyNameAndValue list
@@ -102,7 +100,10 @@ val format: provider:System.IFormatProvider
             -> string
 
 /// Extracts the properties for a template from the array of objects.
-val captureProperties: template:Template -> args:obj[] -> TemplatePropertyValue seq
+val captureProperties: template:Template -> args:obj[] -> PropertyNameAndValue seq
+
+/// Extracts the properties from a message template and the array of objects.
+val captureMessageProperties: template:string -> args:obj[] -> PropertyNameAndValue seq
 
 /// Prints the message template to a string builder.
 val bprintn: sb:System.Text.StringBuilder -> template:string -> args:obj[] -> unit

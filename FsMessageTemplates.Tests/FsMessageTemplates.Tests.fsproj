@@ -88,7 +88,8 @@
     <Compile Include="CsToFs.fs" />
     <Compile Include="XunitSupport.fs" />
     <Compile Include="FsTests.Parser.fs" />
-    <Compile Include="FsTests.CaptureFormat.fs" />
+    <Compile Include="FsTests.Capture.fs" />
+    <Compile Include="FsTests.Format.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="FsCheck">

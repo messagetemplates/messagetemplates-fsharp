@@ -11,6 +11,13 @@ type LangCsFsDataAttribute() =
     inherit Xunit.Sdk.DataAttribute()
     override __.GetData _ = [[|box "C#"|]; [|box "F#"|]] |> Seq.ofList
 
+let capture lang (messageTemplate:string) args =
+    let argsArray = (args |> Seq.cast<obj> |> Seq.toArray) // force 'args' to be IEnumerable
+    match lang with
+    | "F#" -> FsMessageTemplates.MessageTemplates.captureMessageProperties messageTemplate argsArray |> Seq.toList
+    | "C#" -> MessageTemplates.MessageTemplate.Capture(messageTemplate, argsArray) |> Seq.map CsToFs.templateProperty |> Seq.toList
+    | other -> failwithf "unexpected lang '%s'" other
+
 let renderp lang (provider:IFormatProvider) messageTemplate args =
     let argsArray = (args |> Seq.cast<obj> |> Seq.toArray) // force 'args' to be IEnumerable
     match lang with

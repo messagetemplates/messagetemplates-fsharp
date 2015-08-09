@@ -187,6 +187,16 @@ namespace MessageTemplates
         }
 
         /// <summary>
+        /// Captures properties from the given template message and the provided values.
+        /// </summary>
+        public static IEnumerable<TemplateProperty> Capture(
+            string templateMessage, params object[] values)
+        {
+            var template = Parse(templateMessage);
+            return Capture(template, values);
+        }
+
+        /// <summary>
         /// Captures properties from the given message template and 
         /// provided values.
         /// </summary>

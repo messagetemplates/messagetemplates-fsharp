@@ -1,4 +1,4 @@
-﻿module FsTests.CaptureFormat
+﻿module FsTests.Format
 
 open System
 open System.Globalization
