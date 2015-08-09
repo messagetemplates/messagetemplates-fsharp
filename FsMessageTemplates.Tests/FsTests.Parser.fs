@@ -10,18 +10,6 @@ open System
     behaviour in both implementations.
 *)
 
-type FsToken = FsMessageTemplates.MessageTemplates.Token
-
-let assertParsedAs lang message (expectedTokens: System.Collections.IEnumerable) =
-    let parsed =
-        match lang with
-        | "C#" -> MessageTemplates.MessageTemplate.Parse(message).Tokens |> Seq.map CsToFs.mttToToken |> List.ofSeq
-        | "F#" -> (FsMessageTemplates.MessageTemplates.parse message).Tokens
-        | other -> failwithf "unexpected lang '%s'" other
-
-    let expected = expectedTokens |> Seq.cast<FsToken> |> Seq.toList
-    test <@ parsed = expected @>
-
 [<LangTheory; LangCsFsData>]
 let ``an empty message is a single text token`` (lang) = 
     assertParsedAs lang  "" [Tk.text 0 ""]
@@ -172,38 +160,4 @@ let ``destructuring with empty property name is parsed as text`` (lang) =
 [<LangTheory; LangCsFsData>]
 let ``underscores are valid in property names`` (lang) =
     assertParsedAs lang  "{_123_Hello}" [Tk.prop 0 "{_123_Hello}" "_123_Hello"]
-
-[<LangTheory; LangCsFsData>]
-let ``multiple properties use format provider`` (lang) =
-    let m = renderp lang (CultureInfo.GetCultureInfo "fr-FR")
-                    "Income was {Income} at {Date:d}" [box 1234.567; box (DateTime(2013, 5, 20))]
-    test <@ m = "Income was 1234,567 at 20/05/2013" @>
-
-[<LangTheory; LangCsFsData>]
-let ``format strings are propagated`` (lang) =
-    let m = render lang "Welcome, customer {CustomerId:0000}" [12]
-    test <@ m = "Welcome, customer 0012" @>
-
-[<LangTheory>]
-[<InlineData("C#", "Welcome, customer #{CustomerId,-10}, pleasure to see you", "Welcome, customer #1234      , pleasure to see you")>]
-[<InlineData("C#", "Welcome, customer #{CustomerId,-10:000000}, pleasure to see you", "Welcome, customer #001234    , pleasure to see you")>]
-[<InlineData("C#", "Welcome, customer #{CustomerId,10}, pleasure to see you", "Welcome, customer #      1234, pleasure to see you")>]
-[<InlineData("C#", "Welcome, customer #{CustomerId,10:000000}, pleasure to see you", "Welcome, customer #    001234, pleasure to see you")>]
-[<InlineData("C#", "Welcome, customer #{CustomerId,10:0,0}, pleasure to see you", "Welcome, customer #     1,234, pleasure to see you")>]
-[<InlineData("C#", "Welcome, customer #{CustomerId:0,0}, pleasure to see you", "Welcome, customer #1,234, pleasure to see you")>]
-[<InlineData("F#", "Welcome, customer #{CustomerId,-10}, pleasure to see you", "Welcome, customer #1234      , pleasure to see you")>]
-[<InlineData("F#", "Welcome, customer #{CustomerId,-10:000000}, pleasure to see you", "Welcome, customer #001234    , pleasure to see you")>]
-[<InlineData("F#", "Welcome, customer #{CustomerId,10}, pleasure to see you", "Welcome, customer #      1234, pleasure to see you")>]
-[<InlineData("F#", "Welcome, customer #{CustomerId,10:000000}, pleasure to see you", "Welcome, customer #    001234, pleasure to see you")>]
-[<InlineData("F#", "Welcome, customer #{CustomerId,10:0,0}, pleasure to see you", "Welcome, customer #     1,234, pleasure to see you")>]
-[<InlineData("F#", "Welcome, customer #{CustomerId:0,0}, pleasure to see you", "Welcome, customer #1,234, pleasure to see you")>]
-let ```alignment strings are propagated`` (lang:string) (template:string) (expected:string) =
-    let m = render lang template [1234]
-    test <@ m = expected @>
-
-[<LangTheory; LangCsFsData>]
-let ``format provider is used`` (lang) =
-    let m = renderp lang (CultureInfo.GetCultureInfo "fr-FR")
-                   "Please pay {Sum}" [12.345]
-    test <@ m = "Please pay 12,345" @>
 

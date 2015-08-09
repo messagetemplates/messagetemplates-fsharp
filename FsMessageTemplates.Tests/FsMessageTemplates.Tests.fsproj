@@ -70,34 +70,6 @@
   <Target Name="BeforeBuild">
   </Target>
   -->
-  <ItemGroup>
-    <None Include="paket.references" />
-    <None Include="App.config" />
-    <Compile Include="Tk.fs" />
-    <Compile Include="CsToFs.fs" />
-    <Compile Include="XunitSupport.fs" />
-    <Compile Include="FsTests.Parser.fs" />
-    <Compile Include="FsTests.Capture.fs" />
-    <Compile Include="FsTests.Format.fs" />
-  </ItemGroup>
-  <ItemGroup>
-    <Reference Include="mscorlib" />
-    <Reference Include="System" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Numerics" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\FsMessageTemplates\FsMessageTemplates.fsproj">
-      <Name>FsMessageTemplates</Name>
-      <Project>{a3ffe923-b675-4e01-a085-6bb7c669ccff}</Project>
-      <Private>True</Private>
-    </ProjectReference>
-    <ProjectReference Include="..\MessageTemplates\MessageTemplates.Profile344.csproj">
-      <Name>MessageTemplates.Profile344</Name>
-      <Project>{ea4e4a86-ae2f-4a35-a2b1-ba7894ce3f95}</Project>
-      <Private>True</Private>
-    </ProjectReference>
-  </ItemGroup>
   <Choose>
     <When Condition="$(TargetFrameworkIdentifier) == '.NETCore'">
       <ItemGroup>
@@ -326,4 +298,31 @@
   </Choose>
   <Import Project="..\packages\xunit.runner.visualstudio.2.0.1\build\$(__paket__xunit_runner_visualstudio_props).props" Condition="Exists('..\packages\xunit.runner.visualstudio.2.0.1\build\$(__paket__xunit_runner_visualstudio_props).props')" Label="Paket" />
   <Import Project="..\packages\xunit.runner.visualstudio.2.0.1\build\$(__paket__xunit_runner_visualstudio_targets).targets" Condition="Exists('..\packages\xunit.runner.visualstudio.2.0.1\build\$(__paket__xunit_runner_visualstudio_targets).targets')" Label="Paket" />
+  <ItemGroup>
+    <None Include="paket.references" />
+    <None Include="App.config" />
+    <Compile Include="Tk.fs" />
+    <Compile Include="CsToFs.fs" />
+    <Compile Include="XunitSupport.fs" />
+    <Compile Include="FsTests.Parser.fs" />
+    <Compile Include="FsTests.Capture.fs" />
+    <Compile Include="FsTests.Format.fs" />
+    <Content Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="mscorlib" />
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Numerics" />
+    <ProjectReference Include="..\FsMessageTemplates\FsMessageTemplates.fsproj">
+      <Name>FsMessageTemplates</Name>
+      <Project>{a3ffe923-b675-4e01-a085-6bb7c669ccff}</Project>
+      <Private>True</Private>
+    </ProjectReference>
+    <ProjectReference Include="..\MessageTemplates\MessageTemplates.Profile344.csproj">
+      <Name>MessageTemplates.Profile344</Name>
+      <Project>{ea4e4a86-ae2f-4a35-a2b1-ba7894ce3f95}</Project>
+      <Private>True</Private>
+    </ProjectReference>
+  </ItemGroup>
 </Project>

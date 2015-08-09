@@ -3,6 +3,7 @@
 open System
 open System.Globalization
 open Swensen.Unquote
+open Xunit
 
 type Chair() =
     member __.Back with get() = "straight"
@@ -75,4 +76,39 @@ let ``a template with names and positionals uses names for all values`` (lang) =
 let ``missing positional parameters render as text like standard formats`` (lang) =
     let m = render lang "{1}, {0}" ["world"]
     test <@ m = "{1}, \"world\"" @>
+
+    
+[<LangTheory; LangCsFsData>]
+let ``multiple properties use format provider`` (lang) =
+    let m = renderp lang (CultureInfo.GetCultureInfo "fr-FR")
+                    "Income was {Income} at {Date:d}" [box 1234.567; box (DateTime(2013, 5, 20))]
+    test <@ m = "Income was 1234,567 at 20/05/2013" @>
+
+[<LangTheory; LangCsFsData>]
+let ``format strings are propagated`` (lang) =
+    let m = render lang "Welcome, customer {CustomerId:0000}" [12]
+    test <@ m = "Welcome, customer 0012" @>
+
+[<LangTheory>]
+[<InlineData("C#", "Welcome, customer #{CustomerId,-10}, pleasure to see you", "Welcome, customer #1234      , pleasure to see you")>]
+[<InlineData("C#", "Welcome, customer #{CustomerId,-10:000000}, pleasure to see you", "Welcome, customer #001234    , pleasure to see you")>]
+[<InlineData("C#", "Welcome, customer #{CustomerId,10}, pleasure to see you", "Welcome, customer #      1234, pleasure to see you")>]
+[<InlineData("C#", "Welcome, customer #{CustomerId,10:000000}, pleasure to see you", "Welcome, customer #    001234, pleasure to see you")>]
+[<InlineData("C#", "Welcome, customer #{CustomerId,10:0,0}, pleasure to see you", "Welcome, customer #     1,234, pleasure to see you")>]
+[<InlineData("C#", "Welcome, customer #{CustomerId:0,0}, pleasure to see you", "Welcome, customer #1,234, pleasure to see you")>]
+[<InlineData("F#", "Welcome, customer #{CustomerId,-10}, pleasure to see you", "Welcome, customer #1234      , pleasure to see you")>]
+[<InlineData("F#", "Welcome, customer #{CustomerId,-10:000000}, pleasure to see you", "Welcome, customer #001234    , pleasure to see you")>]
+[<InlineData("F#", "Welcome, customer #{CustomerId,10}, pleasure to see you", "Welcome, customer #      1234, pleasure to see you")>]
+[<InlineData("F#", "Welcome, customer #{CustomerId,10:000000}, pleasure to see you", "Welcome, customer #    001234, pleasure to see you")>]
+[<InlineData("F#", "Welcome, customer #{CustomerId,10:0,0}, pleasure to see you", "Welcome, customer #     1,234, pleasure to see you")>]
+[<InlineData("F#", "Welcome, customer #{CustomerId:0,0}, pleasure to see you", "Welcome, customer #1,234, pleasure to see you")>]
+let ```alignment strings are propagated`` (lang:string) (template:string) (expected:string) =
+    let m = render lang template [1234]
+    test <@ m = expected @>
+
+[<LangTheory; LangCsFsData>]
+let ``format provider is used`` (lang) =
+    let m = renderp lang (CultureInfo.GetCultureInfo "fr-FR")
+                   "Please pay {Sum}" [12.345]
+    test <@ m = "Please pay 12,345" @>
 
