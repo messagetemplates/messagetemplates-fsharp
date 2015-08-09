@@ -68,6 +68,7 @@ type Scalar =
 | DateTime of System.DateTime | DateTimeOffset of System.DateTimeOffset
 | TimeSpan of System.TimeSpan | Guid of System.Guid | Uri of System.Uri
 | Other of obj // Is this necessary? Looks like C# supports it via destr. policies?
+with member GetValueAsObject : unit -> obj
 
 /// A key and value pair, used as part of <see cref="TemplatePropertyValue.DictionaryValue" />.
 type ScalarKeyValuePair = Scalar * TemplatePropertyValue

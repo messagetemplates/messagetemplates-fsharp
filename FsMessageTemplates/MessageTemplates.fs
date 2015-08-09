@@ -65,7 +65,21 @@ type Scalar =
 | DateTime of System.DateTime | DateTimeOffset of System.DateTimeOffset
 | TimeSpan of System.TimeSpan | Guid of System.Guid | Uri of System.Uri
 | Other of obj
-        
+with member x.GetValueAsObject() =
+        match x with
+        | Null -> null
+        | Bool b -> box b
+        | Char c -> box c
+        | Byte b -> box b
+        | Int16 i -> box i | UInt16 i -> box i
+        | Int32 i -> box i | UInt32 i -> box i
+        | Int64 i -> box i | UInt64 i -> box i
+        | Single i -> box i | Double i -> box i
+        | Decimal i -> box i | String i -> box i
+        | DateTime i -> box i | DateTimeOffset i -> box i
+        | TimeSpan i -> box i | Guid i -> box i | Uri i -> box i
+        | Other i -> i
+
 type ScalarKeyValuePair = Scalar * TemplatePropertyValue
 and PropertyNameAndValue = string * TemplatePropertyValue
 and TemplatePropertyValue =
@@ -357,7 +371,7 @@ let tryReflectionTypes (r:DestructureRequest) =
     | _ -> None
     
 let tryScalarDestructure (r:DestructureRequest) =
-    [ tryNullable; tryEnum; tryByteArray; tryReflectionTypes ]
+    [ tryBuiltInTypes; tryNullable; tryEnum; tryByteArray; tryReflectionTypes ]
     |> List.tryPick (fun tryDestr -> tryDestr r)
 
 type SelfLogger = (string * obj[]) -> unit
