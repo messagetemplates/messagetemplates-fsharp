@@ -69,8 +69,8 @@ let ``a template with only positional properties uses format provider`` (lang) =
 // Debatable what the behavior should be, here.
 [<LangTheory; LangCsFsData>]
 let ``a template with names and positionals uses names for all values`` (lang) =
-    let m = render lang "{1}, {Place}" ["world"; "Hello"]
-    test <@ m = "\"world\", \"Hello\"" @>
+    let m = render lang "{1}, {Place}, {5}" ["world"; "Hello"; "yikes"]
+    test <@ m = "\"world\", \"Hello\", \"yikes\"" @>
 
 [<LangTheory; LangCsFsData>]
 let ``missing positional parameters render as text like standard formats`` (lang) =

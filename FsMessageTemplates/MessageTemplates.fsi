@@ -51,8 +51,13 @@ type Token =
 | Prop of startIndex:int * PropertyToken
 
 /// A template, including the message and parsed properties.
-type Template = { FormatString: string; Tokens: Token list }
-    with member GetProperties : unit -> PropertyToken[]
+[<Struct; StructuralEquality; StructuralComparison>]
+type Template =
+    val Tokens : Token list
+    val FormatString : string
+    val Properties : PropertyToken list
+    val internal Named : PropertyToken list
+    val internal PositionalsByPos : PropertyToken list
 
 /// A simple value type.
 [<RequireQualifiedAccess>]

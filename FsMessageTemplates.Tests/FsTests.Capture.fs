@@ -32,6 +32,8 @@ let ``multiple positional property and the same number of values yields the corr
 type MyScalarEnum = Zero=0 | One=1 | Two=2
 
 type ExpectedScalarResult = Different of Scalar | Same
+    with override x.ToString() = sprintf "%A" x
+
 let scalars = [
     (Scalar.Int16 1s), Same
     (Scalar.UInt16 2us), Same
@@ -66,6 +68,17 @@ let ``scalar types are captured correctly when positional`` (lang) =
     let positionalFmtString = String.Join(" ", (scalars |> Seq.mapi (fun i _ -> "{" + string i + "}")))
     let valuesArray = scalars |> Seq.map (scalarInputAsObj) |> Seq.toArray
     let expected = scalars |> List.mapi (fun i s -> string i, ScalarValue (getScalarExpected s))
+    let actual = capture lang positionalFmtString valuesArray
+    test <@ actual = expected @>
+
+[<LangTheory; LangCsFsData>]
+let ``scalar types are captured correctly when positionally out of order`` (lang) =
+    let numberedOutOfOrder = scalars |> List.mapi (fun i items -> i, items) |> List.sortBy (fun x -> x.GetHashCode())
+    let posTokensStringsOutOfOrder = numberedOutOfOrder |> Seq.map (fun (i, _) -> "{" + string i + "}")
+    let outOfOrder = numberedOutOfOrder |> List.map (fun (i, items) -> items)
+    let positionalFmtString = String.Join(" ", posTokensStringsOutOfOrder)
+    let valuesArray = outOfOrder |> Seq.map (scalarInputAsObj) |> Seq.toArray
+    let expected = outOfOrder |> List.mapi (fun i s -> string i, ScalarValue (getScalarExpected s))
     let actual = capture lang positionalFmtString valuesArray
     test <@ actual = expected @>
 
