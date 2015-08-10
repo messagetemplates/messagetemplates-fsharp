@@ -39,7 +39,7 @@ namespace MessageTemplates.PerfTests
             new object[] { 1 },
         };
 
-        const int TEST_ITERATIONS = 20000;
+        const int TEST_ITERATIONS = 3000;
         private readonly IFormatProvider formatProvider = System.Globalization.CultureInfo.InvariantCulture;
 
         [TestMethod]

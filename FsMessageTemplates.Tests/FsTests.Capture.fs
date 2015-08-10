@@ -15,53 +15,55 @@ let ``no values provided yields no properties`` (lang) =
 [<LangTheory; LangCsFsData>]
 let ``one named property and one value yields the correct named property`` (lang) =
     let actual = capture lang "this {will} work, I hope" [box "might"]
-    test <@ actual = [ "will", ScalarValue (Scalar.String "might") ] @>
+    test <@ actual = [ "will", ScalarValue "might" ] @>
 
 [<LangTheory; LangCsFsData>]
 let ``one positional property and one value yields the correct positional property`` (lang) =
     let actual = capture lang "this {0} work, I hope" [box "will"]
-    test <@ actual = [ "0", ScalarValue (Scalar.String "will") ] @>
+    test <@ actual = [ "0", ScalarValue "will" ] @>
 
 [<LangTheory; LangCsFsData>]
 let ``multiple positional property and the same number of values yields the correct positional properties`` (lang) =
     let actual = capture lang "{0} {1} {2}, I hope" [box "this"; box 10; box true]
-    test <@ actual = [ "0", ScalarValue (Scalar.String "this")
-                       "1", ScalarValue (Scalar.Int32 10)
-                       "2", ScalarValue (Scalar.Bool true) ] @>
+    test <@ actual = [ "0", ScalarValue ("this")
+                       "1", ScalarValue (10)
+                       "2", ScalarValue (true) ] @>
 
 type MyScalarEnum = Zero=0 | One=1 | Two=2
 
-type ExpectedScalarResult = Different of Scalar | Same
+type ExpectedScalarResult = Different of obj | Same
     with override x.ToString() = sprintf "%A" x
 
-let scalars = [
-    (Scalar.Int16 1s), Same
-    (Scalar.UInt16 2us), Same
-    (Scalar.Int32 3), Same
-    (Scalar.UInt32 4u), Same
-    (Scalar.Int64 5L), Same
-    (Scalar.UInt64 6UL), Same
-    (Scalar.String "7"), Same
-    (Scalar.Bool true), Same
-    (Scalar.Byte 8uy), Same
-    (Scalar.Char (char 9)), Same
-    (Scalar.DateTime (DateTime(2010, 10, 10))), Same
-    (Scalar.DateTimeOffset (DateTimeOffset(2000, 11, 11, 11, 11, 11, 11, offset=(TimeSpan.FromHours 11.0)))), Same
-    (Scalar.Decimal 12.12M), Same
-    (Scalar.Double 13.13), Same
-    (Scalar.Guid (Guid.NewGuid())), Same
-    (Scalar.Null), Same
-    (Scalar.Single 14.14f), Same
-    (Scalar.TimeSpan (TimeSpan(15, 15, 15, 15))), Same
-    (Scalar.Uri (Uri("http://localhost:1616/16"))), Same
-    (Scalar.Other (box MyScalarEnum.Two)), Same
-    (Scalar.Other (box MyScalarEnum.One)), Same
-    (Scalar.Other (Nullable<int>(15))), Different (Scalar.Int32 15)
-    (Scalar.Other (Nullable<int>())), Different (Scalar.Null) 
+let scalars : (obj * ExpectedScalarResult) list = [
+    box (1s), Same
+    box (2us), Same
+    box (3), Same
+    box (4u), Same
+    box (5L), Same
+    box (6UL), Same
+    box ("7"), Same
+    box (true), Same
+    box (8uy), Same
+    box (char 9), Same
+    box (DateTime(2010, 10, 10)), Same
+    box (DateTimeOffset(2000, 11, 11, 11, 11, 11, 11, offset=TimeSpan.FromHours 11.0)), Same
+    box (12.12M), Same
+    box (13.13), Same
+    box (Guid.NewGuid()), Same
+    box (null), Same
+    box (14.14f), Same
+    box (TimeSpan(15, 15, 15, 15)), Same
+    box (Uri("http://localhost:1616/16")), Same
+    box (box MyScalarEnum.Two), Same
+    box (box MyScalarEnum.One), Same
+    box (Nullable<int>(15)), Different (box 15)
+    box (Nullable<int>()), Different (box null) 
 ]
-let scalarInputAsObj (v:Scalar, e:ExpectedScalarResult) = 
-    match e with Same -> v.GetValueAsObject() | Different de -> de.GetValueAsObject()
-let getScalarExpected (v:Scalar, e:ExpectedScalarResult) = match e with Same -> v | Different de -> de
+
+let scalarInputAsObj (v:obj, e:ExpectedScalarResult) = 
+    match e with Same -> v | Different de -> de
+let getScalarExpected (v:obj, e:ExpectedScalarResult) =
+    match e with Same -> v | Different de -> de
 
 [<LangTheory; LangCsFsData>]
 let ``scalar types are captured correctly when positional`` (lang) =
@@ -99,12 +101,12 @@ let ``multiple positional property capture the correct integral scalar types`` (
                     box     5L
                     box     6UL ]
     let actual = capture lang "{0} {1} {2}, I hope, {3} {4} {5}" values
-    test <@ actual = [ "0", ScalarValue (Scalar.Int16 1s)
-                       "1", ScalarValue (Scalar.UInt16 2us)
-                       "2", ScalarValue (Scalar.Int32 3)
-                       "3", ScalarValue (Scalar.UInt32 4u)
-                       "4", ScalarValue (Scalar.Int64 5L)
-                       "5", ScalarValue (Scalar.UInt64 6UL) ] @>
+    test <@ actual = [ "0", ScalarValue (box 1s)
+                       "1", ScalarValue (box 2us)
+                       "2", ScalarValue (box 3)
+                       "3", ScalarValue (box 4u)
+                       "4", ScalarValue (box 5L)
+                       "5", ScalarValue (box 6UL) ] @>
 
 [<LangTheory; LangCsFsData>]
 let ``multiple positional nullable properties capture the correct integral scalar types`` (lang) =
@@ -115,11 +117,11 @@ let ``multiple positional nullable properties capture the correct integral scala
                     box     (Nullable 5L)
                     box     (Nullable 6UL) ]
     let actual = capture lang "{0} {1} {2}, I hope, {3} {4} {5}" values
-    test <@ actual = [ "0", ScalarValue (Scalar.Int16 1s)
-                       "1", ScalarValue (Scalar.UInt16 2us)
-                       "2", ScalarValue (Scalar.Int32 3)
-                       "3", ScalarValue (Scalar.UInt32 4u)
-                       "4", ScalarValue (Scalar.Int64 5L)
-                       "5", ScalarValue (Scalar.UInt64 6UL) ] @>
+    test <@ actual = [ "0", ScalarValue (box 1s)
+                       "1", ScalarValue (box 2us)
+                       "2", ScalarValue (box 3)
+                       "3", ScalarValue (box 4u)
+                       "4", ScalarValue (box 5L)
+                       "5", ScalarValue (box 6UL) ] @>
 
 

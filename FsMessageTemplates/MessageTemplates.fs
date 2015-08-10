@@ -76,39 +76,11 @@ type Template =
         { FormatString = text; Tokens = tokens
           Properties = properties; Named=namedProps; PositionalsByPos=positionalProps; }
 
-/// A simple value type.
-type Scalar =
-| [<CompilationRepresentation(CompilationRepresentationFlags.UseNullAsTrueValue)>] Null
-| Bool of bool | Char of char | Byte of byte
-| Int16 of int16 | UInt16 of uint16
-| Int32 of int32 | UInt32 of uint32
-| Int64 of int64 | UInt64 of uint64
-| Single of single | Double of double
-| Decimal of decimal | String of string
-| DateTime of System.DateTime | DateTimeOffset of System.DateTimeOffset
-| TimeSpan of System.TimeSpan | Guid of System.Guid | Uri of System.Uri
-| Other of obj
-with
-    override x.ToString() = sprintf "%A" x
-    member x.GetValueAsObject() =
-        match x with
-        | Null -> null
-        | Bool b -> box b
-        | Char c -> box c
-        | Byte b -> box b
-        | Int16 i -> box i | UInt16 i -> box i
-        | Int32 i -> box i | UInt32 i -> box i
-        | Int64 i -> box i | UInt64 i -> box i
-        | Single i -> box i | Double i -> box i
-        | Decimal i -> box i | String i -> box i
-        | DateTime i -> box i | DateTimeOffset i -> box i
-        | TimeSpan i -> box i | Guid i -> box i | Uri i -> box i
-        | Other i -> i
 
-type ScalarKeyValuePair = Scalar * TemplatePropertyValue
+type ScalarKeyValuePair = obj * TemplatePropertyValue
 and PropertyNameAndValue = string * TemplatePropertyValue
 and TemplatePropertyValue =
-| ScalarValue of Scalar
+| ScalarValue of obj
 | SequenceValue of TemplatePropertyValue seq
 | StructureValue of typeTag:string option * values:PropertyNameAndValue list
 | DictionaryValue of data: ScalarKeyValuePair seq
@@ -313,40 +285,28 @@ module Destructure =
     type DtOffset = System.DateTimeOffset
 
     let private tryCastAs<'T> (o:obj) =  match o with | :? 'T as res -> Some res | _ -> None
-    type private TypeScalarFactoryTuple = Type * (obj->Scalar option)
-    let private builtInScalarTypeFactories : TypeScalarFactoryTuple list =
-        [
-                typedefof<bool>,       function :? bool as v -> Some (Scalar.Bool v)               | _ -> None
-                typedefof<char>,       function :? char as v -> Some (Scalar.Char v)               | _ -> None
-                typedefof<byte>,       function :? byte as v -> Some (Scalar.Byte v)               | _ -> None
-                typedefof<int16>,      function :? int16 as v -> Some (Scalar.Int16 v)             | _ -> None
-                typedefof<uint16>,     function :? uint16 as v -> Some (Scalar.UInt16 v)           | _ -> None
-                typedefof<int32>,      function :? int as v -> Some (Scalar.Int32 v)               | _ -> None
-                typedefof<uint32>,     function :? uint32 as v -> Some (Scalar.UInt32 v)           | _ -> None
-                typedefof<int64>,      function :? int64 as v -> Some (Scalar.Int64 v)             | _ -> None
-                typedefof<uint64>,     function :? uint64 as v -> Some (Scalar.UInt64 v)           | _ -> None
-                typedefof<single>,     function :? single as v -> Some (Scalar.Single v)           | _ -> None
-                typedefof<double>,     function :? double as v -> Some (Scalar.Double v)           | _ -> None
-                typedefof<decimal>,    function :? decimal as v -> Some (Scalar.Decimal v)         | _ -> None
-                typedefof<string>,     function :? string as v -> Some (Scalar.String v)           | _ -> None
-                typedefof<DateTime>,   function :? DateTime as v -> Some (Scalar.DateTime v)       | _ -> None
-                typedefof<DtOffset>,   function :? DtOffset as v -> Some (Scalar.DateTimeOffset v) | _ -> None
-                typedefof<TimeSpan>,   function :? TimeSpan as v -> Some (Scalar.TimeSpan v)       | _ -> None
-                typedefof<Guid>,       function :? Guid as v -> Some (Scalar.Guid v)               | _ -> None
-                typedefof<Uri>,        function :? Uri as v -> Some (Scalar.Uri v)                 | _ -> None
-        ]
+    
+    let scalarTypes = 
+        [ typeof<bool>;      typeof<char>
+          typeof<byte>;      typeof<int16>
+          typeof<uint16>;    typeof<int32>
+          typeof<uint32>;    typeof<int64>
+          typeof<uint64>;    typeof<single>
+          typeof<double>;    typeof<decimal>
+          typeof<string>;    typeof<DateTime>
+          typeof<DtOffset>;  typeof<TimeSpan>
+          typeof<Guid>;      typeof<Uri> ]
+
     /// Creates a <see cref="Destructurer" /> which combines the built-in scalar types
     /// with the provided 'otherScalarTypes' sequence.
-    let private createScalarDestr (typesAndFactories: TypeScalarFactoryTuple list) : Destructurer =
-        let typeToScalarFactoryDict = typesAndFactories |> dict
+    let private createScalarDestr (typesAndFactories: Type list) : Destructurer =
+        let typeToScalarFactoryDict = System.Collections.Generic.HashSet(typesAndFactories)
         fun (r:DestructureRequest) ->
-            match typeToScalarFactoryDict.TryGetValue (r.Value.GetType()) with
-            | true, factory -> match (factory r.Value) with
-                                | Some s -> Some (ScalarValue s)
-                                | None -> None
-            | _, _ -> None
+            if typeToScalarFactoryDict.Contains (r.Value.GetType()) then
+                Some (ScalarValue r.Value)
+            else None
 
-    let tryBuiltInTypes = createScalarDestr builtInScalarTypeFactories
+    let tryBuiltInTypes = createScalarDestr scalarTypes
 
     let tryNullable (r:DestructureRequest) =
         let t = r.Value.GetType()
@@ -354,32 +314,31 @@ module Destructure =
         if isNullable then
             match tryCastAs<System.Nullable<_>>() with
             | Some n when n.HasValue -> r.It { r with Value=box (n.GetValueOrDefault()) } // re-destructure with the value inside
-            | Some n when (not n.HasValue) -> Some (ScalarValue (Scalar.Null))
+            | Some n when (not n.HasValue) -> Some (ScalarValue null)
             | _ -> None
-        else
-            None
+        else None
 
     let tryEnum (r:DestructureRequest) =
         match tryCastAs<System.Enum>(r.Value) with
-        | Some e -> Some (ScalarValue (Scalar.Other e))
+        | Some e -> Some (ScalarValue (e))
         | None -> None
 
     let tryByteArrayMaxBytes (maxBytes:int) (r:DestructureRequest) =
         match tryCastAs<System.Byte[]>(r.Value) with
-        | Some bytes when bytes.Length <= maxBytes -> Some (ScalarValue (Scalar.Other(bytes)))
+        | Some bytes when bytes.Length <= maxBytes -> Some (ScalarValue bytes)
         | Some bytes when bytes.Length > maxBytes ->
             let toHexString (b:byte) = b.ToString("X2")
             let start = bytes |> Seq.take maxBytes |> Seq.map toHexString |> String.Concat
             let description = start + "... (" + string bytes.Length + " bytes)"
-            Some (ScalarValue (Scalar.Other(description)))
+            Some (ScalarValue (description))
         | _ -> None
 
     let tryByteArray = tryByteArrayMaxBytes 1024
 
     let tryReflectionTypes (r:DestructureRequest) =
         match r.Value with
-        | :? Type as t -> Some (ScalarValue (Scalar.Other t))
-        | :? System.Reflection.MemberInfo as m -> Some (ScalarValue (Scalar.Other m))
+        | :? Type as t -> Some (ScalarValue t)
+        | :? System.Reflection.MemberInfo as m -> Some (ScalarValue m)
         | _ -> None
 
     let tryScalarDestructure (r:DestructureRequest) =
@@ -388,19 +347,18 @@ module Destructure =
     
     let tryNull (r:DestructureRequest) =
         match r.Value with
-        | null -> Some (ScalarValue Scalar.Null)
+        | null -> Some (ScalarValue null)
         | _ -> None
 
     let tryStringifyDestructurer (r:DestructureRequest) =
-        match r with
-        | { Kind=DestructureKind.Stringify; Value=null } -> Some (ScalarValue Scalar.Null)
-        | { Kind=DestructureKind.Stringify } -> Some (ScalarValue (Scalar.String (r.Value.ToString())))
+        match r.Kind with
+        | DestructureKind.Stringify -> Some (ScalarValue (r.Value.ToString()))
         | _ -> None
 
     let tryDestructuringDestr (r:DestructureRequest)  = None // TODO:
     let tryEnumerableDestr (r:DestructureRequest) = None // TODO:
 
-    let scalarStringCatchAllDestr (r:DestructureRequest) = Some (ScalarValue (Scalar.String (r.Value.ToString())))
+    let scalarStringCatchAllDestr (r:DestructureRequest) = Some (ScalarValue (r.Value.ToString()))
 
     let destrsInOrder = [tryNull; tryStringifyDestructurer;
                          tryScalarDestructure; tryDestructuringDestr;
@@ -452,15 +410,15 @@ let rec writePropToken  (w: Writer)
                         (pv: TemplatePropertyValue) =
 
     match pv with
-    | ScalarValue (Scalar.Null) -> w.Append "null"
+    | ScalarValue null -> w.Append "null"
     | ScalarValue sv ->
         let ptFormatString = pt.ToStringFormatTemplate(None)
         match sv with
-        | Scalar.String s ->
+        | :? string as s ->
             w.Append "\""
             w.AppendFormat ptFormatString [| s.Replace("\"", "\\\"") |]
             w.Append "\""
-        | _ -> w.AppendFormat ptFormatString [| sv.GetValueAsObject() |]
+        | _ -> w.AppendFormat ptFormatString [| sv |]
     | SequenceValue svs -> svs |> Seq.iter (fun sv -> writePropToken w pt sv)
     | StructureValue(typeTag, values) ->
         typeTag |> Option.iter (fun s -> w.Append s)

@@ -45,35 +45,12 @@ let mttToToken (mtt: CsMessageTemplateToken) : Token =
 open System
 type DtOffset = System.DateTimeOffset
 
-let objToScalar (o:obj) : Scalar =
-    match o with
-    | null -> Scalar.Null
-    | :? string as s -> Scalar.String s
-    | :? int32 as i -> Scalar.Int32 i
-    | :? DateTime as dt -> Scalar.DateTime dt
-    | :? bool as b -> Scalar.Bool b
-    | :? double as d -> Scalar.Double d
-    | :? decimal as d -> Scalar.Decimal d
-    | :? DtOffset as dto -> Scalar.DateTimeOffset dto
-    | :? TimeSpan as ts -> Scalar.TimeSpan ts
-    | :? Guid as g -> Scalar.Guid g
-    | :? Uri as u -> Scalar.Uri u
-    | :? char as c -> Scalar.Char c
-    | :? byte as b -> Scalar.Byte b
-    | :? int16 as i -> Scalar.Int16 i
-    | :? uint16 as i -> Scalar.UInt16 i
-    | :? uint32 as i -> Scalar.UInt32 i
-    | :? int64 as i -> Scalar.Int64 i
-    | :? uint64 as i -> Scalar.UInt64 i
-    | :? single as s -> Scalar.Single s
-    | _ -> Scalar.Other o
-
 let rec templatePropertyValue (tpv: CsTemplatePropertyValue) : TemplatePropertyValue =
     match tpv with
-    | :? MessageTemplates.Structure.ScalarValue as sv -> ScalarValue (objToScalar sv.Value)
+    | :? MessageTemplates.Structure.ScalarValue as sv -> ScalarValue sv.Value
     | :? MessageTemplates.Structure.SequenceValue as sev -> SequenceValue (sev.Elements |> Seq.map templatePropertyValue |> Seq.cache)
     | :? MessageTemplates.Structure.DictionaryValue as dv ->
-        let keyMap (kvp:Kvp<CsScalarValue, CsTemplatePropertyValue>) = kvp.Key.Value |> objToScalar
+        let keyMap (kvp:Kvp<CsScalarValue, CsTemplatePropertyValue>) = kvp.Key.Value
         let valueMap (kvp:Kvp<CsScalarValue, CsTemplatePropertyValue>) = templatePropertyValue kvp.Value
         DictionaryValue (dv.Elements |> Seq.map (fun kvp -> keyMap kvp, valueMap kvp))
     | :? MessageTemplates.Structure.StructureValue as strv ->

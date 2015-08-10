@@ -59,27 +59,11 @@ type Template =
     val internal Named : PropertyToken list
     val internal PositionalsByPos : PropertyToken list
 
-/// A simple value type.
-[<RequireQualifiedAccess>]
-type Scalar =
-| [<CompilationRepresentation(CompilationRepresentationFlags.UseNullAsTrueValue)>]
-  Null
-| Bool of bool | Char of char | Byte of byte
-| Int16 of int16 | UInt16 of uint16
-| Int32 of int32 | UInt32 of uint32
-| Int64 of int64 | UInt64 of uint64
-| Single of single | Double of double
-| Decimal of decimal | String of string
-| DateTime of System.DateTime | DateTimeOffset of System.DateTimeOffset
-| TimeSpan of System.TimeSpan | Guid of System.Guid | Uri of System.Uri
-| Other of obj // Is this necessary? Looks like C# supports it via destr. policies?
-with member GetValueAsObject : unit -> obj
-
 /// A key and value pair, used as part of <see cref="TemplatePropertyValue.DictionaryValue" />.
-type ScalarKeyValuePair = Scalar * TemplatePropertyValue
+type ScalarKeyValuePair = obj * TemplatePropertyValue
 /// Describes the kinds of destructured property values captured from a message template.
 and TemplatePropertyValue =
-| ScalarValue of Scalar
+| ScalarValue of obj
 | SequenceValue of TemplatePropertyValue seq
 | StructureValue of typeTag:string option * values:PropertyNameAndValue list
 | DictionaryValue of data: ScalarKeyValuePair seq
