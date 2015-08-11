@@ -77,6 +77,10 @@ let ``missing positional parameters render as text like standard formats`` (lang
     let m = render lang "{1}, {0}" ["world"]
     test <@ m = "{1}, \"world\"" @>
 
+[<LangTheory; LangCsFsData>]
+let ``extra positional parameters are ignored`` (lang) =
+    let m = render lang "{1}, {0}" ["world"; "world"; "world"]
+    test <@ m = "\"world\", \"world\"" @>
     
 [<LangTheory; LangCsFsData>]
 let ``multiple properties use format provider`` (lang) =

@@ -22,9 +22,9 @@ let propToToken (pr: CsPropertyToken) =
               | true, i -> Some i
               | false, _ -> None
     let destr = match pr.Destructuring with
-                | CsDestructuring.Default -> DestructureKind.Default
-                | CsDestructuring.Destructure -> DestructureKind.Destructure
-                | CsDestructuring.Stringify -> DestructureKind.Stringify
+                | CsDestructuring.Default -> DestrHint.Default
+                | CsDestructuring.Destructure -> DestrHint.Destructure
+                | CsDestructuring.Stringify -> DestrHint.Stringify
                 | d -> failwithf "unknown destructure %A" d
     let getDirection d = match d with
                          | CsAlignmentDirection.Left -> Direction.Left

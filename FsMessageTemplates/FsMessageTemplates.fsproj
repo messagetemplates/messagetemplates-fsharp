@@ -34,7 +34,8 @@
     <DefineConstants>TRACE</DefineConstants>
     <WarningLevel>3</WarningLevel>
     <DocumentationFile>bin\Release\FsMessageTemplates.XML</DocumentationFile>
-    <OtherFlags>--debug:pdbonly</OtherFlags>
+    <OtherFlags>
+    </OtherFlags>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="FSharp.Core">

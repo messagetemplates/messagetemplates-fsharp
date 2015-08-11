@@ -1,7 +1,7 @@
 ﻿module FsMessageTemplates.MessageTemplates
 
 /// A hint at how a property should be destructured.
-type DestructureKind = Default = 0 | Stringify = 1 | Destructure = 2
+type DestrHint = Default = 0 | Stringify = 1 | Destructure = 2
 
 /// The alignment direction.
 type Direction = Left = 0 | Right = 1
@@ -19,7 +19,7 @@ type PropertyToken =
     /// Constructs a new instance of a template property.
     new: name:string
             * pos:int option
-            * destr:DestructureKind
+            * destr:DestrHint
             * align: AlignInfo option
             * format: string option
             -> PropertyToken
@@ -30,7 +30,7 @@ type PropertyToken =
     member Pos:int option
     /// The destructuring hint (i.e. if {@name} was used then Destructure, if {$name}
     /// was used, then Stringify).
-    member Destr:DestructureKind
+    member Destr:DestrHint
     /// The alignment information (i.e. if {@name,-10} was parsed from the template, this
     /// would be AlignInfo(Direction.Right, 10)).
     member Align:AlignInfo option
@@ -51,7 +51,7 @@ type Token =
 | Prop of startIndex:int * PropertyToken
 
 /// A template, including the message and parsed properties.
-[<Struct; StructuralEquality; StructuralComparison>]
+[<Struct>]
 type Template =
     val Tokens : Token list
     val FormatString : string
@@ -74,10 +74,15 @@ and PropertyNameAndValue = string * TemplatePropertyValue
 /// more friendly (and immutable) <see cref="TemplatePropertyValue" />. This returns
 /// None if the conversion failed, otherwise Some.
 type Destructurer = DestructureRequest -> TemplatePropertyValue option
-and DestructureRequest = {
-    Kind: DestructureKind
-    Value: obj
-    It: Destructurer }
+and
+    [<Struct; NoEquality; NoComparison>]
+    DestructureRequest =
+        new: hint:DestrHint * value:obj * destr:Destructurer -> DestructureRequest
+        member Hint: DestrHint
+        member Value: obj
+        member Destr: Destructurer
+
+type PropertyAndValue = PropertyToken * TemplatePropertyValue
 
 /// Parses a message template string.
 val parse: template:string -> Template
@@ -90,10 +95,10 @@ val format: provider:System.IFormatProvider
             -> string
 
 /// Extracts the properties for a template from the array of objects.
-val captureProperties: template:Template -> args:obj[] -> PropertyNameAndValue seq
+val captureProperties: template:Template -> args:obj[] -> PropertyNameAndValue list
 
 /// Extracts the properties from a message template and the array of objects.
-val captureMessageProperties: template:string -> args:obj[] -> PropertyNameAndValue seq
+val captureMessageProperties: template:string -> args:obj[] -> PropertyNameAndValue list
 
 /// Prints the message template to a string builder.
 val bprintn: sb:System.Text.StringBuilder -> template:string -> args:obj[] -> unit
