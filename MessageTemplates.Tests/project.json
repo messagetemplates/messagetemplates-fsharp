@@ -17,9 +17,7 @@
 
     "frameworks": {
         "dnx451": {
-            "frameworkAssemblies": {
-                "System.Runtime": ""
-            }
+
         }
     }
 }
