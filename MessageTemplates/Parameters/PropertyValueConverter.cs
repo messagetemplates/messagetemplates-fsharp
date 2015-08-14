@@ -124,6 +124,8 @@ namespace MessageTemplates.Parameters
                 }
             }
 
+            #region IEnumerable->SequenceValue|DictionaryValue
+
             var enumerable = value as IEnumerable;
             if (enumerable != null)
             {
@@ -165,7 +167,9 @@ namespace MessageTemplates.Parameters
                 return new SequenceValue(
                     enumerable.Cast<object>().Select(o => limiter.CreatePropertyValue(o, destructuring)));
             }
-            
+
+            #endregion
+
             if (destructuring == Destructuring.Destructure)
             {
                 var typeTag = value.GetType().Name;

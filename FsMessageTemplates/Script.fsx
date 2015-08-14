@@ -1,11 +1,10 @@
 ﻿// Learn more about F# at http://fsharp.org. See the 'F# Tutorial' project
 // for more guidance on F# programming.
 
-#r "System.Runtime"
 #I "bin/Debug/"
 #r "FsMessageTemplates"
-#I "../packages/xunit.assert.2.0.0/lib/portable-net45+win+wpa81+wp80+monotouch+monoandroid+Xamarin.iOS/"
-#r "xunit.assert"
+
+#load "../FsMessageTemplates.Tests/Tk.fs"
 
 open FsMessageTemplates.MessageTemplates
 
@@ -45,28 +44,7 @@ let testData = [
                           Tk.propp 13 2 ] }
 ]
 
-let castToArray = Seq.cast<obj> >> Seq.toArray
-let formatEnumerable template enumerable =
-    format System.Globalization.CultureInfo.InvariantCulture
-           template
-           (castToArray enumerable)
-
-let runParseTest data =
-    let template = parse data.Template
-    printfn "PARSE TEST\n Expected = %s\n Actual   = %s" data.Template template.FormatString 
-    Xunit.Assert.Equal(data.Template, template.FormatString)
-    let expectedArray = data.Expected |> List.toArray
-    let actualArray = template.Tokens |> List.toArray
-    Xunit.Assert.Equal<Token>(expectedArray, actualArray)
-
-let runFormatTest data =
-    let template = parse data.Template
-    let actual = formatEnumerable template data.Values
-    printfn "FMT TEST\n Expected = %s\n Actual   = %s" data.Template actual 
-    Xunit.Assert.Equal(data.ExpectedString, actual)
-
-testData |> List.iter runParseTest
-testData |> List.iter runFormatTest
-
-
-
+testData
+|> Seq.map (fun test -> test, parse test.Template)
+//|> Seq.map (fun (test, templ) -> captureProperties templ (test.Values |> Seq.cast<obj> |> Seq.toArray)) 
+|> Seq.toArray
