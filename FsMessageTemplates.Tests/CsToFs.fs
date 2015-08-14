@@ -48,11 +48,11 @@ type DtOffset = System.DateTimeOffset
 let rec templatePropertyValue (tpv: CsTemplatePropertyValue) : TemplatePropertyValue =
     match tpv with
     | :? MessageTemplates.Structure.ScalarValue as sv -> ScalarValue sv.Value
-    | :? MessageTemplates.Structure.SequenceValue as sev -> SequenceValue (sev.Elements |> Seq.map templatePropertyValue |> Seq.cache)
+    | :? MessageTemplates.Structure.SequenceValue as sev -> SequenceValue (sev.Elements |> Seq.map templatePropertyValue |> Seq.toList)
     | :? MessageTemplates.Structure.DictionaryValue as dv ->
         let keyMap (kvp:Kvp<CsScalarValue, CsTemplatePropertyValue>) = kvp.Key.Value
         let valueMap (kvp:Kvp<CsScalarValue, CsTemplatePropertyValue>) = templatePropertyValue kvp.Value
-        DictionaryValue (dv.Elements |> Seq.map (fun kvp -> keyMap kvp, valueMap kvp))
+        DictionaryValue (dv.Elements |> Seq.map (fun kvp -> keyMap kvp, valueMap kvp) |> Seq.toList)
     | :? MessageTemplates.Structure.StructureValue as strv ->
         let structureValues = strv.Properties |> Seq.map (fun p -> p.Name, templatePropertyValue p.Value) |> Seq.toList
         let typeTagOption = if String.IsNullOrEmpty(strv.TypeTag) then None else Some strv.TypeTag

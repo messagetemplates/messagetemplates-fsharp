@@ -18,7 +18,7 @@ let assertParsedAs lang message (expectedTokens: System.Collections.IEnumerable)
     let parsed =
         match lang with
         | "C#" -> MessageTemplates.MessageTemplate.Parse(message).Tokens |> Seq.map CsToFs.mttToToken |> List.ofSeq
-        | "F#" -> (FsMessageTemplates.MessageTemplates.parse message).Tokens
+        | "F#" -> (FsMessageTemplates.MessageTemplates.parse message).Tokens |> List.ofSeq
         | other -> failwithf "unexpected lang '%s'" other
 
     let expected = expectedTokens |> Seq.cast<FsToken> |> Seq.toList
@@ -27,7 +27,7 @@ let assertParsedAs lang message (expectedTokens: System.Collections.IEnumerable)
 let capture lang (messageTemplate:string) args =
     let argsArray = (args |> Seq.cast<obj> |> Seq.toArray) // force 'args' to be IEnumerable
     match lang with
-    | "F#" -> FsMessageTemplates.MessageTemplates.captureMessageProperties messageTemplate argsArray
+    | "F#" -> FsMessageTemplates.MessageTemplates.captureMessageProperties messageTemplate argsArray |> List.ofSeq
     | "C#" -> MessageTemplates.MessageTemplate.Capture(messageTemplate, argsArray) |> Seq.map CsToFs.templateProperty |> List.ofSeq
     | other -> failwithf "unexpected lang '%s'" other
 

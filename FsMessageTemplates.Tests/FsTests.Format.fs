@@ -15,6 +15,15 @@ type Receipt() =
     member __.When with get() = System.DateTime(2013, 5, 20, 16, 39, 0)
     override __.ToString() = "a receipt"
 
+// Delegate1 works with tuple arguments. 
+type MyDelegate = delegate of (int * int) -> int
+
+[<LangTheory; LangCsFsData>]
+let ``a delegate is rendered as a string`` (lang) =
+    let myDel = MyDelegate(fun (i1,i2) -> i1+i2)
+    let m = render lang "What even would a {del} print?" [box myDel]
+    test <@ m = "What even would a \"FsTests.Format+MyDelegate\" print?" @>
+
 [<LangTheory; LangCsFsData>]
 let ``a class instance is rendered in simple notation`` (lang) =
     let m = render lang "I sat at {@Chair}" [Chair()]

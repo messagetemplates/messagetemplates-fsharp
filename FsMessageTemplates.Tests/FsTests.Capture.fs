@@ -18,6 +18,27 @@ let ``one named property and one value yields the correct named property`` (lang
     test <@ actual = [ "will", ScalarValue "might" ] @>
 
 [<LangTheory; LangCsFsData>]
+let ``one enumerable property yeilds a sequence value`` (lang) =
+    let actual = capture lang "this {will} work, I hope" [box [|1..3|]]
+    let expectedValue = SequenceValue [ ScalarValue 1; ScalarValue 2; ScalarValue 3; ]
+    let expected =  ["will", expectedValue]
+    test <@ actual = expected @>
+
+type Chair() =
+    member __.Back with get() = "straight"
+    member __.Legs with get() = [|1;2;3;4|]
+    override __.ToString() = "a chair"
+
+[<LangTheory; LangCsFsData>]
+let ``a class instance is captured as a structure value`` (lang) =
+    let actual = capture lang "I sat at {@Chair}" [Chair()]
+    let expected = [ "Chair", StructureValue(Some "Chair", [ "Back", ScalarValue "straight"
+                                                             "Legs", SequenceValue ([ ScalarValue 1; ScalarValue 2; ScalarValue 3; ScalarValue 4])
+                                                ])]
+
+    test <@ actual = expected @>
+
+[<LangTheory; LangCsFsData>]
 let ``one positional property and one value yields the correct positional property`` (lang) =
     let actual = capture lang "this {0} work, I hope" [box "will"]
     test <@ actual = [ "0", ScalarValue "will" ] @>

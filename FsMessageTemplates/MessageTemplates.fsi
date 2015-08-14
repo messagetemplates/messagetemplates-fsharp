@@ -51,29 +51,29 @@ type Token =
 | Prop of startIndex:int * PropertyToken
 
 /// A template, including the message and parsed properties.
-[<Struct>]
+[<Class>]
 type Template =
-    val Tokens : Token list
-    val FormatString : string
-    val Properties : PropertyToken list
-    val internal Named : PropertyToken list
-    val internal PositionalsByPos : PropertyToken list
+    member Tokens : Token seq
+    member FormatString : string
+    member Properties : PropertyToken []
+    member internal Named : PropertyToken []
+    member internal PositionalsByPos : PropertyToken []
 
 /// A key and value pair, used as part of <see cref="TemplatePropertyValue.DictionaryValue" />.
 type ScalarKeyValuePair = obj * TemplatePropertyValue
 /// Describes the kinds of destructured property values captured from a message template.
 and TemplatePropertyValue =
 | ScalarValue of obj
-| SequenceValue of TemplatePropertyValue seq
+| SequenceValue of TemplatePropertyValue list
 | StructureValue of typeTag:string option * values:PropertyNameAndValue list
-| DictionaryValue of data: ScalarKeyValuePair seq
+| DictionaryValue of data: ScalarKeyValuePair list
 /// A property and it's associated destructured value.
 and PropertyNameAndValue = string * TemplatePropertyValue
 
 /// A function that attempts to destructure a property and value object into a 
 /// more friendly (and immutable) <see cref="TemplatePropertyValue" />. This returns
 /// None if the conversion failed, otherwise Some.
-type Destructurer = DestructureRequest -> TemplatePropertyValue option
+type Destructurer = DestructureRequest -> TemplatePropertyValue
 and
     [<Struct; NoEquality; NoComparison>]
     DestructureRequest =
@@ -95,10 +95,10 @@ val format: provider:System.IFormatProvider
             -> string
 
 /// Extracts the properties for a template from the array of objects.
-val captureProperties: template:Template -> args:obj[] -> PropertyNameAndValue list
+val captureProperties: template:Template -> args:obj[] -> PropertyNameAndValue seq
 
 /// Extracts the properties from a message template and the array of objects.
-val captureMessageProperties: template:string -> args:obj[] -> PropertyNameAndValue list
+val captureMessageProperties: template:string -> args:obj[] -> PropertyNameAndValue seq
 
 /// Prints the message template to a string builder.
 val bprintn: sb:System.Text.StringBuilder -> template:string -> args:obj[] -> unit
