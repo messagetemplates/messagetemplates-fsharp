@@ -70,7 +70,7 @@ type Template(formatString:string, tokens: Token[]) =
     member internal this.Named = namedProps
     member internal this.PositionalsByPos = positionalProps
 
-type ScalarKeyValuePair = obj * TemplatePropertyValue
+type ScalarKeyValuePair = TemplatePropertyValue * TemplatePropertyValue
 and PropertyNameAndValue = string * TemplatePropertyValue
 and TemplatePropertyValue =
 | ScalarValue of obj
@@ -85,7 +85,8 @@ and
         member x.Hint = hint
         member x.Value = value
         member x.Destr = destr
-        member internal x.TryAgainWithValue (newValue:obj) = destr (DestructureRequest(hint, newValue, destr))
+        member internal x.WithValue (newValue:obj) = DestructureRequest(hint, newValue, destr)
+        member internal x.TryAgainWithValue (newValue:obj) = destr (x.WithValue newValue)
 
 type PropertyAndValue = PropertyToken * TemplatePropertyValue
 
@@ -332,20 +333,26 @@ module Destructure =
     open System.Reflection
     let inline getTypeInfo (t:Type) =
         System.Reflection.IntrospectionExtensions.GetTypeInfo t
-    let inline isValueTypeDictionary (t:Type) =
+    let inline isValidScalarDictionaryKeyType (t:Type) =
         scalarTypeHash.Contains(t) || (getTypeInfo t).IsEnum
+    let inline isScalarDict (t: Type) =
+        t.IsConstructedGenericType
+        && t.GetGenericTypeDefinition() = typedefof<System.Collections.Generic.Dictionary<_,_>>
+        && isValidScalarDictionaryKeyType(t.GenericTypeArguments.[0])
 
     let inline tryEnumerableDestr (r:DestructureRequest) =
+        let valueType = r.Value.GetType()
         match tryCastAs<System.Collections.IEnumerable>(r.Value) with
-        | e when (Object.ReferenceEquals(null, e)) -> emptyKeepTrying
-        | e when isValueTypeDictionary (e.GetType()) ->
-            let keyProp, valueProp = let ty = e.GetType()
-                                     ty.GetRuntimeProperty("Key"), ty.GetRuntimeProperty("Value")
-            let getKey o = keyProp.GetValue(o)
-            let getValue o = valueProp.GetValue(o)
+        | e when Object.ReferenceEquals(null, e) -> emptyKeepTrying
+        | e when isScalarDict valueType ->
+            let mutable keyProp, valueProp = Unchecked.defaultof<PropertyInfo>, Unchecked.defaultof<PropertyInfo>
+            let getKey o = if keyProp = null then keyProp <- o.GetType().GetRuntimeProperty("Key")
+                           keyProp.GetValue(o)
+            let getValue o = if valueProp = null then valueProp <- o.GetType().GetRuntimeProperty("Value")
+                             valueProp.GetValue(o)
             let skvps = e |> Seq.cast<obj>
                           |> Seq.map (fun o -> getKey o, getValue o)
-                          |> Seq.map (fun (key, value) -> key, r.TryAgainWithValue(value))
+                          |> Seq.map (fun (key, value) -> tryScalarDestructure (r.WithValue key), r.TryAgainWithValue(value))
                           |> Seq.toList
             DictionaryValue skvps
         | e -> SequenceValue(e |> Seq.cast<obj> |> Seq.map r.TryAgainWithValue |> Seq.toList)
@@ -410,7 +417,7 @@ let captureProperties (t:Template) (args:obj[]) =
 
 let captureMessageProperties (s:string) (args:obj[]) = captureProperties (s |> parse) args
 
-let rec writePropToken (sb: StringBuilder) (w: TextWriter) (pt: PropertyToken) (pv: TemplatePropertyValue) =
+let rec writePropValue (sb: StringBuilder) (w: TextWriter) (pt: PropertyToken) (pv: TemplatePropertyValue) =
     match pv with
     | ScalarValue null -> w.Write "null"
     | ScalarValue sv ->
@@ -422,7 +429,7 @@ let rec writePropToken (sb: StringBuilder) (w: TextWriter) (pt: PropertyToken) (
         w.Write '['
         let lastIndex = svs.Length - 1
         svs |> List.iteri (fun i sv ->
-            writePropToken sb w pt sv
+            writePropValue sb w pt sv
             if i <> lastIndex then w.Write ", "
         )
         w.Write ']'
@@ -432,17 +439,26 @@ let rec writePropToken (sb: StringBuilder) (w: TextWriter) (pt: PropertyToken) (
         let lastIndex = values.Length - 1
         values |> List.iteri (fun i (n, v) ->
             w.Write("{0}: ", n)
-            writePropToken sb w pt v
+            writePropValue sb w pt v
             w.Write (if i = lastIndex then " " else ", ")
         )
         w.Write "}"
-    | DictionaryValue(data) -> failwith "Not implemented yet"
+    | DictionaryValue(data) ->
+        w.Write '['
+        data |> List.iter (fun (entryKey, entryValue) ->
+            w.Write '('
+            writePropValue sb w pt entryKey
+            w.Write ": "
+            writePropValue sb w pt entryValue
+            w.Write ")"
+        )
+        w.Write ']'
 
 /// Converts template token and value into a rendered string.
-let inline writeToken (sb: StringBuilder) (w: TextWriter) (writePropToken) (token:Token) (value:TemplatePropertyValue option) =
+let inline writeToken (sb: StringBuilder) (w: TextWriter) (writePropValue) (token:Token) (value:TemplatePropertyValue option) =
     match token, value with
     | Token.Text (_, raw), None -> w.Write raw
-    | Token.Prop (_, pt), Some pv -> writePropToken sb w pt pv
+    | Token.Prop (_, pt), Some pv -> writePropValue sb w pt pv
     | Token.Prop (_, pt), None -> w.Write (pt.ToStringFormatTemplate(sb, defaultArg pt.Pos 0))
     | Token.Text (_, raw), Some pv -> failwithf "unexpected text token %s with property value %A" raw pv
 
@@ -451,14 +467,14 @@ let doFormat (w: TextWriter) (writePropToken) (template:Template) (values:obj[])
     let sb = StringBuilder()
     for t in template.Tokens do
         match t with
-        | Token.Text _ as tt -> writeToken sb w writePropToken tt None
+        | Token.Text _ as tt -> writeToken sb w writePropValue tt None
         | Token.Prop (_, pd) as tp ->
             let exists, value = valuesByPropName.TryGetValue(pd.Name)
-            writeToken sb w writePropToken tp (if exists then Some value else None)
+            writeToken sb w writePropValue tp (if exists then Some value else None)
 
 let format provider template values =
     use tw = new System.IO.StringWriter(formatProvider=provider)
-    doFormat tw writePropToken template values
+    doFormat tw writePropValue template values
     tw.ToString()
 
 let bprintn (sb:System.Text.StringBuilder) (template:string) (args:obj[]) = () // TODO:

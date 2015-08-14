@@ -29,13 +29,32 @@ type Chair() =
     member __.Legs with get() = [|1;2;3;4|]
     override __.ToString() = "a chair"
 
+let chairStructureValue =
+    let typeTag = Some "Chair"
+    let propNamesAndValues = [  "Back", ScalarValue "straight"
+                                "Legs", SequenceValue ([ ScalarValue 1; ScalarValue 2; ScalarValue 3; ScalarValue 4 ]) ]
+    StructureValue (typeTag, propNamesAndValues)
+
+[<LangTheory; LangCsFsData>]
+let ``a destructured dictionary yeilds dictionary values`` (lang) =
+    let inputDictionary = System.Collections.Generic.Dictionary(dict [| "key", Chair(); |])
+    let actual = capture lang "this {@will} work, I hope" [ box inputDictionary ]
+    let expected = [ "will", DictionaryValue [ ScalarValue "key", chairStructureValue ] ]
+    test <@ actual = expected @>
+
+[<LangTheory; LangCsFsData>]
+let ``an F# 'dict' (which is not Dictionary<_,_>) yeilds a sequence->structure value`` (lang) =
+    let inputDictionary = dict [| "firstDictEntryKey", Chair(); |]
+    let actual = capture lang "this {@will} work, I hope" [ box inputDictionary ]
+    let expected = [ "will", SequenceValue [StructureValue(Some "KeyValuePair`2", [ "Key", ScalarValue "firstDictEntryKey"
+                                                                                    "Value", chairStructureValue ])]
+                   ]
+    test <@ actual = expected @>
+
 [<LangTheory; LangCsFsData>]
 let ``a class instance is captured as a structure value`` (lang) =
     let actual = capture lang "I sat at {@Chair}" [Chair()]
-    let expected = [ "Chair", StructureValue(Some "Chair", [ "Back", ScalarValue "straight"
-                                                             "Legs", SequenceValue ([ ScalarValue 1; ScalarValue 2; ScalarValue 3; ScalarValue 4])
-                                                ])]
-
+    let expected : PropertyNameAndValue list = [ "Chair", chairStructureValue ]
     test <@ actual = expected @>
 
 [<LangTheory; LangCsFsData>]

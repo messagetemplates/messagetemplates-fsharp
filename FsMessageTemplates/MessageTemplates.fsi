@@ -60,7 +60,7 @@ type Template =
     member internal PositionalsByPos : PropertyToken []
 
 /// A key and value pair, used as part of <see cref="TemplatePropertyValue.DictionaryValue" />.
-type ScalarKeyValuePair = obj * TemplatePropertyValue
+type ScalarKeyValuePair = TemplatePropertyValue * TemplatePropertyValue
 /// Describes the kinds of destructured property values captured from a message template.
 and TemplatePropertyValue =
 | ScalarValue of obj

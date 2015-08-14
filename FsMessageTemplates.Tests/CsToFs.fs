@@ -50,7 +50,7 @@ let rec templatePropertyValue (tpv: CsTemplatePropertyValue) : TemplatePropertyV
     | :? MessageTemplates.Structure.ScalarValue as sv -> ScalarValue sv.Value
     | :? MessageTemplates.Structure.SequenceValue as sev -> SequenceValue (sev.Elements |> Seq.map templatePropertyValue |> Seq.toList)
     | :? MessageTemplates.Structure.DictionaryValue as dv ->
-        let keyMap (kvp:Kvp<CsScalarValue, CsTemplatePropertyValue>) = kvp.Key.Value
+        let keyMap (kvp:Kvp<CsScalarValue, CsTemplatePropertyValue>) = templatePropertyValue kvp.Key
         let valueMap (kvp:Kvp<CsScalarValue, CsTemplatePropertyValue>) = templatePropertyValue kvp.Value
         DictionaryValue (dv.Elements |> Seq.map (fun kvp -> keyMap kvp, valueMap kvp) |> Seq.toList)
     | :? MessageTemplates.Structure.StructureValue as strv ->
