@@ -13,7 +13,6 @@ platform: Any CPU
 install:
   - set PATH=%PROGRAMFILES(x86)%\MSBuild\14.0\Bin;%PATH%
   - dnvm upgrade -alias default
-  - .paket\paket.bootstrapper.exe
   - .paket\paket.exe restore
   - dnu restore MessageTemplates
   - dnu restore MessageTemplates.Tests
