@@ -476,11 +476,32 @@ let doFormat (w: TextWriter) (writePropToken) (template:Template) (values:obj[])
             let exists, value = valuesByPropName.TryGetValue(pd.Name)
             writeToken sb w writePropValue tp (if exists then Some value else None)
 
-let format provider template values =
-    use tw = new System.IO.StringWriter(formatProvider=provider)
+let format template values =
+    use tw = new StringWriter()
     doFormat tw writePropValue template values
     tw.ToString()
 
-let bprintn (sb:System.Text.StringBuilder) (template:string) (args:obj[]) = () // TODO:
-let sfprintn (p:System.IFormatProvider) (template:string) (args:obj[]) = "" // TODO:
-let fprintn (tw:System.IO.TextWriter) (template:string) (args:obj[]) = () // TODO:
+let bprintsm (sb:StringBuilder) (template:string) (args:obj[]) =
+    use tw = new StringWriter(sb)
+    doFormat tw writePropValue (parse template) args
+
+let sprintsm (p:System.IFormatProvider) (template:string) (args:obj[]) =
+    use tw = new StringWriter(p)
+    doFormat tw writePropValue (parse template) args
+    tw.ToString()
+
+let fprintsm (tw:TextWriter) (template:string) (args:obj[]) =
+    let template = parse template
+    doFormat tw writePropValue template args
+
+let bprintm (template:Template) (sb:StringBuilder) (args:obj[]) =
+    use tw = new StringWriter(sb)
+    doFormat tw writePropValue template args
+
+let sprintm (template:Template) (provider:System.IFormatProvider) (args:obj[]) =
+    use tw = new StringWriter(provider)
+    doFormat tw writePropValue template args
+    tw.ToString()
+
+let fprintm (template:Template) (tw:TextWriter) (args:obj[]) =
+    doFormat tw writePropValue template args

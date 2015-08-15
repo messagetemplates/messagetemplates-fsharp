@@ -1,6 +1,7 @@
 ﻿using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Diagnostics;
+using System.Linq;
 
 namespace MessageTemplates.PerfTests
 {
@@ -35,6 +36,9 @@ namespace MessageTemplates.PerfTests
             Console.WriteLine();
             test(t.CSharpParseAndFormatPositional);
             test(t.FSharpParseAndFormatPositional);
+            Console.WriteLine();
+            test(t.CSharpFormatPositional);
+            test(t.FSharpFormatPositional);
         }
 
         readonly string[] NAMED_TEMPLATES = new[] {
@@ -169,7 +173,7 @@ namespace MessageTemplates.PerfTests
                 for (var x = 0; x < POSITIONAL_TEMPLATES.Length; x++)
                 {
                     var mt = FsMessageTemplates.MessageTemplates.parse(POSITIONAL_TEMPLATES[x]);
-                    FsMessageTemplates.MessageTemplates.format(formatProvider, mt, ARGS[x]);
+                    FsMessageTemplates.MessageTemplates.format(mt, ARGS[x]);
                 }
             }
         }
@@ -182,7 +186,40 @@ namespace MessageTemplates.PerfTests
                 for (var x = 0; x < NAMED_TEMPLATES.Length; x++)
                 {
                     var mt = FsMessageTemplates.MessageTemplates.parse(NAMED_TEMPLATES[x]);
-                    FsMessageTemplates.MessageTemplates.format(formatProvider, mt, ARGS[x]);
+                    FsMessageTemplates.MessageTemplates.sprintm(mt, formatProvider, ARGS[x]);
+                }
+            }
+        }
+
+        [TestMethod]
+        public void CSharpFormatPositional()
+        {
+            var templates = POSITIONAL_TEMPLATES.Select(MessageTemplate.Parse).ToArray();
+            var tw = new System.IO.StringWriter();
+
+            for (var i = 0; i < TEST_ITERATIONS; i++)
+            {
+                for (var x = 0; x < templates.Length; x++)
+                {
+                    templates[x].Format(tw.FormatProvider, tw, ARGS[x]);
+                    tw.GetStringBuilder().Clear();
+                }
+            }
+        }
+
+        [TestMethod]
+        public void FSharpFormatPositional()
+        {
+            var templates = POSITIONAL_TEMPLATES.Select(FsMessageTemplates.MessageTemplates.parse).ToArray();
+            var tw = new System.IO.StringWriter();
+
+            for (var i = 0; i < TEST_ITERATIONS; i++)
+            {
+                for (var x = 0; x < templates.Length; x++)
+                {
+                    FsMessageTemplates.MessageTemplates
+                        .fprintm(templates[x], tw, ARGS[x]);
+                    tw.GetStringBuilder().Clear();
                 }
             }
         }

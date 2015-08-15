@@ -35,9 +35,7 @@ let renderp lang (provider:IFormatProvider) messageTemplate args =
     let argsArray = (args |> Seq.cast<obj> |> Seq.toArray) // force 'args' to be IEnumerable
     match lang with
     | "C#" -> MessageTemplates.MessageTemplate.Format(provider, messageTemplate, argsArray)
-    | "F#" -> FsMessageTemplates.MessageTemplates.format provider
-                                                        (FsMessageTemplates.MessageTemplates.parse messageTemplate)
-                                                        argsArray
+    | "F#" -> FsMessageTemplates.MessageTemplates.sprintsm provider messageTemplate argsArray
     | other -> failwithf "unexpected lang '%s'" other
 
 let render lang template args =
