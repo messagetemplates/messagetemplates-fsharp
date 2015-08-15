@@ -7,12 +7,19 @@ type DestrHint = Default = 0 | Stringify = 1 | Destructure = 2
 type Direction = Left = 0 | Right = 1
 
 [<Struct>]
-type AlignInfo(d:Direction, w:int) =
-    member __.Direction = d
-    member __.Width = w
-    override x.ToString() = (if x.Direction = Direction.Right then "-" else "") + string x.Width
-
-let emptyAlignInstance = AlignInfo()
+type AlignInfo =
+    new (direction:Direction, width:int) = { _direction=direction; _width=width; }
+    new (isValid:bool) = { _direction=Direction.Left; _width=(if isValid then -1 else -2) }
+    val private _direction:Direction
+    val private _width:int
+    member this.Direction with get() = this._direction
+    member this.Width with get() = this._width
+    member this.IsEmpty = this.Width = -1
+    member internal this.IsValid = this.Width <> -2
+    static member Empty = AlignInfo(isValid=true)
+    static member Invalid = AlignInfo(isValid=false)
+    override x.ToString() = if x.IsEmpty then "" elif x.IsValid = false then ""
+                            else (if x._direction = Direction.Right then "-" else "") + string x._width
 
 let inline getDestrHintChar destr = match destr with DestrHint.Destructure -> "@" | DestrHint.Stringify -> "$" | _ -> ""
 let inline getDestrFromChar c = match c with '@' -> DestrHint.Destructure | '$' -> DestrHint.Stringify | _ -> DestrHint.Default
@@ -22,8 +29,8 @@ type System.Text.StringBuilder with
     member this.ToStringAndClear () = let s = this.ToString() in this.Clear()|>ignore; s
 
 [<Struct>]
-type PropertyToken(name:string, pos:int option, destr:DestrHint, align: AlignInfo option, format: string option) =
-    static member Empty = PropertyToken("", None, DestrHint.Default, None, None)
+type PropertyToken(name:string, pos:int option, destr:DestrHint, align: AlignInfo, format: string option) =
+    static member Empty = PropertyToken("", None, DestrHint.Default, AlignInfo.Empty, None)
     member __.Name = name
     member __.Pos = pos
     member __.Destr = destr
@@ -34,7 +41,7 @@ type PropertyToken(name:string, pos:int option, destr:DestrHint, align: AlignInf
         sb  .Append("{")
             .AppendIf(includeDestr && x.Destr <> DestrHint.Default, getDestrHintChar x.Destr)
             .Append(name)
-            .AppendIf(x.Align <> None, "," + (stringOrNone x.Align))
+            .AppendIf(not x.Align.IsEmpty, "," + (string x.Align))
             .AppendIf(x.Format <> None, ":" + (stringOrNone x.Format))
             .Append("}")
             .ToStringAndClear()
@@ -153,12 +160,10 @@ let inline hasAnyInvalid isValid (s:string) =
 /// just like System.String.IndexOf(char) but within a string range
 let inline rngIndexOf (s:string) (rng:Range) (c:char) = tryGetFirstCharRng ((=) c) s rng 
 
-let inline tryParseAlignInfoRng (s:string) (rng:Range option) : bool * AlignInfo =
+let inline tryParseAlignInfoRng (s:string) (rng:Range option) : AlignInfo =
     match s, rng with
-    | _, None ->
-        true, emptyAlignInstance
-    | s, Some rng when (rng.Start >= rng.End) || (hasAnyInvalidRng isValidInAlignment s rng) ->
-        false, emptyAlignInstance
+    | _, None -> AlignInfo(isValid=true)
+    | s, Some rng when (rng.Start >= rng.End) || (hasAnyInvalidRng isValidInAlignment s rng) -> AlignInfo(isValid=false)
     | s, Some rng ->
         let alignSubString = rng.GetSubString s
         let lastDashIdx = alignSubString.LastIndexOf('-')
@@ -166,10 +171,10 @@ let inline tryParseAlignInfoRng (s:string) (rng:Range option) : bool * AlignInfo
                     | 0 -> int (alignSubString.Substring(1)) // skip dash for the numeric alignment
                     | -1 -> int alignSubString // no dash, must be all numeric
                     | _ -> 0 // dash is not allowed to be anywhere else
-        if width = 0 then false, emptyAlignInstance
+        if width = 0 then AlignInfo(isValid=false)
         else
             let direction = match lastDashIdx with -1 -> Direction.Left | _ -> Direction.Right
-            true, AlignInfo(direction, width)
+            AlignInfo(direction, width)
 
 let inline tryGetPropInSubString (t:string) (within : Range) : Token =
     /// Given a template such has "Hello, {@name,-10:abc}!" and a *within* range
@@ -200,12 +205,11 @@ let inline tryGetPropInSubString (t:string) (within : Range) : Token =
         if propertyName = "" || (hasAnyInvalid isValidInPropName propertyName) then emptyPropToken
         elif formatRange.IsSome && (hasAnyInvalidRng isValidInFormat t formatRange.Value) then emptyPropToken
         else match (tryParseAlignInfoRng t alignRange) with
-             | false, _ -> emptyPropToken
-             | true, alignInfo ->
+             | ai when ai.IsValid = false -> emptyPropToken
+             | alignInfo ->
                 let format = formatRange |> Option.map (fun rng -> rng.GetSubString t)
-                let maybeAlign = if alignInfo = emptyAlignInstance then None else Some alignInfo
                 Prop(within.Start - 1,
-                     PropertyToken(propertyName, maybeInt32 propertyName, destr, maybeAlign, format))
+                     PropertyToken(propertyName, maybeInt32 propertyName, destr, alignInfo, format))
 
 let emptyTextTokenArray = [| emptyTextToken |]
 

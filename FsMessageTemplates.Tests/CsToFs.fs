@@ -31,8 +31,8 @@ let propToToken (pr: CsPropertyToken) =
                          | CsAlignmentDirection.Right -> Direction.Right
                          | _ -> failwithf "unknown direction %A" d
     let align = match pr.Alignment with
-                | Value v -> Some (AlignInfo(getDirection v.Direction, v.Width))
-                | Null _ -> None
+                | Value v -> AlignInfo(getDirection v.Direction, v.Width)
+                | Null _ -> AlignInfo.Empty
     let format = match pr.Format with | null -> None | s -> Some s
     Token.Prop(pr.StartIndex, PropertyToken(pr.PropertyName, pos, destr, align, format))
 

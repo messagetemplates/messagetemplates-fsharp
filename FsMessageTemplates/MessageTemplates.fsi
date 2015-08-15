@@ -12,6 +12,12 @@ type AlignInfo =
     new: Direction:Direction * Width:int -> AlignInfo
     member Direction : Direction
     member Width : int
+    member IsEmpty: bool
+    member internal IsValid: bool
+    val private _direction:Direction
+    val private _width:int
+    static member Empty: AlignInfo
+    static member Invalid: AlignInfo
 
 /// Represents the details about property parsed from within a message template.
 [<Struct>]
@@ -20,7 +26,7 @@ type PropertyToken =
     new: name:string
             * pos:int option
             * destr:DestrHint
-            * align: AlignInfo option
+            * align: AlignInfo
             * format: string option
             -> PropertyToken
     /// The name of the property.
@@ -33,7 +39,7 @@ type PropertyToken =
     member Destr:DestrHint
     /// The alignment information (i.e. if {@name,-10} was parsed from the template, this
     /// would be AlignInfo(Direction.Right, 10)).
-    member Align:AlignInfo option
+    member Align:AlignInfo
     /// The format information (i.e. if {@name:0,000} was parsed from the template, this
     /// would be the string "0,000").
     member Format:string option
