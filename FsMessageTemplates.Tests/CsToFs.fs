@@ -1,6 +1,7 @@
 ﻿module FsTests.CsToFs
 
 open FsMessageTemplates.MessageTemplates
+open Tk
 
 type Kvp<'a,'b> = System.Collections.Generic.KeyValuePair<'a,'b>
 
@@ -51,8 +52,8 @@ let rec templatePropertyValue (tpv: CsTemplatePropertyValue) : TemplatePropertyV
         let valueMap (kvp:Kvp<CsScalarValue, CsTemplatePropertyValue>) = templatePropertyValue kvp.Value
         DictionaryValue (dv.Elements |> Seq.map (fun kvp -> keyMap kvp, valueMap kvp) |> Seq.toList)
     | :? MessageTemplates.Structure.StructureValue as strv ->
-        let structureValues = strv.Properties |> Seq.map (fun p -> p.Name, templatePropertyValue p.Value) |> Seq.toArray
+        let structureValues = strv.Properties |> Seq.map (fun p -> PropertyNameAndValue(p.Name, templatePropertyValue p.Value)) |> Seq.toArray
         StructureValue (strv.TypeTag, structureValues)
     | _ -> failwithf "unknown template property value type %A" tpv
 
-let templateProperty (tp: CsTemplateProperty) : PropertyNameAndValue = tp.Name, (templatePropertyValue tp.Value)
+let templateProperty (tp: CsTemplateProperty) = PropertyNameAndValue(tp.Name, (templatePropertyValue tp.Value))

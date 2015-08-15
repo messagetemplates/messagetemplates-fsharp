@@ -42,26 +42,71 @@ namespace MessageTemplates.PerfTests
             Console.WriteLine();
             test(t.CSharpParseAndFormatNamedDestr);
             test(t.FSharpParseAndFormatNamedDestr);
+            Console.WriteLine();
+            test(t.CSharpCaptureNamedDestr);
+            test(t.FSharpCaptureNamedDestr);
+        }
+
+        readonly string[] NAMED_DESTR_TEMPLATES = new[]
+        {
+            "Hello, {@name}, how's {@fsprop} it {@going}?",
+        };
+        
+        readonly object[][] NAMED_DESTR_ARGS = new[]
+        {
+            new object[] { "adam",
+                new Chair(),
+                FsMessageTemplates.MessageTemplates.Token.NewProp(1, new FsMessageTemplates.MessageTemplates.PropertyToken()),
+                new Version(1,2,3,4),
+            },
+        };
+
+        [TestMethod]
+        public void FSharpCaptureNamedDestr()
+        {
+            var templates = NAMED_DESTR_TEMPLATES.Select(FsMessageTemplates.MessageTemplates.parse).ToArray();
+            
+            for (var i = 0; i < TEST_ITERATIONS * 3; i++)
+            {
+                for (var x = 0; x < templates.Length; x++)
+                {
+                    FsMessageTemplates.MessageTemplates.captureProperties(templates[x], NAMED_DESTR_ARGS[x]);
+                }
+            }
+        }
+
+        [TestMethod]
+        public void CSharpCaptureNamedDestr()
+        {
+            var templates = NAMED_DESTR_TEMPLATES.Select(MessageTemplate.Parse).ToArray();
+
+            for (var i = 0; i < TEST_ITERATIONS * 3; i++)
+            {
+                for (var x = 0; x < templates.Length; x++)
+                {
+                    MessageTemplate.Capture(templates[x], NAMED_DESTR_ARGS[x]);
+                }
+            }
         }
 
         [TestMethod]
         public void FSharpParseAndFormatNamedDestr()
         {
             var tw = new System.IO.StringWriter();
-            for (var i = 0; i < TEST_ITERATIONS; i++)
+            for (var _ = 0; _ < TEST_ITERATIONS * 3; _++)
             {
                 for (int x = 0; x < NAMED_DESTR_TEMPLATES.Length; x++)
                 {
                     FsMessageTemplates.MessageTemplates.fprintsm(tw, NAMED_DESTR_TEMPLATES[x], NAMED_DESTR_ARGS[x]);
                 }
-            }            
+            }
         }
 
         [TestMethod]
         public void CSharpParseAndFormatNamedDestr()
         {
             var tw = new System.IO.StringWriter();
-            for (var i = 0; i < TEST_ITERATIONS; i++)
+            for (var i = 0; i < TEST_ITERATIONS*3; i++)
             {
                 for (int x = 0; x < NAMED_DESTR_TEMPLATES.Length; x++)
                 {
@@ -69,15 +114,6 @@ namespace MessageTemplates.PerfTests
                 }
             }
         }
-
-        readonly string[] NAMED_DESTR_TEMPLATES = new[]
-        {
-            "Hello, {@name}, how's it {@going}?",
-        };
-
-        readonly object[][] NAMED_DESTR_ARGS = new[] {
-            new object[] { "adam", new Chair(), new Version(1,2,3,4), },
-            };
 
         readonly string[] NAMED_TEMPLATES = new[] {
             "Hello, {namsd,fgsdfg{{adam}}}, how's it {going1,-10:blah:bhal}? {going2:0,0} {going3:0,0} {going4:0,0} {going5:0,0} {going6:0,0}",

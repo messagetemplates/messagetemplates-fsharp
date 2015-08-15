@@ -17,7 +17,7 @@ type AlignInfo =
     val private _direction:Direction
     val private _width:int
     static member Empty: AlignInfo
-    static member Invalid: AlignInfo
+    static member internal Invalid: AlignInfo
 
 /// Represents the details about property parsed from within a message template.
 [<Struct>]
@@ -72,7 +72,7 @@ and TemplatePropertyValue =
 | StructureValue of typeTag:string * values:PropertyNameAndValue[]
 | DictionaryValue of data: ScalarKeyValuePair list
 /// A property and it's associated destructured value.
-and PropertyNameAndValue = string * TemplatePropertyValue
+and PropertyNameAndValue = { Name:string; Value:TemplatePropertyValue }
 
 /// A function that attempts to destructure a property and value object into a 
 /// more friendly (and immutable) <see cref="TemplatePropertyValue" />. This returns
@@ -85,8 +85,6 @@ and
         member Hint: DestrHint
         member Value: obj
         member Destr: Destructurer
-
-type PropertyAndValue = PropertyToken * TemplatePropertyValue
 
 /// Parses a message template string.
 val parse: template:string -> Template

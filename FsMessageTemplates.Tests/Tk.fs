@@ -2,7 +2,7 @@
 
 open FsMessageTemplates.MessageTemplates
 
-// let td tindex raw = { Text=raw; StartIndex=tindex }
+let PropertyNameAndValue (name:string, value:TemplatePropertyValue) = { Name=name; Value=value }
 let text tindex raw = Token.Text(tindex, raw)
 let desDef = DestrHint.Default
 let emptyAlign = AlignInfo.Empty

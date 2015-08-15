@@ -1,9 +1,9 @@
 ﻿module FsTests.Capture
 
 open System
-open System.Globalization
 open Swensen.Unquote
 
+open Tk
 open FsMessageTemplates.MessageTemplates
 
 [<LangTheory; LangCsFsData>]
@@ -15,13 +15,13 @@ let ``no values provided yields no properties`` (lang) =
 [<LangTheory; LangCsFsData>]
 let ``one named property and one value yields the correct named property`` (lang) =
     let actual = capture lang "this {will} work, I hope" [box "might"]
-    test <@ actual = [ "will", ScalarValue "might" ] @>
+    test <@ actual = [ PropertyNameAndValue("will", ScalarValue "might") ] @>
 
 [<LangTheory; LangCsFsData>]
 let ``one enumerable property yeilds a sequence value`` (lang) =
     let actual = capture lang "this {will} work, I hope" [box [|1..3|]]
     let expectedValue = SequenceValue [ ScalarValue 1; ScalarValue 2; ScalarValue 3; ]
-    let expected =  ["will", expectedValue]
+    let expected =  [ PropertyNameAndValue("will", expectedValue) ]
     test <@ actual = expected @>
 
 type Chair() =
@@ -30,43 +30,46 @@ type Chair() =
     override __.ToString() = "a chair"
 
 let chairStructureValue =
-    let propNamesAndValues = [| "Back", ScalarValue "straight"
-                                "Legs", SequenceValue ([ ScalarValue 1; ScalarValue 2; ScalarValue 3; ScalarValue 4 ]) |]
+    let propNamesAndValues = [| PropertyNameAndValue("Back", ScalarValue "straight")
+                                PropertyNameAndValue("Legs", SequenceValue ([ ScalarValue 1; ScalarValue 2; ScalarValue 3; ScalarValue 4 ]))
+                             |]
     StructureValue ("Chair", propNamesAndValues)
 
 [<LangTheory; LangCsFsData>]
 let ``a destructured dictionary yeilds dictionary values`` (lang) =
     let inputDictionary = System.Collections.Generic.Dictionary(dict [| "key", Chair(); |])
     let actual = capture lang "this {@will} work, I hope" [ box inputDictionary ]
-    let expected = [ "will", DictionaryValue [ ScalarValue "key", chairStructureValue ] ]
+    let expected = [ PropertyNameAndValue("will", DictionaryValue [ ScalarValue "key", chairStructureValue ]) ]
     test <@ actual = expected @>
 
 [<LangTheory; LangCsFsData>]
 let ``an F# 'dict' (which is not Dictionary<_,_>) yeilds a sequence->structure value`` (lang) =
     let inputDictionary = dict [| "firstDictEntryKey", Chair(); |]
     let actual = capture lang "this {@will} work, I hope" [ box inputDictionary ]
-    let expected = [ "will", SequenceValue [StructureValue("KeyValuePair`2", [| "Key", ScalarValue "firstDictEntryKey"
-                                                                                "Value", chairStructureValue |])]
+    let expected = [ PropertyNameAndValue("will", SequenceValue [StructureValue("KeyValuePair`2", [| PropertyNameAndValue("Key", ScalarValue "firstDictEntryKey")
+                                                                                                     PropertyNameAndValue("Value", chairStructureValue)
+                                                                                                  |])
+                                                                ])
                    ]
     test <@ actual = expected @>
 
 [<LangTheory; LangCsFsData>]
 let ``a class instance is captured as a structure value`` (lang) =
     let actual = capture lang "I sat at {@Chair}" [Chair()]
-    let expected : PropertyNameAndValue list = [ "Chair", chairStructureValue ]
+    let expected : PropertyNameAndValue list = [ PropertyNameAndValue("Chair", chairStructureValue) ]
     test <@ actual = expected @>
 
 [<LangTheory; LangCsFsData>]
 let ``one positional property and one value yields the correct positional property`` (lang) =
     let actual = capture lang "this {0} work, I hope" [box "will"]
-    test <@ actual = [ "0", ScalarValue "will" ] @>
+    test <@ actual = [ PropertyNameAndValue("0", ScalarValue "will") ] @>
 
 [<LangTheory; LangCsFsData>]
 let ``multiple positional property and the same number of values yields the correct positional properties`` (lang) =
     let actual = capture lang "{0} {1} {2}, I hope" [box "this"; box 10; box true]
-    test <@ actual = [ "0", ScalarValue ("this")
-                       "1", ScalarValue (10)
-                       "2", ScalarValue (true) ] @>
+    test <@ actual = [ PropertyNameAndValue("0", ScalarValue ("this"))
+                       PropertyNameAndValue("1", ScalarValue (10))
+                       PropertyNameAndValue("2", ScalarValue (true)) ] @>
 
 type MyScalarEnum = Zero=0 | One=1 | Two=2
 
@@ -108,7 +111,7 @@ let getScalarExpected (v:obj, e:ExpectedScalarResult) =
 let ``scalar types are captured correctly when positional`` (lang) =
     let positionalFmtString = String.Join(" ", (scalars |> Seq.mapi (fun i _ -> "{" + string i + "}")))
     let valuesArray = scalars |> Seq.map (scalarInputAsObj) |> Seq.toArray
-    let expected = scalars |> List.mapi (fun i s -> string i, ScalarValue (getScalarExpected s))
+    let expected = scalars |> List.mapi (fun i s -> PropertyNameAndValue(string i, ScalarValue (getScalarExpected s)))
     let actual = capture lang positionalFmtString valuesArray
     test <@ actual = expected @>
 
@@ -119,7 +122,7 @@ let ``scalar types are captured correctly when positionally out of order`` (lang
     let outOfOrder = numberedOutOfOrder |> List.map (fun (i, items) -> items)
     let positionalFmtString = String.Join(" ", posTokensStringsOutOfOrder)
     let valuesArray = outOfOrder |> Seq.map (scalarInputAsObj) |> Seq.toArray
-    let expected = outOfOrder |> List.mapi (fun i s -> string i, ScalarValue (getScalarExpected s))
+    let expected = outOfOrder |> List.mapi (fun i s -> PropertyNameAndValue(string i, ScalarValue (getScalarExpected s)))
     let actual = capture lang positionalFmtString valuesArray
     test <@ actual = expected @>
 
@@ -127,7 +130,7 @@ let ``scalar types are captured correctly when positionally out of order`` (lang
 let ``scalar types are captured correctly when named`` (lang) =
     let namedFmtString = String.Join(" ", (scalars |> Seq.mapi (fun i v -> "{named" + (string i) + "}")))
     let valuesArray = scalars |> Seq.map (fun s -> (scalarInputAsObj s)) |> Seq.toArray
-    let expected = scalars |> List.mapi (fun i s -> "named" + string i, ScalarValue (getScalarExpected s))
+    let expected = scalars |> List.mapi (fun i s -> PropertyNameAndValue("named" + string i, ScalarValue (getScalarExpected s)))
     let actual = capture lang namedFmtString valuesArray
     test <@ actual = expected @>
 
@@ -140,12 +143,12 @@ let ``multiple positional property capture the correct integral scalar types`` (
                     box     5L
                     box     6UL ]
     let actual = capture lang "{0} {1} {2}, I hope, {3} {4} {5}" values
-    test <@ actual = [ "0", ScalarValue (box 1s)
-                       "1", ScalarValue (box 2us)
-                       "2", ScalarValue (box 3)
-                       "3", ScalarValue (box 4u)
-                       "4", ScalarValue (box 5L)
-                       "5", ScalarValue (box 6UL) ] @>
+    test <@ actual = [ PropertyNameAndValue("0", ScalarValue (box 1s))
+                       PropertyNameAndValue("1", ScalarValue (box 2us))
+                       PropertyNameAndValue("2", ScalarValue (box 3))
+                       PropertyNameAndValue("3", ScalarValue (box 4u))
+                       PropertyNameAndValue("4", ScalarValue (box 5L))
+                       PropertyNameAndValue("5", ScalarValue (box 6UL)) ] @>
 
 [<LangTheory; LangCsFsData>]
 let ``multiple positional nullable properties capture the correct integral scalar types`` (lang) =
@@ -156,11 +159,11 @@ let ``multiple positional nullable properties capture the correct integral scala
                     box     (Nullable 5L)
                     box     (Nullable 6UL) ]
     let actual = capture lang "{0} {1} {2}, I hope, {3} {4} {5}" values
-    test <@ actual = [ "0", ScalarValue (box 1s)
-                       "1", ScalarValue (box 2us)
-                       "2", ScalarValue (box 3)
-                       "3", ScalarValue (box 4u)
-                       "4", ScalarValue (box 5L)
-                       "5", ScalarValue (box 6UL) ] @>
+    test <@ actual = [ PropertyNameAndValue("0", ScalarValue (box 1s))
+                       PropertyNameAndValue("1", ScalarValue (box 2us))
+                       PropertyNameAndValue("2", ScalarValue (box 3))
+                       PropertyNameAndValue("3", ScalarValue (box 4u))
+                       PropertyNameAndValue("4", ScalarValue (box 5L))
+                       PropertyNameAndValue("5", ScalarValue (box 6UL)) ] @>
 
 
