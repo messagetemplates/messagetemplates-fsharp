@@ -27,7 +27,7 @@ type PropertyToken =
             * pos:int
             * destr:DestrHint
             * align: AlignInfo
-            * format: string option
+            * format: string
             -> PropertyToken
     /// The name of the property.
     member Name:string
@@ -42,7 +42,7 @@ type PropertyToken =
     member Align:AlignInfo
     /// The format information (i.e. if {@name:0,000} was parsed from the template, this
     /// would be the string "0,000").
-    member Format:string option
+    member Format:string
     /// When the property is positional (i.e. if {0}, {1}, etc was used instead of a
     /// property name, this returns true. Get the postion number from the Pos field.
     member IsPositional : bool

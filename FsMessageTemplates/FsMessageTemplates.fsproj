@@ -34,8 +34,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <WarningLevel>3</WarningLevel>
     <DocumentationFile>bin\Release\FsMessageTemplates.XML</DocumentationFile>
-    <OtherFlags>
-    </OtherFlags>
+    <OtherFlags>--debug:full</OtherFlags>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="FSharp.Core">

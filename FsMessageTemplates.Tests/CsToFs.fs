@@ -31,8 +31,7 @@ let propToToken (pr: CsPropertyToken) =
     let align = match pr.Alignment with
                 | Value v -> AlignInfo(getDirection v.Direction, v.Width)
                 | Null _ -> AlignInfo.Empty
-    let format = match pr.Format with | null -> None | s -> Some s
-    Token.Prop(pr.StartIndex, PropertyToken(pr.PropertyName, pos, destr, align, format))
+    Token.Prop(pr.StartIndex, PropertyToken(pr.PropertyName, pos, destr, align, pr.Format))
 
 let mttToToken (mtt: CsMessageTemplateToken) : Token =
     match mtt with

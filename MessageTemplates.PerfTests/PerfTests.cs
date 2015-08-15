@@ -8,37 +8,10 @@ namespace MessageTemplates.PerfTests
     [TestClass]
     public class PerfTests
     {
-        const int TEST_ITERATIONS = 50000;
+        const int TEST_ITERATIONS = 20000;
 
         static void Main(string[] args)
         {
-            //var template = "Hello, {@name}, how's it {@going}?";
-            //var formatArgs = new object[] { "adam", new Chair() };
-            //var tw = new System.IO.StringWriter();
-
-            //var sw = new Stopwatch();
-            //sw.Start();
-            //for (var i = 0; i < 1000; i++)
-            //{
-            //    FsMessageTemplates.MessageTemplates.fprintsm(tw, template, formatArgs);
-            //    tw.WriteLine();
-            //}
-            //sw.Stop();
-            //System.IO.File.WriteAllText("output_fs.txt", tw.ToString());
-            //Console.WriteLine(sw.Elapsed);
-
-            //tw.GetStringBuilder().Clear();
-
-            //sw.Restart();
-            //for (var i = 0; i < 200000; i++)
-            //{
-            //    MessageTemplate.Format(tw.FormatProvider, tw, template, formatArgs);
-            //    tw.WriteLine();
-            //}
-            //sw.Stop();
-            //System.IO.File.WriteAllText("output_cs.txt", tw.ToString());
-            //Console.WriteLine(sw.Elapsed);
-
             var t = new PerfTests();
             Action<Action> test = (action) =>
             {
@@ -66,7 +39,45 @@ namespace MessageTemplates.PerfTests
             Console.WriteLine();
             test(t.CSharpFormatPositional);
             test(t.FSharpFormatPositional);
+            Console.WriteLine();
+            test(t.CSharpParseAndFormatNamedDestr);
+            test(t.FSharpParseAndFormatNamedDestr);
         }
+
+        [TestMethod]
+        public void FSharpParseAndFormatNamedDestr()
+        {
+            var tw = new System.IO.StringWriter();
+            for (var i = 0; i < TEST_ITERATIONS; i++)
+            {
+                for (int x = 0; x < NAMED_DESTR_TEMPLATES.Length; x++)
+                {
+                    FsMessageTemplates.MessageTemplates.fprintsm(tw, NAMED_DESTR_TEMPLATES[x], NAMED_DESTR_ARGS[x]);
+                }
+            }            
+        }
+
+        [TestMethod]
+        public void CSharpParseAndFormatNamedDestr()
+        {
+            var tw = new System.IO.StringWriter();
+            for (var i = 0; i < TEST_ITERATIONS; i++)
+            {
+                for (int x = 0; x < NAMED_DESTR_TEMPLATES.Length; x++)
+                {
+                    MessageTemplate.Format(tw.FormatProvider, tw, NAMED_DESTR_TEMPLATES[x], NAMED_DESTR_ARGS[x]);
+                }
+            }
+        }
+
+        readonly string[] NAMED_DESTR_TEMPLATES = new[]
+        {
+            "Hello, {@name}, how's it {@going}?",
+        };
+
+        readonly object[][] NAMED_DESTR_ARGS = new[] {
+            new object[] { "adam", new Chair(), new Version(1,2,3,4), },
+            };
 
         readonly string[] NAMED_TEMPLATES = new[] {
             "Hello, {namsd,fgsdfg{{adam}}}, how's it {going1,-10:blah:bhal}? {going2:0,0} {going3:0,0} {going4:0,0} {going5:0,0} {going6:0,0}",

@@ -19,7 +19,7 @@ type AlignInfo =
     static member Empty = AlignInfo(isValid=true)
     static member Invalid = AlignInfo(isValid=false)
     override x.ToString() = if x.IsEmpty then "" elif x.IsValid = false then ""
-                            else (if x._direction = Direction.Right then "-" else "") + string x._width
+                            else (if x._direction = Direction.Left then "-" else "") + string x._width
 
 let inline getDestrHintChar destr = if destr = DestrHint.Default then "" elif destr = DestrHint.Destructure then "@" else "$"
 let inline getDestrFromChar c = if c = '@' then DestrHint.Destructure elif c = '$' then DestrHint.Stringify else DestrHint.Default
@@ -29,8 +29,8 @@ type System.Text.StringBuilder with
     member inline this.ToStringAndClear () = let s = this.ToString() in this.Clear()|>ignore; s
 
 [<Struct>]
-type PropertyToken(name:string, pos:int, destr:DestrHint, align: AlignInfo, format: string option) =
-    static member Empty = PropertyToken("", -1, DestrHint.Default, AlignInfo.Empty, None)
+type PropertyToken(name:string, pos:int, destr:DestrHint, align: AlignInfo, format: string) =
+    static member Empty = PropertyToken("", -1, DestrHint.Default, AlignInfo.Empty, null)
     member __.Name = name
     member __.Pos = pos
     member __.Destr = destr
@@ -41,8 +41,8 @@ type PropertyToken(name:string, pos:int, destr:DestrHint, align: AlignInfo, form
         sb  .Append("{")
             .AppendIf(includeDestr && x.Destr <> DestrHint.Default, getDestrHintChar x.Destr)
             .Append(name)
-            .AppendIf(not x.Align.IsEmpty, "," + (string x.Align))
-            .AppendIf(x.Format <> None, ":" + (stringOrNone x.Format))
+            .AppendIf(not x.Align.IsEmpty, "," + ((if x.Align.Direction = Direction.Right then "-" else "") + string x.Align.Width))
+            .AppendIf(x.Format <> null, ":" + x.Format)
             .Append("}")
             .ToStringAndClear()
 
@@ -161,7 +161,7 @@ let inline tryParseAlignInfoRng (s:string) (rng:Range option) : AlignInfo =
                     | _ -> 0 // dash is not allowed to be anywhere else
         if width = 0 then AlignInfo(isValid=false)
         else
-            let direction = match lastDashIdx with -1 -> Direction.Left | _ -> Direction.Right
+            let direction = match lastDashIdx with -1 -> Direction.Right | _ -> Direction.Left
             AlignInfo(direction, width)
 
 let inline tryGetPropInSubString (t:string) (within : Range) : Token =
@@ -195,7 +195,7 @@ let inline tryGetPropInSubString (t:string) (within : Range) : Token =
         else match (tryParseAlignInfoRng t alignRange) with
              | ai when ai.IsValid = false -> emptyPropToken
              | alignInfo ->
-                let format = formatRange |> Option.map (fun rng -> rng.GetSubString t)
+                let format = if formatRange.IsSome then (formatRange.Value.GetSubString t) else null
                 Prop(within.Start - 1,
                      PropertyToken(propertyName, parseIntOrNegative1 propertyName, destr, alignInfo, format))
 
@@ -252,7 +252,7 @@ module Destructure =
     type DtOffset = System.DateTimeOffset
 
     // perf
-    let emptyKeepTrying = Unchecked.defaultof<TemplatePropertyValue>
+    let inline emptyKeepTrying() = Unchecked.defaultof<TemplatePropertyValue>
     let inline isEmptyKeepTrying (tpv:TemplatePropertyValue) = Object.ReferenceEquals(tpv, null)
     let inline tryCastAs<'T> (o:obj) =  match o with | :? 'T as res -> res | _ -> Unchecked.defaultof<'T>
     
@@ -268,7 +268,7 @@ module Destructure =
     let inline tryBuiltInTypesOrNull (r:DestructureRequest) =
         if r.Value = null then ScalarValue null 
         elif scalarTypeHash.Contains(r.Value.GetType()) then (ScalarValue r.Value)
-        else emptyKeepTrying
+        else emptyKeepTrying()
 
     let inline tryNullable (r:DestructureRequest) =
         let t = r.Value.GetType()
@@ -278,17 +278,17 @@ module Destructure =
             | n when (Object.ReferenceEquals(null, n)) -> (ScalarValue null)
             | n when (not n.HasValue) -> (ScalarValue null)
             | n when n.HasValue -> r.TryAgainWithValue(box (n.GetValueOrDefault()))
-            | _ -> emptyKeepTrying
-        else emptyKeepTrying
+            | _ -> emptyKeepTrying()
+        else emptyKeepTrying()
 
     let inline tryEnum (r:DestructureRequest) =
         match tryCastAs<System.Enum>(r.Value) with
-        | e when (Object.ReferenceEquals(null, e)) -> emptyKeepTrying
+        | e when (Object.ReferenceEquals(null, e)) -> emptyKeepTrying()
         | e -> (ScalarValue (e))
 
     let inline tryByteArrayMaxBytes (maxBytes:int) (r:DestructureRequest) =
         match tryCastAs<System.Byte[]>(r.Value) with
-        | bytes when (Object.ReferenceEquals(null, bytes)) -> emptyKeepTrying
+        | bytes when (Object.ReferenceEquals(null, bytes)) -> emptyKeepTrying()
         | bytes when bytes.Length <= maxBytes -> ScalarValue bytes
         | bytes ->
             let inline toHexString (b:byte) = b.ToString("X2")
@@ -302,14 +302,14 @@ module Destructure =
         match r.Value with
         | :? Type as t -> ScalarValue t
         | :? System.Reflection.MemberInfo as m -> ScalarValue m
-        | _ -> emptyKeepTrying
+        | _ -> emptyKeepTrying()
 
     let private scalarDestructurers = [| tryBuiltInTypesOrNull; tryNullable; tryEnum;
                                          tryByteArray; tryReflectionTypes |]
     let private scalarDestructurersLength = scalarDestructurers.Length
     
     let rec loopTryAll (r:DestructureRequest) (ds:Destructurer[]) i stop =
-        if i >= stop then emptyKeepTrying
+        if i >= stop then emptyKeepTrying()
         else
             match ds.[i] r with
             | tpv when isEmptyKeepTrying tpv -> loopTryAll r ds (i+1) stop
@@ -319,15 +319,15 @@ module Destructure =
         loopTryAll r scalarDestructurers 0 scalarDestructurersLength
 
     let inline tryNull (r:DestructureRequest) =
-        match r.Value with | null -> ScalarValue null | _ -> emptyKeepTrying
+        match r.Value with | null -> ScalarValue null | _ -> emptyKeepTrying()
     let inline tryStringifyDestructurer (r:DestructureRequest) =
-        match r.Hint with | DestrHint.Stringify -> ScalarValue (r.Value.ToString()) | _ -> emptyKeepTrying
+        match r.Hint with | DestrHint.Stringify -> ScalarValue (r.Value.ToString()) | _ -> emptyKeepTrying()
 
     let inline tryDelegateString (r:DestructureRequest) =
-        if r.Hint <> DestrHint.Destructure then emptyKeepTrying
+        if r.Hint <> DestrHint.Destructure then emptyKeepTrying()
         else
             match tryCastAs<System.Delegate>(r.Value) with
-            | e when (Object.ReferenceEquals(null, e)) -> emptyKeepTrying
+            | e when (Object.ReferenceEquals(null, e)) -> emptyKeepTrying()
             | e -> (ScalarValue (string e))
     
     open System.Reflection
@@ -343,7 +343,7 @@ module Destructure =
     let inline tryEnumerableDestr (r:DestructureRequest) =
         let valueType = r.Value.GetType()
         match tryCastAs<System.Collections.IEnumerable>(r.Value) with
-        | e when Object.ReferenceEquals(null, e) -> emptyKeepTrying
+        | e when Object.ReferenceEquals(null, e) -> emptyKeepTrying()
         | e when isScalarDict valueType ->
             let mutable keyProp, valueProp = Unchecked.defaultof<PropertyInfo>, Unchecked.defaultof<PropertyInfo>
             let getKey o = if keyProp = null then keyProp <- o.GetType().GetRuntimeProperty("Key")
@@ -357,7 +357,7 @@ module Destructure =
             DictionaryValue skvps
         | e -> SequenceValue(e |> Seq.cast<obj> |> Seq.map r.TryAgainWithValue |> Seq.toList)
 
-    let inline tryCustomDestructuring (r:DestructureRequest) = emptyKeepTrying // TODO:
+    let inline tryCustomDestructuring (r:DestructureRequest) = emptyKeepTrying() // TODO:
     let inline scalarStringCatchAllDestr (r:DestructureRequest) = ScalarValue (r.Value.ToString())
 
     let inline isPublicInstanceReadProp (p:PropertyInfo) =
@@ -365,7 +365,7 @@ module Destructure =
             (p.Name <> "Item" || p.GetIndexParameters().Length = 0)
 
     let inline tryObjectStructureDestructuring (r:DestructureRequest) =
-        if r.Hint <> DestrHint.Destructure then emptyKeepTrying
+        if r.Hint <> DestrHint.Destructure then emptyKeepTrying()
         else
             let ty = r.Value.GetType()
             let typeTag = match ty.Name with
@@ -417,14 +417,34 @@ let captureProperties (t:Template) (args:obj[]) =
 
 let captureMessageProperties (s:string) (args:obj[]) = captureProperties (s |> parse) args
 
+let inline writeScalar (w: TextWriter) (sv: TemplatePropertyValue) (format: string) =
+    match sv with
+    | ScalarValue sv ->
+        match sv with
+        | :? string as s ->
+            w.Write "\""
+            w.Write (s.Replace("\"", "\\\""))
+            w.Write "\""
+        | :? System.IFormattable as f ->
+            w.Write (f.ToString(format, w.FormatProvider))
+        | _ -> w.Write(sv.ToString())
+    | _ -> ()
+
 let rec writePropValue (sb: StringBuilder) (w: TextWriter) (pt: PropertyToken) (pv: TemplatePropertyValue) =
     match pv with
     | ScalarValue null -> w.Write "null"
-    | ScalarValue sv ->
-        let ptFormatString = pt.ToStringFormatTemplate(sb, 0)
-        match sv with
-        | :? string as s -> w.Write "\""; w.Write (ptFormatString, s.Replace("\"", "\\\"")); w.Write "\"";
-        | _ -> w.Write(ptFormatString, [| sv |])
+    | ScalarValue _ ->
+        if pt.Align.IsEmpty then writeScalar w pv pt.Format
+        else
+            let alignWriter = new StringWriter(w.FormatProvider)
+            writeScalar alignWriter pv pt.Format
+            let valueAsString = alignWriter.ToString()
+            if valueAsString.Length >= pt.Align.Width then w.Write valueAsString
+            else
+                let pad = pt.Align.Width - valueAsString.Length
+                if pt.Align.Direction = Direction.Right then w.Write (System.String(' ', pad))
+                w.Write valueAsString
+                if pt.Align.Direction = Direction.Left then w.Write (System.String(' ', pad))
     | SequenceValue svs ->
         w.Write '['
         let lastIndex = svs.Length - 1
@@ -434,12 +454,12 @@ let rec writePropValue (sb: StringBuilder) (w: TextWriter) (pt: PropertyToken) (
         )
         w.Write ']'
     | StructureValue(typeTag, values) ->
-        if typeTag <> null && typeTag.Length > 0 then w.Write typeTag; w.Write ' '
+        if typeTag <> null then w.Write typeTag; w.Write ' '
         w.Write "{ "
         let lastIndex = values.Length - 1
         for i = 0 to lastIndex do
             let n, v = values.[i]
-            w.Write("{0}: ", n)
+            w.Write n; w.Write ": "
             writePropValue sb w pt v
             w.Write (if i = lastIndex then " " else ", ")
         w.Write "}"
