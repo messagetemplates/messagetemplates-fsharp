@@ -24,7 +24,7 @@ type AlignInfo =
 type PropertyToken =
     /// Constructs a new instance of a template property.
     new: name:string
-            * pos:int option
+            * pos:int
             * destr:DestrHint
             * align: AlignInfo
             * format: string option
@@ -33,7 +33,7 @@ type PropertyToken =
     member Name:string
     /// If the property was positional (i.e. {0} or {1}, instead of {name}), this
     /// is the position number.
-    member Pos:int option
+    member Pos:int
     /// The destructuring hint (i.e. if {@name} was used then Destructure, if {$name}
     /// was used, then Stringify).
     member Destr:DestrHint
@@ -43,11 +43,9 @@ type PropertyToken =
     /// The format information (i.e. if {@name:0,000} was parsed from the template, this
     /// would be the string "0,000").
     member Format:string option
-    with
-        static member Empty: PropertyToken
-        /// When the property is positional (i.e. if {0}, {1}, etc was used instead of a
-        /// property name, this returns true. Get the postion number from the Pos field.
-        member IsPositional : bool
+    /// When the property is positional (i.e. if {0}, {1}, etc was used instead of a
+    /// property name, this returns true. Get the postion number from the Pos field.
+    member IsPositional : bool
 
 /// A token parsed from a message template.
 type Token =
@@ -61,7 +59,7 @@ type Token =
 type Template =
     member Tokens : Token seq
     member FormatString : string
-    member Properties : PropertyToken []
+    member Properties : PropertyToken seq
     member internal Named : PropertyToken []
     member internal PositionalsByPos : PropertyToken []
 
@@ -71,7 +69,7 @@ type ScalarKeyValuePair = TemplatePropertyValue * TemplatePropertyValue
 and TemplatePropertyValue =
 | ScalarValue of obj
 | SequenceValue of TemplatePropertyValue list
-| StructureValue of typeTag:string option * values:PropertyNameAndValue list
+| StructureValue of typeTag:string * values:PropertyNameAndValue[]
 | DictionaryValue of data: ScalarKeyValuePair list
 /// A property and it's associated destructured value.
 and PropertyNameAndValue = string * TemplatePropertyValue

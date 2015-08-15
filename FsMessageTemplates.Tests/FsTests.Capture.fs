@@ -30,10 +30,9 @@ type Chair() =
     override __.ToString() = "a chair"
 
 let chairStructureValue =
-    let typeTag = Some "Chair"
-    let propNamesAndValues = [  "Back", ScalarValue "straight"
-                                "Legs", SequenceValue ([ ScalarValue 1; ScalarValue 2; ScalarValue 3; ScalarValue 4 ]) ]
-    StructureValue (typeTag, propNamesAndValues)
+    let propNamesAndValues = [| "Back", ScalarValue "straight"
+                                "Legs", SequenceValue ([ ScalarValue 1; ScalarValue 2; ScalarValue 3; ScalarValue 4 ]) |]
+    StructureValue ("Chair", propNamesAndValues)
 
 [<LangTheory; LangCsFsData>]
 let ``a destructured dictionary yeilds dictionary values`` (lang) =
@@ -46,8 +45,8 @@ let ``a destructured dictionary yeilds dictionary values`` (lang) =
 let ``an F# 'dict' (which is not Dictionary<_,_>) yeilds a sequence->structure value`` (lang) =
     let inputDictionary = dict [| "firstDictEntryKey", Chair(); |]
     let actual = capture lang "this {@will} work, I hope" [ box inputDictionary ]
-    let expected = [ "will", SequenceValue [StructureValue(Some "KeyValuePair`2", [ "Key", ScalarValue "firstDictEntryKey"
-                                                                                    "Value", chairStructureValue ])]
+    let expected = [ "will", SequenceValue [StructureValue("KeyValuePair`2", [| "Key", ScalarValue "firstDictEntryKey"
+                                                                                "Value", chairStructureValue |])]
                    ]
     test <@ actual = expected @>
 

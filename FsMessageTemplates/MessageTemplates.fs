@@ -21,22 +21,22 @@ type AlignInfo =
     override x.ToString() = if x.IsEmpty then "" elif x.IsValid = false then ""
                             else (if x._direction = Direction.Right then "-" else "") + string x._width
 
-let inline getDestrHintChar destr = match destr with DestrHint.Destructure -> "@" | DestrHint.Stringify -> "$" | _ -> ""
-let inline getDestrFromChar c = match c with '@' -> DestrHint.Destructure | '$' -> DestrHint.Stringify | _ -> DestrHint.Default
+let inline getDestrHintChar destr = if destr = DestrHint.Default then "" elif destr = DestrHint.Destructure then "@" else "$"
+let inline getDestrFromChar c = if c = '@' then DestrHint.Destructure elif c = '$' then DestrHint.Stringify else DestrHint.Default
 let inline stringOrNone (v:'a option) = match v with Some x -> string x | None -> ""
 type System.Text.StringBuilder with
-    member this.AppendIf (cond:bool, s:string) = if cond then this.Append(s) else this
-    member this.ToStringAndClear () = let s = this.ToString() in this.Clear()|>ignore; s
+    member inline this.AppendIf (cond:bool, s:string) = if cond then this.Append(s) else this
+    member inline this.ToStringAndClear () = let s = this.ToString() in this.Clear()|>ignore; s
 
 [<Struct>]
-type PropertyToken(name:string, pos:int option, destr:DestrHint, align: AlignInfo, format: string option) =
-    static member Empty = PropertyToken("", None, DestrHint.Default, AlignInfo.Empty, None)
+type PropertyToken(name:string, pos:int, destr:DestrHint, align: AlignInfo, format: string option) =
+    static member Empty = PropertyToken("", -1, DestrHint.Default, AlignInfo.Empty, None)
     member __.Name = name
     member __.Pos = pos
     member __.Destr = destr
     member __.Align = align
     member __.Format = format
-    member x.IsPositional with get() = x.Pos.IsSome
+    member x.IsPositional with get() = x.Pos >= 0
     member private x.ToPropertyString (sb:StringBuilder, includeDestr:bool, name:string) =
         sb  .Append("{")
             .AppendIf(includeDestr && x.Destr <> DestrHint.Default, getDestrHintChar x.Destr)
@@ -57,32 +57,20 @@ type Token =
 let emptyTextToken = Text(0, "")
 let emptyPropToken = Prop(0, PropertyToken.Empty)
 
-type Template(formatString:string, tokens: Token[]) =
-    let mutable allPos, anyPos = true, false
-    let choosPropsAndSetFlags = function
-        | Prop (_,pd) ->
-            if pd.IsPositional then anyPos <- true else allPos <- false
-            Some pd
-        | _ -> None
-    let properties = tokens |> Array.choose choosPropsAndSetFlags
-    let namedProps, positionalProps =
-        if allPos then
-            properties |> Array.sortInPlaceBy (fun p -> p.Pos)
-            Unchecked.defaultof<PropertyToken[]>, properties
-        else
-            properties, Unchecked.defaultof<PropertyToken[]> 
+type Template(formatString:string, tokens: Token[], isNamed:bool, properties:PropertyToken[]) =
     member this.Tokens = tokens :> Token seq
     member this.FormatString = formatString
-    member this.Properties = properties
-    member internal this.Named = namedProps
-    member internal this.PositionalsByPos = positionalProps
+    member this.Properties = properties :> PropertyToken seq
+    member internal this.Named = if isNamed then properties else Unchecked.defaultof<PropertyToken[]>
+    member internal this.PositionalsByPos = if isNamed then Unchecked.defaultof<PropertyToken[]> else properties
+    member internal this.HasAnyProperties = properties.Length > 0
 
 type ScalarKeyValuePair = TemplatePropertyValue * TemplatePropertyValue
 and PropertyNameAndValue = string * TemplatePropertyValue
 and TemplatePropertyValue =
 | ScalarValue of obj
 | SequenceValue of TemplatePropertyValue list
-| StructureValue of typeTag:string option * values:PropertyNameAndValue list
+| StructureValue of typeTag:string * values:PropertyNameAndValue []
 | DictionaryValue of data: ScalarKeyValuePair list
 
 type Destructurer = DestructureRequest -> TemplatePropertyValue
@@ -98,9 +86,9 @@ and
 type PropertyAndValue = PropertyToken * TemplatePropertyValue
 
 let inline tryParseInt32 s = System.Int32.TryParse(s, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture)
-let inline maybeInt32 s =
-    if System.String.IsNullOrEmpty(s) then None
-    else match tryParseInt32 s with true, n -> Some n | false, _ -> None
+let inline parseIntOrNegative1 s =
+    if System.String.IsNullOrEmpty(s) then -1
+    else match tryParseInt32 s with true, n -> n | _ -> -1
 
 let inline parseTextToken (startAt:int) (template:string) : int*Token =
     let chars = template
@@ -209,7 +197,7 @@ let inline tryGetPropInSubString (t:string) (within : Range) : Token =
              | alignInfo ->
                 let format = formatRange |> Option.map (fun rng -> rng.GetSubString t)
                 Prop(within.Start - 1,
-                     PropertyToken(propertyName, maybeInt32 propertyName, destr, alignInfo, format))
+                     PropertyToken(propertyName, parseIntOrNegative1 propertyName, destr, alignInfo, format))
 
 let emptyTextTokenArray = [| emptyTextToken |]
 
@@ -250,7 +238,14 @@ let parseTokens (mt:string) =
                         | p -> rz.Add p; go nextIndex
         go 0
 
-let parse (s:string) = Template(s, s |> parseTokens)
+let parse (s:string) =
+    let tokens = s |> parseTokens
+    let properties = tokens |> Array.choose (function Prop (_, pt) -> Some pt | _ -> None)
+    let mutable allPos, anyPos = true, false
+    for i = 0 to (properties.Length-1) do
+        if properties.[i].IsPositional then anyPos <- true else allPos <- false
+    if allPos then properties |> Array.sortInPlaceBy (fun p -> p.Pos)
+    Template(s, tokens, not allPos, properties)
 
 module Destructure =
     open System
@@ -277,7 +272,7 @@ module Destructure =
 
     let inline tryNullable (r:DestructureRequest) =
         let t = r.Value.GetType()
-        let isNullable = t.IsConstructedGenericType && t.GetGenericTypeDefinition() = typeof<Nullable<_>>
+        let isNullable = t.IsConstructedGenericType && t.GetGenericTypeDefinition() = typedefof<Nullable<_>>
         if isNullable then
             match tryCastAs<System.Nullable<_>>(r.Value) with
             | n when (Object.ReferenceEquals(null, n)) -> (ScalarValue null)
@@ -311,16 +306,17 @@ module Destructure =
 
     let private scalarDestructurers = [| tryBuiltInTypesOrNull; tryNullable; tryEnum;
                                          tryByteArray; tryReflectionTypes |]
+    let private scalarDestructurersLength = scalarDestructurers.Length
     
-    let rec loopTryAll (r:DestructureRequest) (ds:Destructurer[]) i =
-        if i >= ds.Length then emptyKeepTrying
+    let rec loopTryAll (r:DestructureRequest) (ds:Destructurer[]) i stop =
+        if i >= stop then emptyKeepTrying
         else
             match ds.[i] r with
-            | tpv when isEmptyKeepTrying tpv -> loopTryAll r ds (i+1)
+            | tpv when isEmptyKeepTrying tpv -> loopTryAll r ds (i+1) stop
             | tpv -> tpv
     
     let inline tryScalarDestructure (r:DestructureRequest) =
-        loopTryAll r scalarDestructurers 0
+        loopTryAll r scalarDestructurers 0 scalarDestructurersLength
 
     let inline tryNull (r:DestructureRequest) =
         match r.Value with | null -> ScalarValue null | _ -> emptyKeepTrying
@@ -373,18 +369,18 @@ module Destructure =
         else
             let ty = r.Value.GetType()
             let typeTag = match ty.Name with
-                          | s when s.Length = 0 || not (Char.IsLetter s.[0]) -> None
-                          | s -> Some s
+                          | s when s.Length = 0 || not (Char.IsLetter s.[0]) -> null
+                          | s -> s
+            
+            let pubprops = ty.GetRuntimeProperties() |> Seq.where isPublicInstanceReadProp |> Seq.toArray
+
             let values =
-                ty.GetRuntimeProperties()
-                |> Seq.where isPublicInstanceReadProp
-                |> Seq.map (fun pi ->
+                pubprops |> Array.map (fun pi ->
                     // TODO: try/catch(TargetParameterCountException+log)
                     // TODO: try/catch(TargetInvocationException+log)
                     let propValue = pi.GetValue(r.Value)
                     // TODO: depth limiting
                     pi.Name, r.TryAgainWithValue(propValue)) // recursive
-                |> Seq.toList
 
             StructureValue(typeTag, values)
 
@@ -393,18 +389,18 @@ module Destructure =
                                 tryEnumerableDestr; tryObjectStructureDestructuring;
                                 scalarStringCatchAllDestr; // if all else fails, convert to a string
                             |]
+    let private allDestrsLength = allDestrs.Length
 
-    let inline tryAll r = loopTryAll r allDestrs 0
+    let inline tryAll r = loopTryAll r allDestrs 0 allDestrsLength
 
 type SelfLogger = (string * obj[]) -> unit
 let inline nullLogger (format: string, values: obj[]) = ()
 
 let capturePropertiesWith (log:SelfLogger) (destr:Destructurer) (t:Template) (args: obj[]) =
-    let anyProps = t.Properties.Length > 0
-    if (args = null || args.Length = 0) && anyProps then Array.empty
-    elif not anyProps then Array.empty
+    if (args = null || args.Length = 0) && t.HasAnyProperties then Array.empty
+    elif not t.HasAnyProperties then Array.empty
     else
-        let props = if t.PositionalsByPos <> null then t.PositionalsByPos else t.Properties
+        let props = if t.PositionalsByPos <> null then t.PositionalsByPos else t.Named
         let mutable matchedRun = props.Length
         if props.Length <> args.Length then
             matchedRun <- min props.Length args.Length
@@ -438,14 +434,14 @@ let rec writePropValue (sb: StringBuilder) (w: TextWriter) (pt: PropertyToken) (
         )
         w.Write ']'
     | StructureValue(typeTag, values) ->
-        typeTag |> Option.iter (fun s -> w.Write s; w.Write ' ')
+        if typeTag <> null && typeTag.Length > 0 then w.Write typeTag; w.Write ' '
         w.Write "{ "
         let lastIndex = values.Length - 1
-        values |> List.iteri (fun i (n, v) ->
+        for i = 0 to lastIndex do
+            let n, v = values.[i]
             w.Write("{0}: ", n)
             writePropValue sb w pt v
             w.Write (if i = lastIndex then " " else ", ")
-        )
         w.Write "}"
     | DictionaryValue(data) ->
         w.Write '['
@@ -463,10 +459,10 @@ let inline writeToken (sb: StringBuilder) (w: TextWriter) (writePropValue) (toke
     match token, value with
     | Token.Text (_, raw), None -> w.Write raw
     | Token.Prop (_, pt), Some pv -> writePropValue sb w pt pv
-    | Token.Prop (_, pt), None -> w.Write (pt.ToStringFormatTemplate(sb, defaultArg pt.Pos 0))
+    | Token.Prop (_, pt), None -> w.Write (pt.ToStringFormatTemplate(sb, (max pt.Pos 0)))
     | Token.Text (_, raw), Some pv -> failwithf "unexpected text token %s with property value %A" raw pv
 
-let doFormat (w: TextWriter) (writePropToken) (template:Template) (values:obj[]) =
+let doFormat (w: TextWriter) (writePropValue) (template:Template) (values:obj[]) =
     let valuesByPropName = captureProperties template values |> dict
     let sb = StringBuilder()
     for t in template.Tokens do

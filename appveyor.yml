@@ -5,7 +5,10 @@ init:
   - git config --global core.autocrlf input
 
 # this turns of AppVeyor automatic searching for test-assemblies, not the actual testing
-test_script: test.cmd
+test_script:
+  - dnx MessageTemplates.Tests test
+  - packages\xunit.runner.console\tools\xunit.console.x86.exe FsMessageTemplates.Tests\bin\Release\FsMessageTemplates.Tests.dll
+  - vstest.console /Logger:AppVeyor MessageTemplates.PerfTests\bin\Release\MessageTemplates.PerfTests.exe
 
 configuration: Release
 os: Visual Studio 2015

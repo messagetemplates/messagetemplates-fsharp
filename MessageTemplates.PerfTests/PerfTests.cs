@@ -8,10 +8,37 @@ namespace MessageTemplates.PerfTests
     [TestClass]
     public class PerfTests
     {
-        const int TEST_ITERATIONS = 10000;
+        const int TEST_ITERATIONS = 50000;
 
         static void Main(string[] args)
         {
+            //var template = "Hello, {@name}, how's it {@going}?";
+            //var formatArgs = new object[] { "adam", new Chair() };
+            //var tw = new System.IO.StringWriter();
+
+            //var sw = new Stopwatch();
+            //sw.Start();
+            //for (var i = 0; i < 1000; i++)
+            //{
+            //    FsMessageTemplates.MessageTemplates.fprintsm(tw, template, formatArgs);
+            //    tw.WriteLine();
+            //}
+            //sw.Stop();
+            //System.IO.File.WriteAllText("output_fs.txt", tw.ToString());
+            //Console.WriteLine(sw.Elapsed);
+
+            //tw.GetStringBuilder().Clear();
+
+            //sw.Restart();
+            //for (var i = 0; i < 200000; i++)
+            //{
+            //    MessageTemplate.Format(tw.FormatProvider, tw, template, formatArgs);
+            //    tw.WriteLine();
+            //}
+            //sw.Stop();
+            //System.IO.File.WriteAllText("output_cs.txt", tw.ToString());
+            //Console.WriteLine(sw.Elapsed);
+
             var t = new PerfTests();
             Action<Action> test = (action) =>
             {

@@ -18,9 +18,7 @@ type CsDictionaryValue = MessageTemplates.Structure.DictionaryValue
 let (|Null|Value|) (x: _ System.Nullable) = if x.HasValue then Value x.Value else Null
 let textToToken (tt: CsTextToken) = Token.Text(tt.StartIndex, tt.Text)
 let propToToken (pr: CsPropertyToken) =
-    let pos = match pr.TryGetPositionalValue() with
-              | true, i -> Some i
-              | false, _ -> None
+    let pos = match pr.TryGetPositionalValue() with | true, i -> i | false, _ -> -1
     let destr = match pr.Destructuring with
                 | CsDestructuring.Default -> DestrHint.Default
                 | CsDestructuring.Destructure -> DestrHint.Destructure
@@ -54,9 +52,8 @@ let rec templatePropertyValue (tpv: CsTemplatePropertyValue) : TemplatePropertyV
         let valueMap (kvp:Kvp<CsScalarValue, CsTemplatePropertyValue>) = templatePropertyValue kvp.Value
         DictionaryValue (dv.Elements |> Seq.map (fun kvp -> keyMap kvp, valueMap kvp) |> Seq.toList)
     | :? MessageTemplates.Structure.StructureValue as strv ->
-        let structureValues = strv.Properties |> Seq.map (fun p -> p.Name, templatePropertyValue p.Value) |> Seq.toList
-        let typeTagOption = if String.IsNullOrEmpty(strv.TypeTag) then None else Some strv.TypeTag
-        StructureValue (typeTagOption, structureValues)
+        let structureValues = strv.Properties |> Seq.map (fun p -> p.Name, templatePropertyValue p.Value) |> Seq.toArray
+        StructureValue (strv.TypeTag, structureValues)
     | _ -> failwithf "unknown template property value type %A" tpv
 
 let templateProperty (tp: CsTemplateProperty) : PropertyNameAndValue = tp.Name, (templatePropertyValue tp.Value)
