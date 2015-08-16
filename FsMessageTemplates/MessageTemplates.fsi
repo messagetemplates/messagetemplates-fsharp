@@ -65,7 +65,8 @@ type Template =
 
 /// A key and value pair, used as part of <see cref="TemplatePropertyValue.DictionaryValue" />.
 type ScalarKeyValuePair = TemplatePropertyValue * TemplatePropertyValue
-/// Describes the kinds of destructured property values captured from a message template.
+/// Describes the kinds of destructured property values that can be
+/// captured from a message template.
 and TemplatePropertyValue =
 | ScalarValue of obj
 | SequenceValue of TemplatePropertyValue list
@@ -76,9 +77,11 @@ and PropertyNameAndValue = { Name:string; Value:TemplatePropertyValue }
 
 /// A function that attempts to destructure a property and value object into a 
 /// more friendly (and immutable) <see cref="TemplatePropertyValue" />. This returns
-/// None if the conversion failed, otherwise Some.
+/// Unchecked.defaultOf<TemplatePropertyValue> (null) if the conversion failed.
 type Destructurer = DestructureRequest -> TemplatePropertyValue
 and
+    /// Describes a request for an object to be destructured into a
+    /// TemplatePropertyValue.
     [<Struct; NoEquality; NoComparison>]
     DestructureRequest =
         new: hint:DestrHint * value:obj * destr:Destructurer -> DestructureRequest
