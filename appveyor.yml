@@ -29,3 +29,5 @@ build:
 
 artifacts:
 - path: artifacts\bin\MessageTemplates\$(configuration)\*.nupkg
+- path: FsMessageTemplates\bin\Release\FsMessageTemplates.*
+- path: artifacts\performance\*.png
