@@ -1,42 +1,55 @@
 ﻿
+#I "../packages/PerfUtil/lib/net40"
+#r "PerfUtil"
+
+#I "../packages/suave/lib/net40"
+#r "Suave"
+
 #r "System.IO"
 #I "bin/Release/"
 #r "FsMessageTemplates"
 #r "MessageTemplates"
 
-[<Literal>]
-let template = "Hello, {@name}, how's it {@going}?"
-let chair = System.Version(1,2,3,4)
-let args = [| box "adam"; box chair |]
-[<Literal>]
-let iterations = 200000
+open PerfUtil
 
-fsi.PrintDepth = 1
-module t = let tw = new System.IO.StringWriter()
+open FsMessageTemplates.MessageTemplates
+open MessageTemplates
 
-let gc () = System.GC.Collect(3, System.GCCollectionMode.Forced, blocking=true)
-let p = System.Globalization.CultureInfo.InvariantCulture
+module ParseFormat =
+    type IParseFormatTest =
+        inherit ITestable
+        abstract ParseFormat : string -> obj[] -> unit
+    
+    let parseFormatTest name run =
+        let tw = new System.IO.StringWriter()
+        { new IParseFormatTest with
+            member __.Name = name
+            member __.ParseFormat (template:string)
+                                  (args:obj[]) = run tw template args
+            member __.Fini () = ()
+            member __.Init () = () }
 
-#time "on"
-let sw = System.Diagnostics.Stopwatch()
+    let MtFs = parseFormatTest "MessageT F#" (fun tw template args->
+        fprintsm tw template args)
 
-gc ()
-printfn "Starting F#..."
-sw.Start()
+    let MtCs = parseFormatTest "MessageT C#" (fun tw template args ->
+        MessageTemplate.Format(tw.FormatProvider, tw, template, args))
 
-for i = 1 to iterations do
-    FsMessageTemplates.MessageTemplates.fprintsm t.tw template args
-    t.tw.WriteLine()
+    let TwCs = parseFormatTest "TextWriter C#" (fun tw template args ->
+        tw.Write(template, args))
 
-printfn "F# completed in %A" sw.Elapsed
+let pfTests = new ImplementationComparer<ParseFormat.IParseFormatTest>(
+                ParseFormat.MtFs, [ ParseFormat.MtCs; ParseFormat.TwCs ])
 
-gc ()
-printfn "Starting C#..."
-sw.Restart()
+pfTests.Run(id="10k x 3 pos args, all ints", repeat=10000,
+    testF=(fun o -> o.ParseFormat ("{0} {1} {2}") [|0;1;2|]))
 
-for i = 1 to iterations do
-    MessageTemplates.MessageTemplate.Format(p, t.tw, template, args)
-    t.tw.WriteLine()
+pfTests.Run(id="10k x 5 pos args, all strings", repeat=10000,
+    testF=(fun o -> o.ParseFormat ("{0}{2}{1}{4}") [|0;1;2;3;4|]))
 
-sw.Stop()
-printfn "C# completed in %A" (sw.Elapsed.ToString())
+pfTests.Run(id="10k x named stringify", repeat=10000,
+    testF=(fun o -> o.ParseFormat "{@one} {@two}"
+                                  [| System.Version(1, 0)
+                                     System.Version(2, 0) |]))
+
+

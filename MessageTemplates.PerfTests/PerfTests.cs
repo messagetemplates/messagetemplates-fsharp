@@ -8,7 +8,46 @@ namespace MessageTemplates.PerfTests
     [TestClass]
     public class PerfTests
     {
-        const int TEST_ITERATIONS = 20000;
+        const int TEST_ITERATIONS = 10000;
+        TimedWriteLine twl;
+
+        public TestContext TestContext { get; set; }
+
+        [TestInitialize]
+        public void Init()
+        {
+            twl = new TimedWriteLine(Console.Out, TestContext.TestName);
+        }
+
+        [TestCleanup]
+        public void CleanUp()
+        {
+            twl.Dispose();
+        }
+
+        class TimedWriteLine : IDisposable
+        {
+            readonly Stopwatch _sw = new Stopwatch();
+            readonly string _testName;
+            readonly System.IO.TextWriter output;
+
+            public TimedWriteLine(System.IO.TextWriter output, string testName = null)
+            {
+                this.output = output;
+
+                this._testName = testName ??
+                    new StackTrace(1, fNeedFileInfo: false).GetFrame(0).GetMethod().Name;
+                
+                output.WriteLine(_testName);
+                _sw.Start();
+            }
+
+            public void Dispose()
+            {
+                _sw.Stop();
+                output.WriteLine("{0}\t{1}", _sw.Elapsed, _testName);
+            }
+        }
 
         static void Main(string[] args)
         {
@@ -18,11 +57,10 @@ namespace MessageTemplates.PerfTests
                 var name = action.Method.Name;
                 action(); // warmup
                 GC.Collect(3, GCCollectionMode.Forced, blocking: true);
-                var sw = new Stopwatch();
-                sw.Start();
-                action();
-                sw.Stop();
-                Console.WriteLine("{0}\t{1}", sw.Elapsed, name);
+                using (new TimedWriteLine(Console.Out, name))
+                {
+                    action();
+                }
             };
 
             test(t.CSharpParseNamed);
@@ -65,7 +103,7 @@ namespace MessageTemplates.PerfTests
         public void FSharpCaptureNamedDestr()
         {
             var templates = NAMED_DESTR_TEMPLATES.Select(FsMessageTemplates.MessageTemplates.parse).ToArray();
-            
+
             for (var i = 0; i < TEST_ITERATIONS * 3; i++)
             {
                 for (var x = 0; x < templates.Length; x++)

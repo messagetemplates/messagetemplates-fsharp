@@ -9,6 +9,7 @@ test_script:
   - dnx MessageTemplates.Tests test
   - packages\xunit.runner.console\tools\xunit.console.x86.exe FsMessageTemplates.Tests\bin\Release\FsMessageTemplates.Tests.dll
   - vstest.console /Logger:AppVeyor MessageTemplates.PerfTests\bin\Release\MessageTemplates.PerfTests.exe
+  - fsi -O --crossoptimize+ --exec MessageTemplates.PerfTests\Script.fsx
 
 configuration: Release
 os: Visual Studio 2015

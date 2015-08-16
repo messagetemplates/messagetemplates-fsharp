@@ -5,5 +5,7 @@ packages\xunit.runner.console\tools\xunit.console.x86.exe FsMessageTemplates.Tes
 IF ['%APPVEYOR%'] == ['True'] (
 	vstest.console /Logger:AppVeyor MessageTemplates.PerfTests\bin\Release\MessageTemplates.PerfTests.exe
 ) ELSE (
-	vstest.console /Logger:timelineLogger MessageTemplates.PerfTests\bin\Release\MessageTemplates.PerfTests.exe
+	vstest.console MessageTemplates.PerfTests\bin\Release\MessageTemplates.PerfTests.exe
 )
+
+fsi -O --crossoptimize+ --exec MessageTemplates.PerfTests\Script.fsx
