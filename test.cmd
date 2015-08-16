@@ -8,4 +8,8 @@ IF ['%APPVEYOR%'] == ['True'] (
 	vstest.console MessageTemplates.PerfTests\bin\Release\MessageTemplates.PerfTests.exe
 )
 
-fsi -O --crossoptimize+ --exec MessageTemplates.PerfTests\Script.fsx
+IF ['%APPVEYOR%'] == ['True'] (
+	"set PATH=%PATH%;C:\\Program Files (x86)\\Microsoft SDKs\\F#\\3.1\\Framework\\v4.0\\""
+) 
+
+FsiAnyCPU -O --crossoptimize+ --exec MessageTemplates.PerfTests\Script.fsx

@@ -15,7 +15,7 @@ configuration: Release
 os: Visual Studio 2015
 platform: Any CPU
 install:
-  - set PATH=%PROGRAMFILES(x86)%\MSBuild\14.0\Bin;%PATH%
+  - set PATH=%PROGRAMFILES(x86)%\MSBuild\14.0\Bin;%PROGRAMFILES(x86)%\Microsoft SDKs\F#\4.0\Framework\v4.0\;%PATH%
   - dnvm upgrade -alias default
   - .paket\paket.exe restore
   - dnu restore MessageTemplates

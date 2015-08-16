@@ -38,18 +38,29 @@ module ParseFormat =
     let TwCs = parseFormatTest "TextWriter C#" (fun tw template args ->
         tw.Write(template, args))
 
-let pfTests = new ImplementationComparer<ParseFormat.IParseFormatTest>(
-                ParseFormat.MtFs, [ ParseFormat.MtCs; ParseFormat.TwCs ])
+let mtCsFsAndTextWriterTests = new ImplementationComparer<ParseFormat.IParseFormatTest>(
+                                ParseFormat.MtFs, [ ParseFormat.MtCs; ParseFormat.TwCs ])
 
-pfTests.Run(id="10k x 3 pos args, all ints", repeat=10000,
+mtCsFsAndTextWriterTests.Run(id="10k x 3 pos args, all ints", repeat=10000,
     testF=(fun o -> o.ParseFormat ("{0} {1} {2}") [|0;1;2|]))
 
-pfTests.Run(id="10k x 5 pos args, all strings", repeat=10000,
+mtCsFsAndTextWriterTests.Run(id="10k x 5 pos args, all strings", repeat=10000,
     testF=(fun o -> o.ParseFormat ("{0}{2}{1}{4}") [|0;1;2;3;4|]))
 
-pfTests.Run(id="10k x named stringify", repeat=10000,
-    testF=(fun o -> o.ParseFormat "{@one} {@two}"
-                                  [| System.Version(1, 0)
-                                     System.Version(2, 0) |]))
 
+let namedTests = new ImplementationComparer<ParseFormat.IParseFormatTest>(
+                                ParseFormat.MtFs, [ ParseFormat.MtCs ])
 
+System.GC.Collect()
+namedTests.Run(id="100k x named destr", repeat=100000,
+    testF=(fun o -> o.ParseFormat "{@one} {@two} {@three}"
+                                  [| System.Version(1, 1)
+                                     (222, 222)
+                                     System.ConsoleColor.Magenta |]))
+
+System.GC.Collect()
+namedTests.Run(id="100k x named destr (AL10)", repeat=100000,
+    testF=(fun o -> o.ParseFormat "{@one,-10} {@two,-10} {@three,-10}"
+                                  [| System.Version(1, 1)
+                                     (222, 222)
+                                     System.ConsoleColor.Magenta |]))
