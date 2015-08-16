@@ -2,6 +2,9 @@
 #I "../packages/PerfUtil/lib/net40"
 #r "PerfUtil"
 
+#I "../packages/Antlr4.StringTemplate/lib/net35"
+#r "Antlr4.StringTemplate"
+
 #r "System.IO"
 #I "bin/Release/"
 #r "FsMessageTemplates"
@@ -34,13 +37,13 @@ module StringFormatComptible =
 
     let TwCs = parseFormatTest "TextWriter" (fun tw template args ->
         tw.Write(template, args))
-
+    
     let positional = new ImplementationComparer<IParseFormatTest>(
                                         TwCs, [ MtFs; MtCs; ],
                                         warmup=true, verbose=true)
 
     let namedAndDestruring = new ImplementationComparer<IParseFormatTest>(
-                                    MtFs, [ MtCs ], warmup=true, verbose=true)
+                                    MtFs, [ MtCs; ], warmup=true, verbose=true)
 
 StringFormatComptible.positional.Run(
     id="10k x 3 posit. ints (AR5)", repeat=10000,
@@ -85,6 +88,7 @@ let invariant = System.Globalization.CultureInfo.InvariantCulture
 
 module AnyFormat =
     let args = [| box "adam" |]
+
     let MtFs = anyFormatTest "MessageT F#" (fun () ->
         sprintsm invariant "Hello, {name}" args |> ignore )
 
@@ -103,14 +107,64 @@ module AnyFormat =
     let FsPrintf = anyFormatTest "F# sprintf" (fun () ->
         Printf.sprintf "Hello, %s" "adam" |> ignore)
 
+    let Ant4St = anyFormatTest "Antlr4.StringT" (fun () ->
+        Antlr4.StringTemplate.Template("Hello, <name>")
+            .Add("name", "adam")
+            .Render(invariant) |> ignore)
+
     let allBasicFormatters = new ImplementationComparer<IFormatTest>(
                                     StringBuilder, [ MtFs; MtCs; StringFormat
-                                                     FsPrintf; StringWriter],
+                                                     FsPrintf; StringWriter
+                                                     Ant4St ],
                                     warmup=true, verbose=true)
 
 AnyFormat.allBasicFormatters.Run(
     id="Format [|\"adam\"|]", repeat=100000,
     testF=fun t -> t.DoIt())
+
+let anyTemplateFormatTest name createTemplate run =
+    let template = createTemplate()
+    { new IFormatTest with
+        member __.Name = name
+        member __.DoIt () = run (template)
+        member __.Fini () = ()
+        member __.Init () = () }
+
+module FormatTemplate =
+    let theVersion = System.Version(2, 2, 2, 2)
+    let args = [| box theVersion; box "blah"; box "blah2" |]
+
+    let MtFs = anyTemplateFormatTest
+                "MessageT F#"
+                (fun () -> parse("Release {$version} and {blah} and {blah2}"))
+                (fun template -> format template args |> ignore)
+
+    let MtCs = anyTemplateFormatTest
+                "MessageT C#"
+                (fun () -> MessageTemplate.Parse("Release {$version} and {blah} and {blah2}"))
+                (fun template -> template.Format(invariant, args) |> ignore)
+
+    let FsPrintf = anyTemplateFormatTest "F# sprintf" (fun () -> ()) (fun () ->
+        Printf.sprintf "Release %O and %s and %s" theVersion "blah" "blah" |> ignore)
+
+// TODO: is it just too slow or am I doing something wrong?
+//    let Ant4St = anyTemplateFormatTest
+//                    "Antlr4.StringT"
+//                    (fun () -> Antlr4.StringTemplate.Template("Release <version>").CreateShadow())
+//                    (fun template -> template |> ignore)
+
+    let StringFormat = anyTemplateFormatTest
+                        "String.Format"
+                        (fun () -> ())
+                        (fun () -> System.String.Format("Version {0} and {1} and {2}", args) |> ignore)
+
+    let all = new ImplementationComparer<IFormatTest>(
+                                    StringFormat, [ MtFs; MtCs; FsPrintf; (*Ant4St;*) ],
+                                    warmup=true, verbose=true)
+
+FormatTemplate.all.Run(
+    id="100k x format cached template", repeat=100000,
+    testF=(fun t -> t.DoIt()))
 
 module FormatStringify =
     let theVersion = System.Version(2, 2, 2, 2)
@@ -166,6 +220,7 @@ let plot yaxis (metric : PerfResult -> float) (results : PerfResult list) =
 let results =
     [ AnyFormat.allBasicFormatters.GetTestResults()
       FormatStringify.allBasicFormatters.GetTestResults()
+      FormatTemplate.all.GetTestResults()
       StringFormatComptible.namedAndDestruring.GetTestResults()
       StringFormatComptible.positional.GetTestResults()
     ]
