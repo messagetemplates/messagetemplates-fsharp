@@ -443,10 +443,11 @@ let captureProperties (t:Template) (args:obj[]) =
 
 let captureMessageProperties (s:string) (args:obj[]) = captureProperties (s |> parse) args
 
-let inline writeScalar (w: TextWriter) (sv: TemplatePropertyValue) (format: string) =
-    match sv with
+let rec writePropValue (w: TextWriter) (pv: TemplatePropertyValue) (format: string) =
+    match pv with
     | ScalarValue sv ->
         match sv with
+        | null -> w.Write "null"
         | :? string as s ->
             w.Write "\""
             w.Write (s.Replace("\"", "\\\""))
@@ -454,28 +455,11 @@ let inline writeScalar (w: TextWriter) (sv: TemplatePropertyValue) (format: stri
         | :? System.IFormattable as f ->
             w.Write (f.ToString(format, w.FormatProvider))
         | _ -> w.Write(sv.ToString())
-    | _ -> ()
-
-let rec writePropValue (w: TextWriter) (pt: PropertyToken) (pv: TemplatePropertyValue) =
-    match pv with
-    | ScalarValue null -> w.Write "null"
-    | ScalarValue _ ->
-        if pt.Align.IsEmpty then writeScalar w pv pt.Format
-        else
-            let alignWriter = new StringWriter(w.FormatProvider)
-            writeScalar alignWriter pv pt.Format
-            let valueAsString = alignWriter.ToString()
-            if valueAsString.Length >= pt.Align.Width then w.Write valueAsString
-            else
-                let pad = pt.Align.Width - valueAsString.Length
-                if pt.Align.Direction = Direction.Right then w.Write (System.String(' ', pad))
-                w.Write valueAsString
-                if pt.Align.Direction = Direction.Left then w.Write (System.String(' ', pad))
     | SequenceValue svs ->
         w.Write '['
         let lastIndex = svs.Length - 1
         svs |> List.iteri (fun i sv ->
-            writePropValue w pt sv
+            writePropValue w sv null
             if i <> lastIndex then w.Write ", "
         )
         w.Write ']'
@@ -486,68 +470,102 @@ let rec writePropValue (w: TextWriter) (pt: PropertyToken) (pv: TemplateProperty
         for i = 0 to lastIndex do
             let tp = values.[i]
             w.Write tp.Name; w.Write ": "
-            writePropValue w pt tp.Value
+            writePropValue w tp.Value null
             w.Write (if i = lastIndex then " " else ", ")
         w.Write "}"
     | DictionaryValue(data) ->
         w.Write '['
         data |> List.iter (fun (entryKey, entryValue) ->
             w.Write '('
-            writePropValue w pt entryKey
+            writePropValue w entryKey null
             w.Write ": "
-            writePropValue w pt entryValue
+            writePropValue w entryValue null
             w.Write ")"
         )
         w.Write ']'
 
 /// Converts template token and value into a rendered string.
-let inline writeToken (w: TextWriter) (writePropValue) (token:Token) (value:TemplatePropertyValue option) =
+let inline writeToken (w: TextWriter) (token:Token) (value:TemplatePropertyValue) =
     match token, value with
-    | Token.Text (_, raw), None -> w.Write raw
-    | Token.Prop (_, pt), Some pv -> writePropValue w pt pv
-    | Token.Prop (_, pt), None -> w.Write pt // calls ToString()
-    | Token.Text (_, raw), Some pv -> failwithf "unexpected text token %s with property value %A" raw pv
+    | Token.Text (_, raw), _ -> w.Write raw
+    | Token.Prop (_, pt), pv ->
+        if Destructure.isEmptyKeepTrying pv then w.Write pt // calls ToString on the token
+        else
+            if pt.Align.IsEmpty then
+                writePropValue w pv pt.Format
+            else
+                let alignWriter = new StringWriter(w.FormatProvider)
+                writePropValue alignWriter pv pt.Format
+                let valueAsString = alignWriter.ToString()
+                if valueAsString.Length >= pt.Align.Width then
+                    w.Write valueAsString
+                else
+                    let pad = pt.Align.Width - valueAsString.Length
+                    if pt.Align.Direction = Direction.Right then w.Write (System.String(' ', pad))
+                    w.Write valueAsString
+                    if pt.Align.Direction = Direction.Left then w.Write (System.String(' ', pad))
 
-let doFormat (w: TextWriter) (writePropValue) (template:Template) (values:obj[]) =
+let inline createValuesByPropNameDictionary (values:PropertyNameAndValue seq) =
+    System.Linq.Enumerable.ToDictionary(source=values,
+                                        keySelector=(fun tp -> tp.Name),
+                                        elementSelector=(fun tp -> tp.Value))
+
+let inline getByName1to5 (values: PropertyNameAndValue[]) (nme: string) =
+    let valueCount = values.Length
+    if values.[0].Name = nme then values.[0].Value
+    elif valueCount > 1 && values.[1].Name = nme then values.[1].Value
+    elif valueCount > 2 && values.[2].Name = nme then values.[2].Value
+    elif valueCount > 3 && values.[3].Name = nme then values.[3].Value
+    elif valueCount > 4 && values.[4].Name = nme then values.[4].Value
+    else Destructure.emptyKeepTrying()
+
+let inline getByNameDict (valuesDict: System.Collections.Generic.IDictionary<string, TemplatePropertyValue>) nme =
+    let tpv = ref Unchecked.defaultof<TemplatePropertyValue>
+    valuesDict.TryGetValue (nme, tpv) |> ignore
+    !tpv
+
+let doFormat (w: TextWriter) (template:Template) (values:obj[]) =
     let values = capturePropertiesWith nullLogger Destructure.tryAll template values
-    let valuesByPropName = System.Linq.Enumerable.ToDictionary(
-                            source=(values :> PropertyNameAndValue seq),
-                            keySelector=(fun tp -> tp.Name),
-                            elementSelector=(fun tp -> tp.Value))
+    let valueCount = values.Length
+    let getValueForPropName =
+        match valueCount with
+        | 0 -> fun _ -> Destructure.emptyKeepTrying()
+        | 1 | 2 | 3 | 4 | 5 -> getByName1to5 values
+        | _ -> getByNameDict (createValuesByPropNameDictionary values)
 
     for t in template.Tokens do
         match t with
-        | Token.Text _ as tt -> writeToken w writePropValue tt None
+        | Token.Text _ as tt -> writeToken w tt Unchecked.defaultof<TemplatePropertyValue>
         | Token.Prop (_, pd) as tp ->
-            let exists, value = valuesByPropName.TryGetValue(pd.Name)
-            writeToken w writePropValue tp (if exists then Some value else None)
+            let value = getValueForPropName pd.Name
+            writeToken w tp value
 
 let format template values =
     use tw = new StringWriter()
-    doFormat tw writePropValue template values
+    doFormat tw template values
     tw.ToString()
 
 let bprintsm (sb:StringBuilder) (template:string) (args:obj[]) =
     use tw = new StringWriter(sb)
-    doFormat tw writePropValue (parse template) args
+    doFormat tw (parse template) args
 
 let sprintsm (p:System.IFormatProvider) (template:string) (args:obj[]) =
     use tw = new StringWriter(p)
-    doFormat tw writePropValue (parse template) args
+    doFormat tw (parse template) args
     tw.ToString()
 
 let fprintsm (tw:TextWriter) (template:string) (args:obj[]) =
     let template = parse template
-    doFormat tw writePropValue template args
+    doFormat tw template args
 
 let bprintm (template:Template) (sb:StringBuilder) (args:obj[]) =
     use tw = new StringWriter(sb)
-    doFormat tw writePropValue template args
+    doFormat tw template args
 
 let sprintm (template:Template) (provider:System.IFormatProvider) (args:obj[]) =
     use tw = new StringWriter(provider)
-    doFormat tw writePropValue template args
+    doFormat tw template args
     tw.ToString()
 
 let fprintm (template:Template) (tw:TextWriter) (args:obj[]) =
-    doFormat tw writePropValue template args
+    doFormat tw template args

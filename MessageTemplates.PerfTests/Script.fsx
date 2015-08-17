@@ -39,7 +39,7 @@ module StringFormatComptible =
         tw.Write(template, args))
     
     let positional = new ImplementationComparer<IParseFormatTest>(
-                                        TwCs, [ MtFs; MtCs; ],
+                                        MtFs, [ TwCs; MtCs; ],
                                         warmup=true, verbose=true)
 
     let namedAndDestruring = new ImplementationComparer<IParseFormatTest>(
@@ -113,9 +113,8 @@ module AnyFormat =
             .Render(invariant) |> ignore)
 
     let allBasicFormatters = new ImplementationComparer<IFormatTest>(
-                                    StringBuilder, [ MtFs; MtCs; StringFormat
-                                                     FsPrintf; StringWriter
-                                                     Ant4St ],
+                                    MtFs, [ MtCs; StringFormat; StringBuilder
+                                            FsPrintf; StringWriter; Ant4St ],
                                     warmup=true, verbose=true)
 
 AnyFormat.allBasicFormatters.Run(
@@ -159,7 +158,7 @@ module FormatTemplate =
                         (fun () -> System.String.Format("Version {0} and {1} and {2}", args) |> ignore)
 
     let all = new ImplementationComparer<IFormatTest>(
-                                    StringFormat, [ MtFs; MtCs; FsPrintf; (*Ant4St;*) ],
+                                    MtFs, [ MtCs; FsPrintf; StringFormat; (*Ant4St;*) ],
                                     warmup=true, verbose=true)
 
 FormatTemplate.all.Run(
@@ -189,9 +188,9 @@ module FormatStringify =
         Printf.sprintf "Release %O" theVersion |> ignore)
 
     let allBasicFormatters = new ImplementationComparer<IFormatTest>(
-                                    StringBuilder, [ MtCs; MtFs
-                                                     StringFormat; StringWriter
-                                                     FsPrintf ],
+                                    MtFs, [ MtCs; StringBuilder
+                                            StringFormat; StringWriter
+                                            FsPrintf ],
                                     warmup=true, verbose=true)
 
 FormatStringify.allBasicFormatters.Run(
