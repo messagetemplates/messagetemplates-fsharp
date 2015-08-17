@@ -5,6 +5,9 @@
 #I "../packages/Antlr4.StringTemplate/lib/net35"
 #r "Antlr4.StringTemplate"
 
+#I "../packages/Serilog/lib/net45"
+#r "Serilog"
+
 #r "System.IO"
 #I "bin/Release/"
 #r "FsMessageTemplates"
@@ -20,30 +23,43 @@ module StringFormatComptible =
         inherit ITestable
         abstract ParseFormat : string -> obj[] -> unit
     
-    let parseFormatTest name run =
+    let parseFormatTest name init run =
         let tw = new System.IO.StringWriter()
         { new IParseFormatTest with
             member __.Name = name
             member __.ParseFormat (template:string)
                                   (args:obj[]) = run tw template args
-            member __.Fini () = ()
-            member __.Init () = () }
+            member __.Fini () = System.IO.File.WriteAllText(name+"output.txt", tw.ToString())
+            member __.Init () = init (tw) }
+    System.IO.Directory.GetCurrentDirectory()
+    let noInit (tw) = ()
 
-    let MtFs = parseFormatTest "MessageT F#" (fun tw template args->
+    let MtFs = parseFormatTest "MessageT F#" noInit (fun tw template args->
         fprintsm tw template args)
 
-    let MtCs = parseFormatTest "MessageT C#" (fun tw template args ->
+    let MtCs = parseFormatTest "MessageT C#" noInit (fun tw template args ->
         MessageTemplate.Format(tw.FormatProvider, tw, template, args))
 
-    let TwCs = parseFormatTest "TextWriter" (fun tw template args ->
+    open Serilog
+    let initSerilog (tw) =
+        Serilog.Log.Logger <-
+            Serilog.LoggerConfiguration()
+                .MinimumLevel.Verbose()
+                .WriteTo.TextWriter(tw)
+                .CreateLogger()
+
+    let Serilog = parseFormatTest "Serilog" initSerilog (fun tw template args ->
+        Serilog.Log.Verbose(template, args))
+
+    let TwCs = parseFormatTest "TextWriter" noInit (fun tw template args ->
         tw.Write(template, args))
     
     let positional = new ImplementationComparer<IParseFormatTest>(
-                                        MtFs, [ TwCs; MtCs; ],
+                                        MtFs, [ TwCs; MtCs; Serilog; ],
                                         warmup=true, verbose=true)
 
     let namedAndDestruring = new ImplementationComparer<IParseFormatTest>(
-                                    MtFs, [ MtCs; ], warmup=true, verbose=true)
+                                    MtFs, [ MtCs; Serilog; ], warmup=true, verbose=true)
 
 StringFormatComptible.positional.Run(
     id="10k x 3 posit. ints (AR5)", repeat=10000,
