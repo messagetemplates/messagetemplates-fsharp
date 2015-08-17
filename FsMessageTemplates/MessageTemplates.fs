@@ -18,8 +18,6 @@ type AlignInfo =
     member internal this.IsValid = this.Width <> -2
     static member Empty = AlignInfo(isValid=true)
     static member Invalid = AlignInfo(isValid=false)
-    override x.ToString() = if x.IsEmpty then "" elif x.IsValid = false then ""
-                            else (if x._direction = Direction.Left then "-" else "") + string x._width
 
 let inline getDestrHintChar destr = if destr = DestrHint.Default then "" elif destr = DestrHint.Destructure then "@" else "$"
 let inline getDestrFromChar c = if c = '@' then DestrHint.Destructure elif c = '$' then DestrHint.Stringify else DestrHint.Default
@@ -41,7 +39,7 @@ type PropertyToken(name:string, pos:int, destr:DestrHint, align: AlignInfo, form
         sb  .Append("{")
             .AppendIf(includeDestr && x.Destr <> DestrHint.Default, getDestrHintChar x.Destr)
             .Append(name)
-            .AppendIf(not x.Align.IsEmpty, "," + ((if x.Align.Direction = Direction.Right then "-" else "") + string x.Align.Width))
+            .AppendIf(not x.Align.IsEmpty, "," + ((if x.Align.Direction = Direction.Left then "-" else "") + string x.Align.Width))
             .AppendIf(x.Format <> null, ":" + x.Format)
             .Append("}")
     override x.ToString() = x.AppendPropertyString(StringBuilder(), true, name).ToStringAndClear()
@@ -145,7 +143,8 @@ let inline rngIndexOf (s:string) (rng:Range) (c:char) = tryGetFirstCharRng ((=) 
 let inline tryParseAlignInfoRng (s:string) (rng:Range option) : AlignInfo =
     match s, rng with
     | _, None -> AlignInfo(isValid=true)
-    | s, Some rng when (rng.Start >= rng.End) || (hasAnyInvalidRng isValidInAlignment s rng) -> AlignInfo(isValid=false)
+    | s, Some rng when (rng.Start > rng.End) || (hasAnyInvalidRng isValidInAlignment s rng) ->
+        AlignInfo(isValid=false)
     | s, Some rng ->
         let alignSubString = rng.GetSubString s
         let lastDashIdx = alignSubString.LastIndexOf('-')
@@ -155,7 +154,8 @@ let inline tryParseAlignInfoRng (s:string) (rng:Range option) : AlignInfo =
                     | _ -> 0 // dash is not allowed to be anywhere else
         if width = 0 then AlignInfo(isValid=false)
         else
-            let direction = match lastDashIdx with -1 -> Direction.Right | _ -> Direction.Left
+            let isNegativeAlignWidth = lastDashIdx >= 0
+            let direction = if isNegativeAlignWidth then Direction.Left else Direction.Right
             AlignInfo(direction, width)
 
 let inline tryGetPropInSubString (t:string) (within : Range) : Token =
@@ -168,7 +168,7 @@ let inline tryGetPropInSubString (t:string) (within : Range) : Token =
         | -1, -1 -> Some within, None, None // neither align nor format
         | -1, fmtIdx -> Some (Range(within.Start, fmtIdx-1)), None, Some (Range(fmtIdx+1, within.End)) // has format part, but does not have align part
         | alIdx, -1 -> Some (Range(within.Start, alIdx-1)), Some (Range(alIdx+1, within.End)), None // has align part, but does not have format part
-        | alIdx, fmtIdx when alIdx < fmtIdx && alIdx <> (fmtIdx - 1) -> // has both parts in correct order
+        | alIdx, fmtIdx when alIdx < fmtIdx && alIdx <> (fmtIdx-1) -> // has both parts in correct order
             let align = Some (Range(alIdx+1, fmtIdx-1))
             let fmt = Some (Range(fmtIdx+1, within.End))
             Some (Range(within.Start, alIdx-1)), align, fmt

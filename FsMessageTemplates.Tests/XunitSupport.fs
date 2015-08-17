@@ -14,7 +14,7 @@ type LangCsFsDataAttribute() =
 
 type FsToken = FsMessageTemplates.MessageTemplates.Token
 
-let assertParsedAs lang message (expectedTokens: System.Collections.IEnumerable) =
+let assertParsedAs lang message (expectedTokens: FsToken seq) =
     let parsed =
         match lang with
         | "C#" -> MessageTemplates.MessageTemplate.Parse(message).Tokens |> Seq.map CsToFs.mttToToken |> List.ofSeq

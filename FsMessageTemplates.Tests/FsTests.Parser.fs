@@ -4,11 +4,18 @@ open Xunit
 open Swensen.Unquote.Assertions
 open System.Globalization
 open System
+open FsMessageTemplates.MessageTemplates
 
 (*
     These tests run against both the C# and F# version. This helps to maintain the same
     behaviour in both implementations.
 *)
+
+[<Fact>]
+let ``align info defaults are correct`` () =
+    test <@ AlignInfo().Direction = FsMessageTemplates.MessageTemplates.Direction.Left @>
+    test <@ AlignInfo().Width = 0 @>
+    test <@ AlignInfo().IsEmpty = false @>
 
 [<LangTheory; LangCsFsData>]
 let ``an empty message is a single text token`` (lang) = 
@@ -94,6 +101,32 @@ let ``formats can contain commas`` (lang) =
                    [Tk.text 0 ","
                     Tk.propf 1 "{CustomerId:0,0}" "CustomerId" "0,0"
                     Tk.text 17 ","]
+                    
+[<LangTheory; LangCsFsData>]
+let ``formats with align right can contain commas`` (lang) = 
+    let template = "big long x{0,5:0,00}x{1,5:0,00}x{2,5:0,00}x"
+    assertParsedAs lang template
+                   [ Tk.text 0 "big long x"
+                     Tk.propparf 10 0 5 "0,00"
+                     Tk.text 20 "x"
+                     Tk.propparf 21 1 5 "0,00"
+                     Tk.text 31 "x"
+                     Tk.propparf 32 2 5 "0,00"
+                     Tk.text 42 "x"]
+
+[<LangTheory; LangCsFsData>]
+let ``formats with align left can contain commas`` (lang) = 
+    let template = "big long x{0,-5:0,00}x{1,-5:0,00}x{2,-5:0,00}x"
+    assertParsedAs  lang template
+                    [   Tk.text 0 "big long x"
+                        Tk.proppalf 10 0 5 "0,00"
+                        Tk.text 21 "x"
+                        Tk.proppalf 22 1 5 "0,00"
+                        Tk.text 33 "x"
+                        Tk.proppalf 34 2 5 "0,00"
+                        Tk.text 45 "x" ]
+
+
 
 [<LangTheory; LangCsFsData>]
 let ``zero values alignment is parsed as text`` (lang) =
