@@ -1,4 +1,13 @@
 ﻿
+type Arguments = {
+    ExportCharts: bool
+    SaveOutput: bool }
+
+let args = {
+    ExportCharts = fsi.CommandLineArgs |> Array.contains ("--exportCharts")
+    SaveOutput = fsi.CommandLineArgs |> Array.contains ("--saveOutput")
+}
+
 #I "../packages/PerfUtil/lib/net40"
 #r "PerfUtil"
 
@@ -29,9 +38,10 @@ module StringFormatComptible =
             member __.Name = name
             member __.ParseFormat (template:string)
                                   (args:obj[]) = run tw template args
-            member __.Fini () = System.IO.File.WriteAllText(name+"output.txt", tw.ToString())
+            member __.Fini () = if args.SaveOutput then
+                                    System.IO.File.AppendAllText(name+" output.txt", tw.ToString())
             member __.Init () = init (tw) }
-    System.IO.Directory.GetCurrentDirectory()
+
     let noInit (tw) = ()
 
     let MtFs = parseFormatTest "MessageT F#" noInit (fun tw template args->
@@ -214,30 +224,30 @@ FormatStringify.allBasicFormatters.Run(
     testF=fun t -> t.DoIt())
 
 #load "../packages/FSharp.Charting/FSharp.Charting.fsx"
-
 open FSharp.Charting
 open PerfUtil
 
-// simple plot function
-let plot yaxis (metric : PerfResult -> float) (results : PerfResult list) =
-    let values = results |> List.choose (fun r -> if r.HasFailed then None else Some (r.SessionId, metric r))
-    let name = results |> List.tryPick (fun r -> Some r.TestId)
-    let ch = Chart.Bar(values, ?Name = name, ?Title = name, YTitle = yaxis)
-    let nameFixedForExport = name.Value.ToString().Replace("[|\"","_").Replace("\"|]", "_") + ".png"
-    let exportFolder = System.IO.Path.Combine(__SOURCE_DIRECTORY__, "..\\artifacts\\perfcharts\\")
-    System.IO.Directory.CreateDirectory(exportFolder) |> ignore
-    let fileName = System.IO.Path.Combine(exportFolder, nameFixedForExport)
-    System.Console.WriteLine("saving {0}", fileName)
-    ch.ShowChart() |> ignore
-    ch.SaveChartAs (fileName, ChartTypes.ChartImageFormat.Png)
+if args.ExportCharts then
+    // simple plot function
+    let plot yaxis (metric : PerfResult -> float) (results : PerfResult list) =
+        let values = results |> List.choose (fun r -> if r.HasFailed then None else Some (r.SessionId, metric r))
+        let name = results |> List.tryPick (fun r -> Some r.TestId)
+        let ch = Chart.Bar(values, ?Name = name, ?Title = name, YTitle = yaxis)
+        let nameFixedForExport = name.Value.ToString().Replace("[|\"","_").Replace("\"|]", "_") + ".png"
+        let exportFolder = System.IO.Path.Combine(__SOURCE_DIRECTORY__, "..\\artifacts\\perfcharts\\")
+        System.IO.Directory.CreateDirectory(exportFolder) |> ignore
+        let fileName = System.IO.Path.Combine(exportFolder, nameFixedForExport)
+        System.Console.WriteLine("saving {0}", fileName)
+        ch.ShowChart() |> ignore
+        ch.SaveChartAs (fileName, ChartTypes.ChartImageFormat.Png)
 
-// read performance tests from 'Tests' module and run them
-let results =
-    [ AnyFormat.allBasicFormatters.GetTestResults()
-      FormatStringify.allBasicFormatters.GetTestResults()
-      FormatTemplate.all.GetTestResults()
-      StringFormatComptible.namedAndDestruring.GetTestResults()
-      StringFormatComptible.positional.GetTestResults()
+    // read performance tests from 'Tests' module and run them
+    [
+        AnyFormat.allBasicFormatters.GetTestResults()
+        FormatStringify.allBasicFormatters.GetTestResults()
+        FormatTemplate.all.GetTestResults()
+        StringFormatComptible.namedAndDestruring.GetTestResults()
+        StringFormatComptible.positional.GetTestResults()
     ]
     |> List.concat
     |> TestSession.groupByTest
