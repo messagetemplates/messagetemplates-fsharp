@@ -24,7 +24,7 @@ let assertParsedAs lang message (expectedTokens: FsToken seq) =
     let expected = expectedTokens |> Seq.cast<FsToken> |> Seq.toList
     test <@ parsed = expected @>
 
-let capture lang (messageTemplate:string) args =
+let capture lang (messageTemplate:string) (args: obj list) =
     let argsArray = (args |> Seq.cast<obj> |> Seq.toArray) // force 'args' to be IEnumerable
     match lang with
     | "F#" -> FsMessageTemplates.Capturing.captureMessageProperties messageTemplate argsArray |> List.ofSeq

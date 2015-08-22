@@ -144,3 +144,34 @@ let ``format provider is used`` (lang) =
                    "Please pay {Sum}" [12.345]
     test <@ m = "Please pay 12,345" @>
 
+type Tree = Leaf of int | Trunk of int * (Tree list)
+type ItemsUnion = ChairItem of c:ChairRecord | ReceiptItem of r:ReceiptRecord
+
+[<LangTheory; LangCsFsData>]
+let ``an F# discriminated union object is formatted with provider correctly`` (lang) =
+    let provider = CultureInfo.GetCultureInfo "fr-FR"
+    let template = "I like {@item1} and {@item2}"
+    let values : obj[] = [| ChairItem({ Back="straight"; Legs=[|1;2;3;4|] })
+                            ReceiptItem({ Sum=12.345; When=DateTime(2013, 5, 20, 16, 39, 0) }) |]
+    let expected = "I like "
+                 + "ChairItem { c: ChairRecord { Back: \"straight\", Legs: [1, 2, 3, 4] }, Tag: 0, IsChairItem: True, IsReceiptItem: False }"
+                 + " and "
+                 + "ReceiptItem { r: ReceiptRecord { Sum: 12,345, When: 20/05/2013 16:39:00 }, Tag: 1, IsChairItem: False, IsReceiptItem: True }"
+    Asserts.MtAssert.RenderedAs(lang, template, values, expected, provider)
+
+[<LangTheory; LangCsFsData>]
+let ``an F# discriminated union object is formatted with provider and depth correctly`` (lang) =
+    let provider = (CultureInfo.GetCultureInfo "fr-FR")
+    let maxDepth = 1
+    let template = "I like {@item1} and {@item2} and {@item3}"
+    let values : obj[] = [| Leaf 1234
+                            Leaf 1234
+                            Trunk (1234, [Leaf 1234; Leaf 1234])
+                         |]
+    let expected = "I like Leaf { Item: 1234, Tag: 0, IsLeaf: True, IsTrunk: False } and "
+                 + "Leaf { Item: 1234, Tag: 0, IsLeaf: True, IsTrunk: False } and "
+                 + "Trunk { Item1: 1234, Item2: ["
+                        + "Leaf { Item: 1234, Tag: 0, IsLeaf: True, IsTrunk: False }, "
+                        + "Leaf { Item: 1234, Tag: 0, IsLeaf: True, IsTrunk: False }"
+                   + "], Tag: 1, IsLeaf: False, IsTrunk: True }"
+    Asserts.MtAssert.RenderedAs(lang, template, values, expected, provider)

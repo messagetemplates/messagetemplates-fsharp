@@ -195,6 +195,24 @@ namespace MessageTemplates
             var template = Parse(templateMessage);
             return Capture(template, values);
         }
+            
+        /// <summary>
+        /// Captures properties from the given message template and 
+        /// provided values.
+        /// </summary>
+        public static IEnumerable<TemplateProperty> CaptureWith(
+            int maximumDepth, IEnumerable<Type> additionalScalarTypes,
+            IEnumerable<Core.IDestructuringPolicy> additionalDestructuringPolicies,
+            MessageTemplate template, params object[] values)
+        {
+            var binder = new Parameters.PropertyBinder(
+                new Parameters.PropertyValueConverter(
+                    maximumDepth,
+                    additionalScalarTypes ?? Enumerable.Empty<Type>(),
+                    additionalDestructuringPolicies ?? Enumerable.Empty<Core.IDestructuringPolicy>()));
+
+            return binder.ConstructProperties(template, values);
+        }
 
         /// <summary>
         /// Captures properties from the given message template and 

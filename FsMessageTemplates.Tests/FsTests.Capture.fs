@@ -5,6 +5,7 @@ open Swensen.Unquote
 
 open Tk
 open FsMessageTemplates
+open Asserts
 
 [<LangTheory; LangCsFsData>]
 let ``no values provided yields no properties`` (lang) =
@@ -14,12 +15,12 @@ let ``no values provided yields no properties`` (lang) =
 
 [<LangTheory; LangCsFsData>]
 let ``one named property and one value yields the correct named property`` (lang) =
-    let actual = capture lang "this {will} work, I hope" [box "might"]
+    let actual = capture lang "this {will} work, I hope" ["might"]
     test <@ actual = [ PropertyNameAndValue("will", ScalarValue "might") ] @>
 
 [<LangTheory; LangCsFsData>]
 let ``one enumerable property yeilds a sequence value`` (lang) =
-    let actual = capture lang "this {will} work, I hope" [box [|1..3|]]
+    let actual = capture lang "this {will} work, I hope" [ [|1..3|] ]
     let expectedValue = SequenceValue [ ScalarValue 1; ScalarValue 2; ScalarValue 3; ]
     let expected =  [ PropertyNameAndValue("will", expectedValue) ]
     test <@ actual = expected @>
@@ -38,14 +39,14 @@ let chairStructureValue =
 [<LangTheory; LangCsFsData>]
 let ``a destructured dictionary yeilds dictionary values`` (lang) =
     let inputDictionary = System.Collections.Generic.Dictionary(dict [| "key", Chair(); |])
-    let actual = capture lang "this {@will} work, I hope" [ box inputDictionary ]
+    let actual = capture lang "this {@will} work, I hope" [ inputDictionary ]
     let expected = [ PropertyNameAndValue("will", DictionaryValue [ ScalarValue "key", chairStructureValue ]) ]
     test <@ actual = expected @>
 
 [<LangTheory; LangCsFsData>]
 let ``an F# 'dict' (which is not Dictionary<_,_>) yeilds a sequence->structure value`` (lang) =
     let inputDictionary = dict [| "firstDictEntryKey", Chair(); |]
-    let actual = capture lang "this {@will} work, I hope" [ box inputDictionary ]
+    let actual = capture lang "this {@will} work, I hope" [ inputDictionary ]
     let expected = [ PropertyNameAndValue("will", SequenceValue [StructureValue("KeyValuePair`2", [| PropertyNameAndValue("Key", ScalarValue "firstDictEntryKey")
                                                                                                      PropertyNameAndValue("Value", chairStructureValue)
                                                                                                   |])
@@ -61,12 +62,12 @@ let ``a class instance is captured as a structure value`` (lang) =
 
 [<LangTheory; LangCsFsData>]
 let ``one positional property and one value yields the correct positional property`` (lang) =
-    let actual = capture lang "this {0} work, I hope" [box "will"]
+    let actual = capture lang "this {0} work, I hope" ["will"]
     test <@ actual = [ PropertyNameAndValue("0", ScalarValue "will") ] @>
 
 [<LangTheory; LangCsFsData>]
 let ``multiple positional property and the same number of values yields the correct positional properties`` (lang) =
-    let actual = capture lang "{0} {1} {2}, I hope" [box "this"; box 10; box true]
+    let actual = capture lang "{0} {1} {2}, I hope" ["this"; 10; true]
     test <@ actual = [ PropertyNameAndValue("0", ScalarValue ("this"))
                        PropertyNameAndValue("1", ScalarValue (10))
                        PropertyNameAndValue("2", ScalarValue (true)) ] @>
@@ -110,7 +111,7 @@ let getScalarExpected (v:obj, e:ExpectedScalarResult) =
 [<LangTheory; LangCsFsData>]
 let ``scalar types are captured correctly when positional`` (lang) =
     let positionalFmtString = String.Join(" ", (scalars |> Seq.mapi (fun i _ -> "{" + string i + "}")))
-    let valuesArray = scalars |> Seq.map (scalarInputAsObj) |> Seq.toArray
+    let valuesArray = scalars |> Seq.map (scalarInputAsObj) |> Seq.toList
     let expected = scalars |> List.mapi (fun i s -> PropertyNameAndValue(string i, ScalarValue (getScalarExpected s)))
     let actual = capture lang positionalFmtString valuesArray
     test <@ actual = expected @>
@@ -121,17 +122,17 @@ let ``scalar types are captured correctly when positionally out of order`` (lang
     let posTokensStringsOutOfOrder = numberedOutOfOrder |> Seq.map (fun (i, _) -> "{" + string i + "}")
     let outOfOrder = numberedOutOfOrder |> List.map (fun (i, items) -> items)
     let positionalFmtString = String.Join(" ", posTokensStringsOutOfOrder)
-    let valuesArray = outOfOrder |> Seq.map (scalarInputAsObj) |> Seq.toArray
+    let values = outOfOrder |> Seq.map (scalarInputAsObj) |> Seq.toList
     let expected = outOfOrder |> List.mapi (fun i s -> PropertyNameAndValue(string i, ScalarValue (getScalarExpected s)))
-    let actual = capture lang positionalFmtString valuesArray
+    let actual = capture lang positionalFmtString values
     test <@ actual = expected @>
 
 [<LangTheory; LangCsFsData>]
 let ``scalar types are captured correctly when named`` (lang) =
     let namedFmtString = String.Join(" ", (scalars |> Seq.mapi (fun i v -> "{named" + (string i) + "}")))
-    let valuesArray = scalars |> Seq.map (fun s -> (scalarInputAsObj s)) |> Seq.toArray
+    let values = scalars |> Seq.map (fun s -> (scalarInputAsObj s)) |> Seq.toList
     let expected = scalars |> List.mapi (fun i s -> PropertyNameAndValue("named" + string i, ScalarValue (getScalarExpected s)))
-    let actual = capture lang namedFmtString valuesArray
+    let actual = capture lang namedFmtString values
     test <@ actual = expected @>
 
 [<LangTheory; LangCsFsData>]
@@ -166,4 +167,55 @@ let ``multiple positional nullable properties capture the correct integral scala
                        PropertyNameAndValue("4", ScalarValue (box 5L))
                        PropertyNameAndValue("5", ScalarValue (box 6UL)) ] @>
 
+type MyDu = Case1 | Case2
+type MyDuWithTuple =
+| Case1AB of a:int * b:string
+| Case2AB
 
+[<AutoOpen>]
+module St =
+    /// named scalar value
+    let scal (name, value) = PropertyNameAndValue(name, ScalarValue value)
+    /// named structure value
+    let strv (name, values) = StructureValue(name, values)
+    /// property name and value
+    let pnv (name, value) = PropertyNameAndValue(name, value)
+    
+[<LangTheory; LangCsFsData>]
+let ``Default destructuring an F# union works`` (lang) =
+    MtAssert.DestructuredAs(lang, "I like {@first} and {@second}", [| Case1; Case2 |],
+        expected=[
+            pnv("first",  strv ("MyDu", [| scal("Tag", 0); scal("IsCase1", true);  scal("IsCase2", false) |]))
+            pnv("second", strv ("MyDu", [| scal("Tag", 1); scal("IsCase1", false); scal("IsCase2", true) |]))
+        ])
+
+    MtAssert.DestructuredAs(lang, "I like {@first} and {@second}", [| Case1AB(1,"2"); Case2AB |],
+        expected=[
+            pnv("first",  strv ("Case1AB", [| scal("a", 1)
+                                              scal("b", "2")
+                                              scal("Tag", 0)
+                                              scal("IsCase1AB", true)
+                                              scal("IsCase2AB", false) |]))
+            pnv("second", strv (null, [| scal("Tag", 1)
+                                         scal("IsCase1AB", false)
+                                         scal("IsCase2AB", true) |]))
+        ])
+
+[<LangTheory; LangCsFsData>]
+let ``Default destructuring an F# tuple works`` (lang) =
+    
+    let values : obj[] = [| 123,"abc"; 456, "def" |]
+    let tyTag = values.[0].GetType().Name
+    MtAssert.DestructuredAs(lang, "I like {@first} and {@second}", values,
+        expected=[
+            pnv("first",  strv (tyTag, [| scal("Item1", 123); scal("Item2", "abc"); |]))
+            pnv("second", strv (tyTag, [| scal("Item1", 456); scal("Item2", "def"); |]))
+        ])
+    
+    let values : obj[] = [| 1,2,3; 4,5,6 |]
+    let tyTag = values.[0].GetType().Name
+    MtAssert.DestructuredAs(lang, "I like {@first} and {@second}", values,
+        expected=[
+            pnv("first",  strv (tyTag, [| scal("Item1", 1); scal("Item2", 2); scal("Item3", 3); |]))
+            pnv("second", strv (tyTag, [| scal("Item1", 4); scal("Item2", 5); scal("Item3", 6); |]))
+        ])
