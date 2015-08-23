@@ -5,7 +5,7 @@ open Tk
 
 type Kvp<'a,'b> = System.Collections.Generic.KeyValuePair<'a,'b>
 
-type FsMt = FsMessageTemplates.MessageTemplates.Template
+type FsMt = FsMessageTemplates.Template
 type CsMt = MessageTemplates.MessageTemplate
 
 type CsTextToken = MessageTemplates.Parsing.TextToken
