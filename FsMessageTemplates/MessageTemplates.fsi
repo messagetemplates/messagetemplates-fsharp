@@ -1,4 +1,4 @@
-﻿module FsMessageTemplates.MessageTemplates
+﻿namespace FsMessageTemplates
 
 /// A hint at how a property should be destructured.
 type DestrHint = Default = 0 | Stringify = 1 | Destructure = 2
@@ -89,33 +89,36 @@ and
         member Value: obj
         member Destr: Destructurer
 
-/// Parses a message template string.
-val parse: template:string -> Template
+module Parser =
+    /// Parses a message template string.
+    val parse: template:string -> Template
 
-/// Extracts the properties for a template from the array of objects.
-val captureProperties: template:Template -> args:obj[] -> PropertyNameAndValue seq
+module Capturing =
+    /// Extracts the properties for a template from the array of objects.
+    val captureProperties: template:Template -> args:obj[] -> PropertyNameAndValue seq
 
-/// Extracts the properties from a message template and the array of objects.
-val captureMessageProperties: template:string -> args:obj[] -> PropertyNameAndValue seq
+    /// Extracts the properties from a message template and the array of objects.
+    val captureMessageProperties: template:string -> args:obj[] -> PropertyNameAndValue seq
 
-/// Formats a message template as a string, replacing the properties
-/// with the provided values.
-val format: template:Template -> values:obj[] -> string
+module Formatting =
+    /// Formats a message template as a string, replacing the properties
+    /// with the provided values.
+    val format: template:Template -> values:obj[] -> string
 
-/// Prints the message template to a string builder.
-val bprintsm: sb:System.Text.StringBuilder -> template:string -> args:obj[] -> unit
+    /// Prints the message template to a string builder.
+    val bprintsm: sb:System.Text.StringBuilder -> template:string -> args:obj[] -> unit
 
-/// Prints the message template to a string.
-val sprintsm: provider:System.IFormatProvider -> template:string -> args:obj[] -> string
+    /// Prints the message template to a string.
+    val sprintsm: provider:System.IFormatProvider -> template:string -> args:obj[] -> string
 
-/// Prints the message template a text writer.
-val fprintsm: tw:System.IO.TextWriter -> template:string -> args:obj[] -> unit
+    /// Prints the message template a text writer.
+    val fprintsm: tw:System.IO.TextWriter -> template:string -> args:obj[] -> unit
 
-/// Prints the message template to a string builder.
-val bprintm: template:Template -> sb:System.Text.StringBuilder -> args:obj[] -> unit
+    /// Prints the message template to a string builder.
+    val bprintm: template:Template -> sb:System.Text.StringBuilder -> args:obj[] -> unit
 
-/// Prints the message template to a string.
-val sprintm: template:Template -> provider:System.IFormatProvider -> args:obj[] -> string
+    /// Prints the message template to a string.
+    val sprintm: template:Template -> provider:System.IFormatProvider -> args:obj[] -> string
 
-/// Prints the message template a text writer.
-val fprintm: template:Template -> tw:System.IO.TextWriter -> args:obj[] -> unit
+    /// Prints the message template a text writer.
+    val fprintm: template:Template -> tw:System.IO.TextWriter -> args:obj[] -> unit

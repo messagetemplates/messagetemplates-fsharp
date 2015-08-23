@@ -94,7 +94,7 @@ namespace MessageTemplates.PerfTests
         {
             new object[] { "adam",
                 new Chair(),
-                FsMessageTemplates.MessageTemplates.Token.NewProp(1, new FsMessageTemplates.MessageTemplates.PropertyToken()),
+                FsMessageTemplates.Token.NewProp(1, new FsMessageTemplates.PropertyToken()),
                 new Version(1,2,3,4),
             },
         };
@@ -102,13 +102,13 @@ namespace MessageTemplates.PerfTests
         [TestMethod]
         public void FSharpCaptureNamedDestr()
         {
-            var templates = NAMED_DESTR_TEMPLATES.Select(FsMessageTemplates.MessageTemplates.parse).ToArray();
+            var templates = NAMED_DESTR_TEMPLATES.Select(FsMessageTemplates.Parser.parse).ToArray();
 
             for (var i = 0; i < TEST_ITERATIONS * 3; i++)
             {
                 for (var x = 0; x < templates.Length; x++)
                 {
-                    FsMessageTemplates.MessageTemplates.captureProperties(templates[x], NAMED_DESTR_ARGS[x]);
+                    FsMessageTemplates.Capturing.captureProperties(templates[x], NAMED_DESTR_ARGS[x]);
                 }
             }
         }
@@ -135,7 +135,7 @@ namespace MessageTemplates.PerfTests
             {
                 for (int x = 0; x < NAMED_DESTR_TEMPLATES.Length; x++)
                 {
-                    FsMessageTemplates.MessageTemplates.fprintsm(tw, NAMED_DESTR_TEMPLATES[x], NAMED_DESTR_ARGS[x]);
+                    FsMessageTemplates.Formatting.fprintsm(tw, NAMED_DESTR_TEMPLATES[x], NAMED_DESTR_ARGS[x]);
                 }
             }
         }
@@ -236,7 +236,7 @@ namespace MessageTemplates.PerfTests
             {
                 for (var x = 0; x < NAMED_TEMPLATES.Length; x++)
                 {
-                    FsMessageTemplates.MessageTemplates.parse(NAMED_TEMPLATES[x]);
+                    FsMessageTemplates.Parser.parse(NAMED_TEMPLATES[x]);
                 }
             }
         }
@@ -248,7 +248,7 @@ namespace MessageTemplates.PerfTests
             {
                 for (var x = 0; x < POSITIONAL_TEMPLATES.Length; x++)
                 {
-                    FsMessageTemplates.MessageTemplates.parse(POSITIONAL_TEMPLATES[x]);
+                    FsMessageTemplates.Parser.parse(POSITIONAL_TEMPLATES[x]);
                 }
             }
         }
@@ -284,8 +284,8 @@ namespace MessageTemplates.PerfTests
             {
                 for (var x = 0; x < POSITIONAL_TEMPLATES.Length; x++)
                 {
-                    var mt = FsMessageTemplates.MessageTemplates.parse(POSITIONAL_TEMPLATES[x]);
-                    FsMessageTemplates.MessageTemplates.format(mt, ARGS[x]);
+                    var mt = FsMessageTemplates.Parser.parse(POSITIONAL_TEMPLATES[x]);
+                    FsMessageTemplates.Formatting.format(mt, ARGS[x]);
                 }
             }
         }
@@ -297,8 +297,8 @@ namespace MessageTemplates.PerfTests
             {
                 for (var x = 0; x < NAMED_TEMPLATES.Length; x++)
                 {
-                    var mt = FsMessageTemplates.MessageTemplates.parse(NAMED_TEMPLATES[x]);
-                    FsMessageTemplates.MessageTemplates.sprintm(mt, formatProvider, ARGS[x]);
+                    var mt = FsMessageTemplates.Parser.parse(NAMED_TEMPLATES[x]);
+                    FsMessageTemplates.Formatting.sprintm(mt, formatProvider, ARGS[x]);
                 }
             }
         }
@@ -322,15 +322,14 @@ namespace MessageTemplates.PerfTests
         [TestMethod]
         public void FSharpFormatPositional()
         {
-            var templates = POSITIONAL_TEMPLATES.Select(FsMessageTemplates.MessageTemplates.parse).ToArray();
+            var templates = POSITIONAL_TEMPLATES.Select(FsMessageTemplates.Parser.parse).ToArray();
             var tw = new System.IO.StringWriter();
 
             for (var i = 0; i < TEST_ITERATIONS; i++)
             {
                 for (var x = 0; x < templates.Length; x++)
                 {
-                    FsMessageTemplates.MessageTemplates
-                        .fprintm(templates[x], tw, ARGS[x]);
+                    FsMessageTemplates.Formatting.fprintm(templates[x], tw, ARGS[x]);
                     tw.GetStringBuilder().Clear();
                 }
             }

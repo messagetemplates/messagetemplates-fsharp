@@ -12,13 +12,13 @@ type LangCsFsDataAttribute() =
     inherit Xunit.Sdk.DataAttribute()
     override __.GetData _ = [[|box "C#"|]; [|box "F#"|]] |> Seq.ofList
 
-type FsToken = FsMessageTemplates.MessageTemplates.Token
+type FsToken = FsMessageTemplates.Token
 
 let assertParsedAs lang message (expectedTokens: FsToken seq) =
     let parsed =
         match lang with
         | "C#" -> MessageTemplates.MessageTemplate.Parse(message).Tokens |> Seq.map CsToFs.mttToToken |> List.ofSeq
-        | "F#" -> (FsMessageTemplates.MessageTemplates.parse message).Tokens |> List.ofSeq
+        | "F#" -> (FsMessageTemplates.Parser.parse message).Tokens |> List.ofSeq
         | other -> failwithf "unexpected lang '%s'" other
 
     let expected = expectedTokens |> Seq.cast<FsToken> |> Seq.toList
@@ -27,7 +27,7 @@ let assertParsedAs lang message (expectedTokens: FsToken seq) =
 let capture lang (messageTemplate:string) args =
     let argsArray = (args |> Seq.cast<obj> |> Seq.toArray) // force 'args' to be IEnumerable
     match lang with
-    | "F#" -> FsMessageTemplates.MessageTemplates.captureMessageProperties messageTemplate argsArray |> List.ofSeq
+    | "F#" -> FsMessageTemplates.Capturing.captureMessageProperties messageTemplate argsArray |> List.ofSeq
     | "C#" -> MessageTemplates.MessageTemplate.Capture(messageTemplate, argsArray) |> Seq.map CsToFs.templateProperty |> List.ofSeq
     | other -> failwithf "unexpected lang '%s'" other
 
@@ -35,7 +35,7 @@ let renderp lang (provider:IFormatProvider) messageTemplate args =
     let argsArray = (args |> Seq.cast<obj> |> Seq.toArray) // force 'args' to be IEnumerable
     match lang with
     | "C#" -> MessageTemplates.MessageTemplate.Format(provider, messageTemplate, argsArray)
-    | "F#" -> FsMessageTemplates.MessageTemplates.sprintsm provider messageTemplate argsArray
+    | "F#" -> FsMessageTemplates.Formatting.sprintsm provider messageTemplate argsArray
     | other -> failwithf "unexpected lang '%s'" other
 
 let render lang template args =

@@ -24,7 +24,9 @@ let args = {
 
 open PerfUtil
 
-open FsMessageTemplates.MessageTemplates
+module FsFormat = FsMessageTemplates.Formatting
+module FsParser = FsMessageTemplates.Parser
+module FsCapture = FsMessageTemplates.Capturing
 open MessageTemplates
 
 module StringFormatComptible =
@@ -45,7 +47,7 @@ module StringFormatComptible =
     let noInit (tw) = ()
 
     let MtFs = parseFormatTest "MessageT F#" noInit (fun tw template args->
-        fprintsm tw template args)
+        FsFormat.fprintsm tw template args)
 
     let MtCs = parseFormatTest "MessageT C#" noInit (fun tw template args ->
         MessageTemplate.Format(tw.FormatProvider, tw, template, args))
@@ -116,7 +118,7 @@ module AnyFormat =
     let args = [| box "adam" |]
 
     let MtFs = anyFormatTest "MessageT F#" (fun () ->
-        sprintsm invariant "Hello, {name}" args |> ignore )
+        FsFormat.sprintsm invariant "Hello, {name}" args |> ignore )
 
     let MtCs = anyFormatTest "MessageT C#" (fun () ->
         MessageTemplate.Format(invariant, "Hello, {name}", args) |> ignore)
@@ -161,8 +163,8 @@ module FormatTemplate =
 
     let MtFs = anyTemplateFormatTest
                 "MessageT F#"
-                (fun () -> parse("Release {$version} and {blah} and {blah2}"))
-                (fun template -> format template args |> ignore)
+                (fun () -> FsParser.parse("Release {$version} and {blah} and {blah2}"))
+                (fun template -> FsFormat.format template args |> ignore)
 
     let MtCs = anyTemplateFormatTest
                 "MessageT C#"
@@ -196,7 +198,7 @@ module FormatStringify =
     let args = [| box theVersion |]
 
     let MtFs = anyFormatTest "MessageT F#" (fun () ->
-        sprintsm invariant "Release {$version}" args |> ignore )
+        FsFormat.sprintsm invariant "Release {$version}" args |> ignore )
 
     let MtCs = anyFormatTest "MessageT C#" (fun () ->
         MessageTemplate.Format(invariant, "Release {$version}", args) |> ignore)

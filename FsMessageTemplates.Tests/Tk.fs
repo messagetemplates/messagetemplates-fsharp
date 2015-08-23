@@ -1,6 +1,6 @@
 ﻿module Tk
 
-open FsMessageTemplates.MessageTemplates
+open FsMessageTemplates
 
 let PropertyNameAndValue (name:string, value:TemplatePropertyValue) = { Name=name; Value=value }
 let text tindex raw = Token.Text(tindex, raw)

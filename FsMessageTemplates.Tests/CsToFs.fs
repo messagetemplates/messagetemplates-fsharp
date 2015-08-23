@@ -1,6 +1,6 @@
 ﻿module FsTests.CsToFs
 
-open FsMessageTemplates.MessageTemplates
+open FsMessageTemplates
 open Tk
 
 type Kvp<'a,'b> = System.Collections.Generic.KeyValuePair<'a,'b>

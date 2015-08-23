@@ -4,7 +4,7 @@ open System
 open Swensen.Unquote
 
 open Tk
-open FsMessageTemplates.MessageTemplates
+open FsMessageTemplates
 
 [<LangTheory; LangCsFsData>]
 let ``no values provided yields no properties`` (lang) =

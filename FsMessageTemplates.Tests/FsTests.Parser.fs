@@ -4,7 +4,7 @@ open Xunit
 open Swensen.Unquote.Assertions
 open System.Globalization
 open System
-open FsMessageTemplates.MessageTemplates
+open FsMessageTemplates
 
 (*
     These tests run against both the C# and F# version. This helps to maintain the same
@@ -13,7 +13,7 @@ open FsMessageTemplates.MessageTemplates
 
 [<Fact>]
 let ``align info defaults are correct`` () =
-    test <@ AlignInfo().Direction = FsMessageTemplates.MessageTemplates.Direction.Left @>
+    test <@ AlignInfo().Direction = FsMessageTemplates.Direction.Left @>
     test <@ AlignInfo().Width = 0 @>
     test <@ AlignInfo().IsEmpty = false @>
 
@@ -61,7 +61,7 @@ let ``parsing 100k performance`` (lang) =
     let test =
         match lang with
         | "C#" -> fun s -> MessageTemplates.MessageTemplate.Parse s |> ignore
-        | "F#" -> fun s -> FsMessageTemplates.MessageTemplates.parse s |> ignore
+        | "F#" -> fun s -> FsMessageTemplates.Parser.parse s |> ignore
         | _ -> failwithf "unexpected lang %s" lang
 
     for _ in 1..100000 do test template
