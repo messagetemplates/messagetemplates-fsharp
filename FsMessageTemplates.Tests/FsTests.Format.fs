@@ -144,3 +144,52 @@ let ``format provider is used`` (lang) =
                    "Please pay {Sum}" [12.345]
     test <@ m = "Please pay 12,345" @>
 
+type Tree = Seq of nums: double list | Leaf of double | Trunk of double * DateTimeOffset * (Tree list)
+let Four39PmOn20May2013 = DateTimeOffset(2013, 5, 20, 16, 39, 00, TimeSpan.FromHours 9.5)
+type ItemsUnion = ChairItem of c:ChairRecord | ReceiptItem of r:ReceiptRecord
+
+[<LangTheory; LangCsFsData>]
+let ``an F# discriminated union object is formatted with provider correctly`` (lang) =
+    let provider = CultureInfo.GetCultureInfo "fr-FR"
+    let template = "I like {@item1} and {@item2}"
+    let values : obj[] = [| ChairItem({ Back="straight"; Legs=[|1;2;3;4|] })
+                            ReceiptItem({ Sum=12.345; When=DateTime(2013, 5, 20, 16, 39, 0) }) |]
+    let expected = "I like "
+                 + "ChairItem { c: ChairRecord { Back: \"straight\", Legs: [1, 2, 3, 4] }, Tag: 0, IsChairItem: True, IsReceiptItem: False }"
+                 + " and "
+                 + "ReceiptItem { r: ReceiptRecord { Sum: 12,345, When: 20/05/2013 16:39:00 }, Tag: 1, IsChairItem: False, IsReceiptItem: True }"
+    Asserts.MtAssert.RenderedAs(lang, template, values, expected, provider)
+
+[<Theory(Skip="F# does not do depth limiting yet"); LangCsFsData>]
+let ``an F# discriminated union object is formatted with provider and depth correctly`` (lang) =
+    let provider = (CultureInfo.GetCultureInfo "fr-FR")
+    let template = "I like {@item1} and {@item2} and {@item3}"
+    let values : obj[] = [| Leaf 12.345
+                            Leaf 12.345
+                            Trunk (12.345, Four39PmOn20May2013, [Leaf 12.345; Leaf 12.345]) |]
+    let expected = "I like Leaf { Item: null, Tag: null, IsLeaf: null, IsTrunk: null } and "
+                 + "Leaf { Item: null, Tag: null, IsLeaf: null, IsTrunk: null } and "
+                 + "Trunk { Item1: null, Item2: null, Tag: null, IsLeaf: null, IsTrunk: null }"
+    // Asserts.MtAssert.RenderedAs(lang, template, values, expected, provider, depth=1)
+    ()
+
+[<LangTheory; LangCsFsData>]
+let ``Destructred F# objects captured with a custom destructurer render with format provider`` (lang) =
+    let provider = CultureInfo.GetCultureInfo "fr-FR"
+    let maxDepth = 1
+    let template = "I like {@item1}
+and {@item2}
+and {@item3}
+and {@item4}"
+    let values : obj[] = [| Leaf 12.345
+                            Leaf 12.345
+                            Trunk (12.345, Four39PmOn20May2013, [Leaf 12.345; Leaf 12.345])
+                            Trunk (1.1, Four39PmOn20May2013, [Seq [1.1;2.2;3.3]; Seq [4.4]])
+                         |]
+    let expected = "I like Leaf { Item: 12,345 }
+and Leaf { Item: 12,345 }
+and Trunk { Item1: 12,345, Item2: 20/05/2013 16:39:00 +09:30, Item3: [Leaf { Item: 12,345 }, Leaf { Item: 12,345 }] }
+and Trunk { Item1: 1,1, Item2: 20/05/2013 16:39:00 +09:30, Item3: [Seq { nums: [1,1, 2,2, 3,3] }, Seq { nums: [4,4] }] }"
+    let customFsharpDestr = CsToFs.toFsDestructurer (Destructurama.FSharpTypesDestructuringPolicy())
+    let destr = FsMessageTemplates.Capturing.createCustomDestructurer None (Some customFsharpDestr)
+    Asserts.MtAssert.RenderedAs(lang, template, values, expected, provider, additionalDestrs=[destr])

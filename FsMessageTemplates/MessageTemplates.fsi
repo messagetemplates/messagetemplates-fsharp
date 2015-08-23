@@ -77,7 +77,7 @@ and PropertyNameAndValue = { Name:string; Value:TemplatePropertyValue }
 
 /// A function that attempts to destructure a property and value object into a 
 /// more friendly (and immutable) <see cref="TemplatePropertyValue" />. This returns
-/// Unchecked.defaultOf<TemplatePropertyValue> (null) if the conversion failed.
+/// Unchecked.defaultOf TemplatePropertyValue (i.e. null) if the conversion failed.
 type Destructurer = DestructureRequest -> TemplatePropertyValue
 and
     /// Describes a request for an object to be destructured into a
@@ -94,13 +94,34 @@ module Parser =
     val parse: template:string -> Template
 
 module Capturing =
+    val createCustomDestructurer : tryScalars: Destructurer option
+                                   -> tryObjects: Destructurer option
+                                   -> Destructurer
+
+    val inline isEmptyKeepTrying : TemplatePropertyValue -> bool
+
     /// Extracts the properties for a template from the array of objects.
     val captureProperties: template:Template -> args:obj[] -> PropertyNameAndValue seq
 
     /// Extracts the properties from a message template and the array of objects.
     val captureMessageProperties: template:string -> args:obj[] -> PropertyNameAndValue seq
 
+    /// "Captures" properties for the template using the provided Destructurer,
+    /// Template, and args. If the template has *all* positional properties, the
+    /// positional indexes are used to match the args to the template properties.
+    /// Otherwise, arguments are matched left-to-right with the properties, and
+    /// any extra (unmatched) properties are ignored.
+    val capturePropertiesCustom:
+        destr:Destructurer -> template:Template -> args:obj[] -> PropertyNameAndValue seq
+
 module Formatting =
+    /// Formats and appends the template message to a TextWriter, using the provided
+    /// function to look up each TemplatePropertyValue for each property name.
+    val formatCustom: template:Template
+                        -> tw:System.IO.TextWriter
+                        -> getValueByName: (string -> TemplatePropertyValue)
+                        -> unit
+
     /// Formats a message template as a string, replacing the properties
     /// with the provided values.
     val format: template:Template -> values:obj[] -> string

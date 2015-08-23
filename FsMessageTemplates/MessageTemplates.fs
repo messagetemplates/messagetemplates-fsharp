@@ -203,7 +203,7 @@ module Parser =
                  | alignInfo ->
                     let format = if formatRange.IsSome then (formatRange.Value.GetSubString t) else null
                     Prop(within.Start - 1,
-                         PropertyToken(propertyName, parseIntOrNegative1 propertyName, destr, alignInfo, format))
+                        PropertyToken(propertyName, parseIntOrNegative1 propertyName, destr, alignInfo, format))
 
     let parseTokens (mt:string) =
         let tlen = mt.Length
@@ -260,7 +260,6 @@ module Parser =
 
 module Destructure =
     open System
-    type DtOffset = System.DateTimeOffset
 
     // perf
     let inline emptyKeepTrying() = Unchecked.defaultof<TemplatePropertyValue>
@@ -268,10 +267,10 @@ module Destructure =
     let inline tryCastAs<'T> (o:obj) =  match o with | :? 'T as res -> res | _ -> Unchecked.defaultof<'T>
     
     let scalarTypes = 
-        [ typeof<bool>;      typeof<char>;       typeof<byte>;      typeof<int16>
-          typeof<uint16>;    typeof<int32>;      typeof<uint32>;    typeof<int64>
-          typeof<uint64>;    typeof<single>;     typeof<double>;    typeof<decimal>
-          typeof<string>;    typeof<DateTime>;   typeof<DtOffset>;  typeof<TimeSpan>
+        [ typeof<bool>;      typeof<char>;       typeof<byte>;              typeof<int16>
+          typeof<uint16>;    typeof<int32>;      typeof<uint32>;            typeof<int64>
+          typeof<uint64>;    typeof<single>;     typeof<double>;            typeof<decimal>
+          typeof<string>;    typeof<DateTime>;   typeof<DateTimeOffset>;    typeof<TimeSpan>
           typeof<Guid>;      typeof<Uri>; ]
 
     let scalarTypeHash = System.Collections.Generic.HashSet(scalarTypes)
@@ -372,7 +371,6 @@ module Destructure =
             DictionaryValue skvps
         | e -> SequenceValue(e |> Seq.cast<obj> |> Seq.map r.TryAgainWithValue |> Seq.toList)
 
-    let inline tryCustomDestructuring (r:DestructureRequest) = emptyKeepTrying() // TODO:
     let inline scalarStringCatchAllDestr (r:DestructureRequest) = ScalarValue (r.Value.ToString())
 
     let inline isPublicInstanceReadProp (p:PropertyInfo) =
@@ -403,21 +401,42 @@ module Destructure =
 
             StructureValue(typeTag, (rzValues.ToArray()))
 
-    let inline tryAll r =
-        match tryNull r with
-        | ekt1 when isEmptyKeepTrying ekt1 ->
-            match tryStringifyDestructurer r with
-            | ekt2 when isEmptyKeepTrying ekt2 ->
-                match tryScalarDestructure r with
-                | ekt3 when isEmptyKeepTrying ekt3 ->
-                    match tryDelegateString r with
-                    | ekt4 when isEmptyKeepTrying ekt4 ->
-                        match tryEnumerableDestr r with
-                        | ekt5 when isEmptyKeepTrying ekt5 ->
-                            match tryObjectStructureDestructuring r with
-                            | ekt6 when isEmptyKeepTrying ekt6 ->
-                                match scalarStringCatchAllDestr r with
-                                | ekt7 when isEmptyKeepTrying ekt7 -> emptyKeepTrying()
+    /// A destructurer that does nothing by returning emptyKeepTrying()
+    let inline alwaysKeepTrying (_:DestructureRequest) = emptyKeepTrying()
+
+    /// Attempts all built-in destructurers in the correct order, falling
+    /// back to 'scalarStringCatchAllDestr' (stringify) if no better option
+    /// is found first. Also supports custom scalar destructuring and custom
+    /// object destructuring at the appropriated points in the pipline. Note
+    /// this is called semi-recursively in a very tight loop during the process
+    /// of capturing template property values.
+    let inline tryAllWithCustom (tryCustomScalarTypes: Destructurer option)
+                                (tryCustomDestructure: Destructurer option)
+                                (request: DestructureRequest) =
+        let tryCustomDestructure = defaultArg tryCustomDestructure alwaysKeepTrying
+        let tryCustomScalarTypes = defaultArg tryCustomScalarTypes alwaysKeepTrying
+
+        // Performance :(
+        match tryNull request with
+        | tpv when isEmptyKeepTrying tpv ->
+            match tryStringifyDestructurer request with
+            | tpv when isEmptyKeepTrying tpv ->
+                match tryScalarDestructure request with
+                | tpv when isEmptyKeepTrying tpv ->
+                    match tryCustomScalarTypes request with
+                    | tpv when isEmptyKeepTrying tpv ->
+                        match tryDelegateString request with
+                        | tpv when isEmptyKeepTrying tpv ->
+                            match tryCustomDestructure request with
+                            | tpv when isEmptyKeepTrying tpv ->
+                                match tryEnumerableDestr request with
+                                | tpv when isEmptyKeepTrying tpv ->
+                                    match tryObjectStructureDestructuring request with
+                                    | tpv when isEmptyKeepTrying tpv ->
+                                        match scalarStringCatchAllDestr request with
+                                        | tpv when isEmptyKeepTrying tpv -> emptyKeepTrying()
+                                        | tpv -> tpv
+                                    | tpv -> tpv
                                 | tpv -> tpv
                             | tpv -> tpv
                         | tpv -> tpv
@@ -427,8 +446,17 @@ module Destructure =
         | tpv -> tpv
 
 module Capturing =
+    let inline isEmptyKeepTrying (tpv) = Destructure.isEmptyKeepTrying (tpv)
+
+    let createCustomDestructurer (tryScalars:Destructurer option) (tryCustomObjects: Destructurer option) : Destructurer =
+        Destructure.tryAllWithCustom tryScalars tryCustomObjects
+
+    /// Describes a function for logging warning messages.
     type SelfLogger = (string * obj[]) -> unit
+    /// An inline null logger; for ignoring any warning messages.
     let inline nullLogger (format: string, values: obj[]) = ()
+
+    let defaultDestructureNoCustoms : Destructurer = Destructure.tryAllWithCustom None None
 
     let capturePropertiesWith (log:SelfLogger) (destr:Destructurer) (t:Template) (args: obj[]) =
         if (args = null || args.Length = 0) && t.HasAnyProperties then Array.empty
@@ -447,14 +475,29 @@ module Capturing =
                 Array.set result i { Name=p.Name; Value=destr req }
             result
 
-    let captureProperties (t:Template) (args:obj[]) =
-        capturePropertiesWith nullLogger Destructure.tryAll t args
+    let capturePropertiesCustom (d: Destructurer) (t: Template) (args: obj[]) =
+        capturePropertiesWith nullLogger d t args
         :> PropertyNameAndValue seq
 
+    let capturePropertiesExtra tryCustomScalars tryCustomDestructurers (t:Template) (args:obj[]) =
+        let customDestructurer = Destructure.tryAllWithCustom tryCustomScalars tryCustomDestructurers
+        capturePropertiesWith nullLogger customDestructurer t args
+        :> PropertyNameAndValue seq
+
+    let captureProperties (t:Template) (args:obj[]) =
+        capturePropertiesWith nullLogger defaultDestructureNoCustoms t args
+        :> PropertyNameAndValue seq
+
+    /// The same as 'captureProperties' except the message template is first
+    /// parsed, then the properties are captured.
     let captureMessageProperties (s:string) (args:obj[]) =
         captureProperties (Parser.parse s) args
 
 module Formatting =
+    /// Recursively writes the string representation of the template property
+    /// value to the provided TextWriter. The provided format string is only
+    /// used for a ScalarValue v when v implements System.IFormattable.
+    /// TODO: ICustomFormattable?
     let rec writePropValue (w: TextWriter) (pv: TemplatePropertyValue) (format: string) =
         match pv with
         | ScalarValue sv ->
@@ -496,7 +539,10 @@ module Formatting =
             )
             w.Write ']'
 
-    /// Converts template token and value into a rendered string.
+    /// Converts a 'matched' token and template property value into a rendered string.
+    /// For properties, the System.String.Format rules are applied, including alignment
+    /// and System.IFormattable rules, along with the additional MessageTemplates rules
+    /// for named properties and destructure-formatting.
     let inline writeToken (w: TextWriter) (token:Token) (value:TemplatePropertyValue) =
         match token, value with
         | Token.Text (_, raw), _ -> w.Write raw
@@ -536,8 +582,10 @@ module Formatting =
         valuesDict.TryGetValue (nme, tpv) |> ignore
         !tpv
 
-    let doFormat (w: TextWriter) (template:Template) (values:obj[]) =
-        let values = Capturing.capturePropertiesWith Capturing.nullLogger Destructure.tryAll template values
+    let captureThenFormat (w: TextWriter) (template:Template) (values:obj[]) =
+        let values = Capturing.capturePropertiesWith
+                        Capturing.nullLogger Capturing.defaultDestructureNoCustoms
+                        template values
         let valueCount = values.Length
         let getValueForPropName =
             match valueCount with
@@ -554,30 +602,37 @@ module Formatting =
 
     let format template values =
         use tw = new StringWriter()
-        doFormat tw template values
+        captureThenFormat tw template values
         tw.ToString()
+
+    let formatCustom (t:Template) w getValueByName =
+        for tok in t.Tokens do
+            match tok with
+            | Token.Text _ as tt -> writeToken w tt Unchecked.defaultof<TemplatePropertyValue>
+            | Token.Prop (_, pd) as tp ->
+                let value = getValueByName pd.Name
+                writeToken w tp value
 
     let bprintsm (sb:StringBuilder) (template:string) (args:obj[]) =
         use tw = new StringWriter(sb)
-        doFormat tw (Parser.parse template) args
+        captureThenFormat tw (Parser.parse template) args
 
     let sprintsm (p:System.IFormatProvider) (template:string) (args:obj[]) =
         use tw = new StringWriter(p)
-        doFormat tw (Parser.parse template) args
+        captureThenFormat tw (Parser.parse template) args
         tw.ToString()
 
     let fprintsm (tw:TextWriter) (template:string) (args:obj[]) =
-        doFormat tw (Parser.parse template) args
+        captureThenFormat tw (Parser.parse template) args
 
     let bprintm (template:Template) (sb:StringBuilder) (args:obj[]) =
         use tw = new StringWriter(sb)
-        doFormat tw template args
+        captureThenFormat tw template args
 
     let sprintm (template:Template) (provider:System.IFormatProvider) (args:obj[]) =
         use tw = new StringWriter(provider)
-        doFormat tw template args
+        captureThenFormat tw template args
         tw.ToString()
 
     let fprintm (template:Template) (tw:TextWriter) (args:obj[]) =
-        doFormat tw template args
-
+        captureThenFormat tw template args
