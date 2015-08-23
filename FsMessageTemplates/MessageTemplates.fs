@@ -106,7 +106,7 @@ module Parser =
                 let c = chars.[i]
                 match c with
                 | '{' -> if (i+1) < tlen && chars.[i+1] = '{' then append c; go (i+2)
-                             elif i = startAt then startAt, Empty.textToken
+                         elif i = startAt then startAt, Empty.textToken
                          else i, Text(startAt, sb.ToStringAndClear())
                 | '}' when (i+1) < tlen && chars.[i+1] = '}' -> append c; go (i+2)
                 | _ -> append c; go (i+1)
@@ -190,20 +190,20 @@ module Parser =
             | _, _ -> None, None, None // hammer time; you can't split this
 
         match nameRange, alignRange, formatRange with
-            | None, _, _ -> Empty.propToken
-            | Some nameAndDestr, _, _ ->
-                let destr = DestrHint.FromChar t.[nameAndDestr.Start]
-                let propertyName = match destr with
-                                   | DestrHint.Default -> nameAndDestr.GetSubString t
-                                   | _ -> Range(nameAndDestr.Start+1, nameAndDestr.End).GetSubString t
-                if propertyName = "" || (hasAnyInvalid isValidInPropName propertyName) then Empty.propToken
-                elif formatRange.IsSome && (hasAnyInvalidRng isValidInFormat t formatRange.Value) then Empty.propToken
-                else match (tryParseAlignInfoRng t alignRange) with
-                     | ai when ai.IsValid = false -> Empty.propToken
-                     | alignInfo ->
-                        let format = if formatRange.IsSome then (formatRange.Value.GetSubString t) else null
-                        Prop(within.Start - 1,
-                             PropertyToken(propertyName, parseIntOrNegative1 propertyName, destr, alignInfo, format))
+        | None, _, _ -> Empty.propToken
+        | Some nameAndDestr, _, _ ->
+            let destr = DestrHint.FromChar t.[nameAndDestr.Start]
+            let propertyName = match destr with
+                               | DestrHint.Default -> nameAndDestr.GetSubString t
+                               | _ -> Range(nameAndDestr.Start+1, nameAndDestr.End).GetSubString t
+            if propertyName = "" || (hasAnyInvalid isValidInPropName propertyName) then Empty.propToken
+            elif formatRange.IsSome && (hasAnyInvalidRng isValidInFormat t formatRange.Value) then Empty.propToken
+            else match (tryParseAlignInfoRng t alignRange) with
+                 | ai when ai.IsValid = false -> Empty.propToken
+                 | alignInfo ->
+                    let format = if formatRange.IsSome then (formatRange.Value.GetSubString t) else null
+                    Prop(within.Start - 1,
+                        PropertyToken(propertyName, parseIntOrNegative1 propertyName, destr, alignInfo, format))
 
     let parseTokens (mt:string) =
         let tlen = mt.Length
