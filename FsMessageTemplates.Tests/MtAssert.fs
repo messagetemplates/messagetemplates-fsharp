@@ -5,6 +5,8 @@ open FsMessageTemplates
 open Swensen.Unquote
 open System.Collections.Generic
 
+let invariantProvider = (System.Globalization.CultureInfo.InvariantCulture :> System.IFormatProvider)
+
 type MtAssert() =
     /// Captures properties from the C# or F# version in compatible ways.
     static member internal Capture(lang, template, values, ?depth, ?additionalScalars, ?additionalDestrs) =
@@ -38,7 +40,7 @@ type MtAssert() =
 
     /// Formats either the C# or F# version in compatible ways.
     static member internal Format(lang, template, values, ?provider, ?depth, ?additionalScalars, ?additionalDestrs) =
-        let provider = defaultArg provider System.Globalization.CultureInfo.InvariantCulture
+        let provider = defaultArg provider invariantProvider
         let depth = defaultArg depth 10
         let additionalScalars = defaultArg additionalScalars Seq.empty<Type>
         let additionalDestrs = defaultArg additionalDestrs Seq.empty<FsMessageTemplates.Destructurer>
@@ -83,7 +85,7 @@ type MtAssert() =
         test <@ actual = expected @>
 
     static member RenderedAs(lang, template, values, expected, ?provider, ?depth, ?additionalScalars, ?additionalDestrs) =
-        let provider = defaultArg provider System.Globalization.CultureInfo.InvariantCulture
+        let provider = defaultArg provider invariantProvider
         let depth = defaultArg depth 10
         let additionalScalars = defaultArg additionalScalars Seq.empty<Type>
         let additionalDestrs = defaultArg additionalDestrs Seq.empty<FsMessageTemplates.Destructurer>
