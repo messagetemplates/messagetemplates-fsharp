@@ -8,7 +8,7 @@ namespace MessageTemplates.PerfTests
     [TestClass]
     public class PerfTests
     {
-        const int TEST_ITERATIONS = 10000;
+        const int TEST_ITERATIONS = 2000;
         TimedWriteLine twl;
 
         public TestContext TestContext { get; set; }

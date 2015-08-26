@@ -160,23 +160,41 @@ let ``an F# discriminated union object is formatted with provider correctly`` (l
                  + "ReceiptItem { r: ReceiptRecord { Sum: 12,345, When: 20/05/2013 16:39:00 }, Tag: 1, IsChairItem: False, IsReceiptItem: True }"
     Asserts.MtAssert.RenderedAs(lang, template, values, expected, provider)
 
-[<Theory(Skip="F# does not do depth limiting yet"); LangCsFsData>]
-let ``an F# discriminated union object is formatted with provider and depth correctly`` (lang) =
+[<Theory; LangCsFsData>]
+let ``Rendered F# DU or Tuple fields are 'null' when depth is 1`` (lang) =
     let provider = (CultureInfo.GetCultureInfo "fr-FR")
     let template = "I like {@item1} and {@item2} and {@item3}"
     let values : obj[] = [| Leaf 12.345
                             Leaf 12.345
                             Trunk (12.345, Four39PmOn20May2013, [Leaf 12.345; Leaf 12.345]) |]
-    let expected = "I like Leaf { Item: null, Tag: null, IsLeaf: null, IsTrunk: null } and "
-                 + "Leaf { Item: null, Tag: null, IsLeaf: null, IsTrunk: null } and "
-                 + "Trunk { Item1: null, Item2: null, Tag: null, IsLeaf: null, IsTrunk: null }"
-    // Asserts.MtAssert.RenderedAs(lang, template, values, expected, provider, depth=1)
-    ()
+    // all fields should be rendered
+    let expected = "I like Leaf { Item: null, Tag: null, IsSeq: null, IsLeaf: null, IsTrunk: null } and "
+                 + "Leaf { Item: null, Tag: null, IsSeq: null, IsLeaf: null, IsTrunk: null } and "
+                 + "Trunk { Item1: null, Item2: null, Item3: null, Tag: null, IsSeq: null, IsLeaf: null, IsTrunk: null }"
+    
+    Asserts.MtAssert.RenderedAs(lang, template, values, expected, provider, maxDepth=1)
+
+[<Theory; LangCsFsData>]
+let ``Rendered F# DU or Tuple fields on level3 are 'null' when depth is 2`` (lang) =
+    let provider = (CultureInfo.GetCultureInfo "fr-FR")
+    let template = "I like {@item1} and {@item2} and {@item3} and {@item4}"
+    let values : obj[] = [| Leaf 12.345
+                            Leaf 12.345
+                            Trunk (12.345, Four39PmOn20May2013, [Leaf 12.345; Leaf 12.345])
+                            ChairItem { Back="slanted"; Legs=[|1;2;3;4;5|] } |]
+
+    // Render fields deeper than level 2 with 'null' values
+    // In this case, only The Trunk.Item3 (Tree list) is after level 2
+    let expected = "I like Leaf { Item: 12,345, Tag: 1, IsSeq: False, IsLeaf: True, IsTrunk: False } and "
+                 + "Leaf { Item: 12,345, Tag: 1, IsSeq: False, IsLeaf: True, IsTrunk: False } and "
+                 + "Trunk { Item1: 12,345, Item2: 20/05/2013 16:39:00 +09:30, Item3: [null, null], Tag: 2, IsSeq: False, IsLeaf: False, IsTrunk: True } and "
+                 + "ChairItem { c: ChairRecord { Back: null, Legs: null }, Tag: 0, IsChairItem: True, IsReceiptItem: False }"
+    
+    Asserts.MtAssert.RenderedAs(lang, template, values, expected, provider, maxDepth=2)
 
 [<LangTheory; LangCsFsData>]
 let ``Destructred F# objects captured with a custom destructurer render with format provider`` (lang) =
     let provider = CultureInfo.GetCultureInfo "fr-FR"
-    let maxDepth = 1
     let template = "I like {@item1}
 and {@item2}
 and {@item3}

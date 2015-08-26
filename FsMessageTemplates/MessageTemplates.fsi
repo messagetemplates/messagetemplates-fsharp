@@ -70,7 +70,7 @@ type ScalarKeyValuePair = TemplatePropertyValue * TemplatePropertyValue
 and TemplatePropertyValue =
 | ScalarValue of obj
 | SequenceValue of TemplatePropertyValue list
-| StructureValue of typeTag:string * values:PropertyNameAndValue[]
+| StructureValue of typeTag:string * values:PropertyNameAndValue list
 | DictionaryValue of data: ScalarKeyValuePair list
 /// A property and it's associated destructured value.
 and PropertyNameAndValue = { Name:string; Value:TemplatePropertyValue }
@@ -82,12 +82,12 @@ type Destructurer = DestructureRequest -> TemplatePropertyValue
 and
     /// Describes a request for an object to be destructured into a
     /// TemplatePropertyValue.
-    [<Struct; NoEquality; NoComparison>]
+    [<Class; NoEquality; NoComparison>]
     DestructureRequest =
-        new: hint:DestrHint * value:obj * destr:Destructurer -> DestructureRequest
+        new: destructurer:Destructurer * value:obj * ?maxDepth:int * ?currentDepth:int * ?hint:DestrHint -> DestructureRequest
         member Hint: DestrHint
         member Value: obj
-        member Destr: Destructurer
+        member Destructurer: Destructurer
 
 module Parser =
     /// Parses a message template string.
@@ -112,7 +112,7 @@ module Capturing =
     /// Otherwise, arguments are matched left-to-right with the properties, and
     /// any extra (unmatched) properties are ignored.
     val capturePropertiesCustom:
-        destr:Destructurer -> template:Template -> args:obj[] -> PropertyNameAndValue seq
+        destr:Destructurer -> maxDepth:int -> template:Template -> args:obj[] -> PropertyNameAndValue seq
 
 module Formatting =
     /// Formats and appends the template message to a TextWriter, using the provided

@@ -31,9 +31,9 @@ type Chair() =
     override __.ToString() = "a chair"
 
 let chairStructureValue =
-    let propNamesAndValues = [| PropertyNameAndValue("Back", ScalarValue "straight")
-                                PropertyNameAndValue("Legs", SequenceValue ([ ScalarValue 1; ScalarValue 2; ScalarValue 3; ScalarValue 4 ]))
-                             |]
+    let propNamesAndValues = [ PropertyNameAndValue("Back", ScalarValue "straight")
+                               PropertyNameAndValue("Legs", SequenceValue ([ ScalarValue 1; ScalarValue 2; ScalarValue 3; ScalarValue 4 ]))
+                             ]
     StructureValue ("Chair", propNamesAndValues)
 
 [<LangTheory; LangCsFsData>]
@@ -47,9 +47,9 @@ let ``a destructured dictionary yeilds dictionary values`` (lang) =
 let ``an F# 'dict' (which is not Dictionary<_,_>) yeilds a sequence->structure value`` (lang) =
     let inputDictionary = dict [| "firstDictEntryKey", Chair(); |]
     let actual = capture lang "this {@will} work, I hope" [ inputDictionary ]
-    let expected = [ PropertyNameAndValue("will", SequenceValue [StructureValue("KeyValuePair`2", [| PropertyNameAndValue("Key", ScalarValue "firstDictEntryKey")
-                                                                                                     PropertyNameAndValue("Value", chairStructureValue)
-                                                                                                  |])
+    let expected = [ PropertyNameAndValue("will", SequenceValue [StructureValue("KeyValuePair`2", [ PropertyNameAndValue("Key", ScalarValue "firstDictEntryKey")
+                                                                                                    PropertyNameAndValue("Value", chairStructureValue)
+                                                                                                  ])
                                                                 ])
                    ]
     test <@ actual = expected @>
@@ -185,20 +185,20 @@ module St =
 let ``Default destructuring an F# union works`` (lang) =
     MtAssert.DestructuredAs(lang, "I like {@first} and {@second}", [| Case1; Case2 |],
         expected=[
-            pnv("first",  strv ("MyDu", [| scal("Tag", 0); scal("IsCase1", true);  scal("IsCase2", false) |]))
-            pnv("second", strv ("MyDu", [| scal("Tag", 1); scal("IsCase1", false); scal("IsCase2", true) |]))
+            pnv("first",  strv ("MyDu", [ scal("Tag", 0); scal("IsCase1", true);  scal("IsCase2", false) ]))
+            pnv("second", strv ("MyDu", [ scal("Tag", 1); scal("IsCase1", false); scal("IsCase2", true) ]))
         ])
 
     MtAssert.DestructuredAs(lang, "I like {@first} and {@second}", [| Case1AB(1,"2"); Case2AB |],
         expected=[
-            pnv("first",  strv ("Case1AB", [| scal("a", 1)
-                                              scal("b", "2")
-                                              scal("Tag", 0)
-                                              scal("IsCase1AB", true)
-                                              scal("IsCase2AB", false) |]))
-            pnv("second", strv (null, [| scal("Tag", 1)
-                                         scal("IsCase1AB", false)
-                                         scal("IsCase2AB", true) |]))
+            pnv("first",  strv ("Case1AB", [ scal("a", 1)
+                                             scal("b", "2")
+                                             scal("Tag", 0)
+                                             scal("IsCase1AB", true)
+                                             scal("IsCase2AB", false) ]))
+            pnv("second", strv (null, [ scal("Tag", 1)
+                                        scal("IsCase1AB", false)
+                                        scal("IsCase2AB", true) ]))
         ])
 
 [<LangTheory; LangCsFsData>]
@@ -208,14 +208,14 @@ let ``Default destructuring an F# tuple works`` (lang) =
     let tyTag = values.[0].GetType().Name
     MtAssert.DestructuredAs(lang, "I like {@first} and {@second}", values,
         expected=[
-            pnv("first",  strv (tyTag, [| scal("Item1", 123); scal("Item2", "abc"); |]))
-            pnv("second", strv (tyTag, [| scal("Item1", 456); scal("Item2", "def"); |]))
+            pnv("first",  strv (tyTag, [ scal("Item1", 123); scal("Item2", "abc"); ]))
+            pnv("second", strv (tyTag, [ scal("Item1", 456); scal("Item2", "def"); ]))
         ])
     
     let values : obj[] = [| 1,2,3; 4,5,6 |]
     let tyTag = values.[0].GetType().Name
     MtAssert.DestructuredAs(lang, "I like {@first} and {@second}", values,
         expected=[
-            pnv("first",  strv (tyTag, [| scal("Item1", 1); scal("Item2", 2); scal("Item3", 3); |]))
-            pnv("second", strv (tyTag, [| scal("Item1", 4); scal("Item2", 5); scal("Item3", 6); |]))
+            pnv("first",  strv (tyTag, [ scal("Item1", 1); scal("Item2", 2); scal("Item3", 3); ]))
+            pnv("second", strv (tyTag, [ scal("Item1", 4); scal("Item2", 5); scal("Item3", 6); ]))
         ])

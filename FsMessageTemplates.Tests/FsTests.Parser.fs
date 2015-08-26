@@ -13,9 +13,9 @@ open FsMessageTemplates
 
 [<Fact>]
 let ``align info defaults are correct`` () =
-    test <@ AlignInfo().Direction = FsMessageTemplates.Direction.Left @>
-    test <@ AlignInfo().Width = 0 @>
-    test <@ AlignInfo().IsEmpty = false @>
+    AlignInfo().Direction =! FsMessageTemplates.Direction.Left
+    AlignInfo().Width =! 0
+    AlignInfo().IsEmpty =! false
 
 [<LangTheory; LangCsFsData>]
 let ``an empty message is a single text token`` (lang) = 
@@ -53,18 +53,6 @@ let ``doubled left and right brackets inside a property are parsed as text`` (la
                    [Tk.text 0 "Hello, " // <- Arguably, there should be a single text token for the whole input
                     Tk.text 7 "{nam{{adam}" // <- the double-braces are "wrong", does anyone care?
                     Tk.text 18 "}, how's it going?"]
-
-[<LangTheory; LangCsFsData>]
-let ``parsing 100k performance`` (lang) =
-    let template = "Hello, {nam{{adam}}}, how's {whatever,-10:00,0} it going?"
-    
-    let test =
-        match lang with
-        | "C#" -> fun s -> MessageTemplates.MessageTemplate.Parse s |> ignore
-        | "F#" -> fun s -> FsMessageTemplates.Parser.parse s |> ignore
-        | _ -> failwithf "unexpected lang %s" lang
-
-    for _ in 1..100000 do test template
 
 [<LangTheory; LangCsFsData>]
 let ``doubled right brackets are parsed as a single bracket`` (lang) =

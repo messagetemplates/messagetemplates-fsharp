@@ -76,18 +76,41 @@ and PropertyNameAndValue = { Name:string; Value:TemplatePropertyValue }
 and TemplatePropertyValue =
 | ScalarValue of obj
 | SequenceValue of TemplatePropertyValue list
-| StructureValue of typeTag:string * values:PropertyNameAndValue []
+| StructureValue of typeTag:string * values:PropertyNameAndValue list
 | DictionaryValue of data: ScalarKeyValuePair list
+    static member ScalarNull = ScalarValue null
+
+[<AutoOpen>]
+module Log =
+    /// Describes a function for logging warning messages.
+    type SelfLogger = (string * obj[]) -> unit
+
+    /// An inline null logger; for ignoring any warning messages.
+    let inline nullLogger (_: string, _: obj[]) = ()
+
+module Defaults =
+    let maxDepth = 10
 
 type Destructurer = DestructureRequest -> TemplatePropertyValue
 and
-    [<Struct>]
-    DestructureRequest(hint:DestrHint, value:obj, destr:Destructurer) =
-        member x.Hint = hint
+    [<NoEquality; NoComparison>]
+    DestructureRequest(destructurer:Destructurer, value:obj, ?maxDepth:int, ?currentDepth:int, ?hint:DestrHint) =
+        member x.Hint = defaultArg hint DestrHint.Default
         member x.Value = value
-        member x.Destr = destr
-        member inline internal x.WithValue (newValue:obj) = DestructureRequest(hint, newValue, destr)
-        member inline internal x.TryAgainWithValue (newValue:obj) = destr (x.WithValue newValue)
+        member x.Destructurer = destructurer
+        member x.MaxDepth = defaultArg maxDepth 10
+        member x.CurrentDepth = defaultArg currentDepth 1
+        member internal x.Log = nullLogger
+        /// During destructuring, this is called to 'recursively' destructure child properties
+        /// or sequence elements.
+        member inline internal x.TryAgainWithValue (newValue:obj, ?newDestructurer: Destructurer) =
+            let nextDepth = x.CurrentDepth + 1
+            if nextDepth > x.MaxDepth then TemplatePropertyValue.ScalarNull
+            else 
+                let destructurer = defaultArg newDestructurer x.Destructurer
+                let childRequest = DestructureRequest(destructurer, newValue, x.MaxDepth, nextDepth, x.Hint)
+                // now invoke the full destructurer again on the new value
+                x.Destructurer childRequest
 
 [<RequireQualifiedAccess>]
 module Empty =
@@ -366,7 +389,11 @@ module Destructure =
                              valueProp.GetValue(o)
             let skvps = e |> Seq.cast<obj>
                           |> Seq.map (fun o -> getKey o, getValue o)
-                          |> Seq.map (fun (key, value) -> tryScalarDestructure (r.WithValue key), r.TryAgainWithValue(value))
+                          |> Seq.map (fun (key, value) ->
+                            // only attempt the built-in scalars for the keyValue, because only
+                            // scalar values are supported as dictionary keys. However, do full 
+                            // destructuring for the dictionary entry values.
+                            r.TryAgainWithValue (key, tryScalarDestructure), r.TryAgainWithValue (value))
                           |> Seq.toList
             DictionaryValue skvps
         | e -> SequenceValue(e |> Seq.cast<obj> |> Seq.map r.TryAgainWithValue |> Seq.toList)
@@ -389,27 +416,37 @@ module Destructure =
             for rtp in ty.GetRuntimeProperties() do
                 if isPublicInstanceReadProp rtp then rzPubProps.Add rtp
 
-            let rzValues = ResizeArray<PropertyNameAndValue>(rzPubProps.Count)
-            for i = 0 to rzPubProps.Count-1 do
-                let pi = rzPubProps.[i]
-                // TODO: try/catch(TargetParameterCountException+log)
-                // TODO: try/catch(TargetInvocationException+log)
-                let propValue = pi.GetValue(r.Value)
-                let propTpv = r.TryAgainWithValue(propValue)
-                // TODO: depth limiting
-                rzValues.Add { Name=pi.Name; Value=propTpv}
+            // Recursively destructure the child properties
+            let rec loopDestrChildren i acc = 
+                if i >= rzPubProps.Count then List.rev acc
+                else
+                    let pi = rzPubProps.[i]
+                    try
+                        let propValue = pi.GetValue(r.Value)
+                        let propTpv = { Name=pi.Name; Value=r.TryAgainWithValue propValue }
+                        loopDestrChildren (i+1) (propTpv :: acc)
+                    with
+                        | :? TargetParameterCountException as ex ->
+                            r.Log("The property accessor {0} is a non-default indexer", [|pi|])
+                            loopDestrChildren (i+1) (acc)
+                        | :? TargetInvocationException as ex ->
+                            r.Log("The property accessor {0} threw exception {1}", [| pi; ex; |])
+                            let propValue = "The property accessor threw an exception:" + ex.InnerException.GetType().Name
+                            let propTpv = { Name=pi.Name; Value=r.TryAgainWithValue propValue }
+                            loopDestrChildren (i+1) (propTpv :: acc)
 
-            StructureValue(typeTag, (rzValues.ToArray()))
+            let childStructureValues = loopDestrChildren 0 []
+            StructureValue(typeTag, childStructureValues)
 
     /// A destructurer that does nothing by returning emptyKeepTrying()
     let inline alwaysKeepTrying (_:DestructureRequest) = emptyKeepTrying()
 
     /// Attempts all built-in destructurers in the correct order, falling
     /// back to 'scalarStringCatchAllDestr' (stringify) if no better option
-    /// is found first. Also supports custom scalar destructuring and custom
-    /// object destructuring at the appropriated points in the pipline. Note
-    /// this is called semi-recursively in a very tight loop during the process
-    /// of capturing template property values.
+    /// is found first. Also supports custom scalars and custom object
+    /// destructuring at the appropriate points in the pipline. Note this is
+    /// called recursively in a tight loop during the process of capturing
+    /// template property values, which means it needs to be fairly fast.
     let inline tryAllWithCustom (tryCustomScalarTypes: Destructurer option)
                                 (tryCustomDestructure: Destructurer option)
                                 (request: DestructureRequest) =
@@ -451,14 +488,9 @@ module Capturing =
     let createCustomDestructurer (tryScalars:Destructurer option) (tryCustomObjects: Destructurer option) : Destructurer =
         Destructure.tryAllWithCustom tryScalars tryCustomObjects
 
-    /// Describes a function for logging warning messages.
-    type SelfLogger = (string * obj[]) -> unit
-    /// An inline null logger; for ignoring any warning messages.
-    let inline nullLogger (format: string, values: obj[]) = ()
-
     let defaultDestructureNoCustoms : Destructurer = Destructure.tryAllWithCustom None None
 
-    let capturePropertiesWith (log:SelfLogger) (destr:Destructurer) (t:Template) (args: obj[]) =
+    let capturePropertiesWith (log:SelfLogger) (destr:Destructurer) (maxDepth:int) (t:Template) (args: obj[]) =
         if (args = null || args.Length = 0) && t.HasAnyProperties then Array.empty
         elif not t.HasAnyProperties then Array.empty
         else
@@ -471,21 +503,16 @@ module Capturing =
             let result = Array.zeroCreate<PropertyNameAndValue>(matchedRun)
             for i = 0 to matchedRun-1 do
                 let p = props.[i]
-                let req = DestructureRequest(p.Destr, args.[i], destr)
+                let req = DestructureRequest(destr, args.[i], maxDepth, hint=p.Destr)
                 Array.set result i { Name=p.Name; Value=destr req }
             result
 
-    let capturePropertiesCustom (d: Destructurer) (t: Template) (args: obj[]) =
-        capturePropertiesWith nullLogger d t args
-        :> PropertyNameAndValue seq
-
-    let capturePropertiesExtra tryCustomScalars tryCustomDestructurers (t:Template) (args:obj[]) =
-        let customDestructurer = Destructure.tryAllWithCustom tryCustomScalars tryCustomDestructurers
-        capturePropertiesWith nullLogger customDestructurer t args
+    let capturePropertiesCustom (d: Destructurer) (maxDepth: int) (t: Template) (args: obj[]) =
+        capturePropertiesWith nullLogger d maxDepth t args
         :> PropertyNameAndValue seq
 
     let captureProperties (t:Template) (args:obj[]) =
-        capturePropertiesWith nullLogger defaultDestructureNoCustoms t args
+        capturePropertiesWith nullLogger defaultDestructureNoCustoms Defaults.maxDepth t args
         :> PropertyNameAndValue seq
 
     /// The same as 'captureProperties' except the message template is first
@@ -584,7 +611,7 @@ module Formatting =
 
     let captureThenFormat (w: TextWriter) (template:Template) (values:obj[]) =
         let values = Capturing.capturePropertiesWith
-                        Capturing.nullLogger Capturing.defaultDestructureNoCustoms
+                        nullLogger Capturing.defaultDestructureNoCustoms Defaults.maxDepth
                         template values
         let valueCount = values.Length
         let getValueForPropName =

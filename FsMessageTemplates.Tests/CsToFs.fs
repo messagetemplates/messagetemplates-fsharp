@@ -59,7 +59,7 @@ let rec templatePropertyValue (tpv: CsTemplatePropertyValue) : TemplatePropertyV
         let valueMap (kvp:Kvp<CsScalarValue, CsTemplatePropertyValue>) = templatePropertyValue kvp.Value
         DictionaryValue (dv.Elements |> Seq.map (fun kvp -> keyMap kvp, valueMap kvp) |> Seq.toList)
     | :? MessageTemplates.Structure.StructureValue as strv ->
-        let structureValues = strv.Properties |> Seq.map (fun p -> PropertyNameAndValue(p.Name, templatePropertyValue p.Value)) |> Seq.toArray
+        let structureValues = strv.Properties |> Seq.map (fun p -> PropertyNameAndValue(p.Name, templatePropertyValue p.Value)) |> Seq.toList
         StructureValue (strv.TypeTag, structureValues)
     | _ -> failwithf "unknown template property value type %A" tpv
 
@@ -73,7 +73,7 @@ let rec createCsTpvFromFsTpv (fsTpv: TemplatePropertyValue) : CsTemplateProperty
     | SequenceValue values -> CsSequenceValue(values |> List.map createCsTpvFromFsTpv) :> CsTemplatePropertyValue
     | StructureValue(typeTag, values) ->
         let csTemplateProperties =
-            values |> Array.map (fun fsPnV -> CsTemplateProperty(fsPnV.Name, createCsTpvFromFsTpv fsPnV.Value))
+            values |> List.map (fun fsPnV -> CsTemplateProperty(fsPnV.Name, createCsTpvFromFsTpv fsPnV.Value))
         CsStructureValue(csTemplateProperties, typeTag) :> CsTemplatePropertyValue
     | DictionaryValue(data) ->
         let fsTpvToCsScalar = function ScalarValue sv -> CsScalarValue(sv) | _ -> failwithf "cannot convert tpv to Scalar %A" fsTpv
@@ -85,14 +85,14 @@ let createTpvFactory (destr: Destructurer) : MessageTemplates.Core.ITemplateProp
     { new MessageTemplates.Core.ITemplatePropertyValueFactory with
           member __.CreatePropertyValue(value: obj, destructureObjects: bool) : MessageTemplates.Structure.TemplatePropertyValue = 
             let hint = if destructureObjects then DestrHint.Destructure else DestrHint.Default
-            let req = DestructureRequest (hint, value, destr)
+            let req = DestructureRequest (destr, value, hint=hint)
             destr req |> createCsTpvFromFsTpv
     }
 
 let fsDestrToCsDestrPolicy (destr: Destructurer) =
     { new MessageTemplates.Core.IDestructuringPolicy with
             member x.TryDestructure(value: obj, pvf: MessageTemplates.Core.ITemplatePropertyValueFactory, result: byref<MessageTemplates.Structure.TemplatePropertyValue>): bool = 
-                let req = DestructureRequest(DestrHint.Destructure, value, destr)
+                let req = DestructureRequest(destr, value, hint=DestrHint.Destructure)
                 let tpv = destr req |> createCsTpvFromFsTpv
                 result <- tpv
                 true
@@ -101,7 +101,7 @@ let fsDestrToCsDestrPolicy (destr: Destructurer) =
 /// Converts a C# IDestructuringPolicy to an F# Destructurer.
 let toFsDestructurer (dp: MessageTemplates.Core.IDestructuringPolicy) : Destructurer =
     fun (req: DestructureRequest) ->
-        let factory = createTpvFactory req.Destr
+        let factory = createTpvFactory req.Destructurer
         let success, value = dp.TryDestructure (req.Value, factory) 
         if success then templatePropertyValue value
         else Unchecked.defaultof<TemplatePropertyValue>
