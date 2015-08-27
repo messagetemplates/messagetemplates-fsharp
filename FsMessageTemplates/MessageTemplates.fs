@@ -1394,9 +1394,11 @@ module Next =
     [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>] // remove when field moved outside
     module Field =
 
-        let inline init key value units =
-            
-            Field ((Value.serialize value), units)
+        let inline initWithUnit value units =
+            Field (Value.serialize value, Some units)
+
+        let inline init value =
+            Field (Value.serialize value, None)
 
     type Message =
       { name      : PointName
@@ -1427,19 +1429,43 @@ module Next =
     [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
     module Message =
 
-        let format (template:string) (args : Value seq) =
+        let event level msg =
+            { name = [] // check in logger
+              value = Event msg
+              fields = Map.empty
+              session = Object Map.empty // default, hoist to static
+              context = LogContext.Create "" // fix, take from logger
+              level   = level // fix
+              timestamp = 0L } // fix
+
+        let private property name =
+            Compose.totalLensPartialLens Message.fields_ (Aether.mapPLens [name])
+
+        let inline field name value =
+            Lens.setPartial (property name) (Field.init value)
+
+        let inline fieldUnit name value units =
+            Lens.setPartial (property name) (Field.initWithUnit value units)
+
+        let private formatString (template:string) (args : Map<PointName, Field>) =
             let template = Parser.parse template
             let sb       = StringBuilder()
-            captureThenFormat sb template args
+            template.Tokens |> Seq.map (function | Text t -> t
+                                                 | Prop p -> let (Field (value, units)) = args |> Map.find p
+                                                             Value.format value)
+                            |> Seq.iter (append sb)
+            sb.ToString()
 
-        let formatf (pf:PrintfFormat<_,_,_,_,'t>) : _ -> 't =
-            format pf.Value
-
-
+        let format (m : Message) =
+            match m.value with
+            | Event template ->
+                formatString template m.fields
+            | _ -> failwith "TODO"
 
 module Usage =
     open Next
     open Next.Aether
+    open Next.Aether.Operators
     open Next.Operators
 
     let (<+>) xs x = 
@@ -1449,17 +1475,29 @@ module Usage =
         Logging.get(modulee="MessageTemplates.Usage", file=__SOURCE_FILE__, line=__LINE__)
 
     let sample () =
-        let values =
-                Value.write "bytes" 4
-            <+> Value.write "sessionId" "session-haf25643256"
+        let valuesInObj =
+               Value.write "bytes" 4
+            *> Value.write "sessionId" "session-haf25643256"
 
-        let msg =
-            Message.format "read ${bytes} on connection ${connectionId}"
-            |> Lens.set Message.fields_ (Field.init "bytes" 4 (BaseUnit Byte))
+        let l =
+            Compose.totalLensPartialLens Message.fields_ (Aether.mapPLens ["bytes"])
+
+        let f =
+            Field.initWithUnit 4 (BaseUnit Byte)
+
+        let msg : Message =
+            let m = Message.event "info" "read ${bytes} on connection ${connectionId}"
+            Lens.setPartial l f m
 
         let msg' =
-            Message.format "read ${bytes} on connection ${connectionId}"
-            |> Field.initWithUnit "bytes" 4 Byte
-            |> Field.init "connectionId" "session-haf23456743"
+            Message.event "debug" "read ${bytes} on connection ${connectionId}"
+            |> Message.fieldUnit "bytes" 4 (BaseUnit Byte)
+            |> Message.field "connectionId" "session-haf23456743"
 
         msg
+
+    let formatting () =
+
+        let m = sample ()
+
+        Message.format m // => string
