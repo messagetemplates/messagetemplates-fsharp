@@ -1338,25 +1338,22 @@ module Next =
             let inline serialize a =
                 toValue a
 
-    type BaseUnit =
-        | Bit
-        | Byte
-        | Second
-        | Metre
-        | Scalar
-        | Ampere
-        | Kelvin
-        | Mole
-        | Candela
-
     type Units =
-        | BaseUnit of BaseUnit
-        | Mul of BaseUnit * BaseUnit
-        | Pow of BaseUnit * BaseUnit
-        | Div of BaseUnit * BaseUnit
-        | Root of BaseUnit
-        | Sqrt of BaseUnit
-        | Log10 of BaseUnit // Log of base:float * BaseUnit
+        | Bits
+        | Bytes
+        | Seconds
+        | Metres
+        | Scalars
+        | Amperes
+        | Kelvins
+        | Moles
+        | Candelas
+        | Mul of Units * Units
+        | Pow of Units * Units
+        | Div of Units * Units
+        | Root of Units
+        | Sqrt of Units
+        | Log10 of Units // Log of base:float * BaseUnit
 
     type LogContext =
         { datacenter : string
@@ -1483,15 +1480,17 @@ module Usage =
             Compose.totalLensPartialLens Message.fields_ (Aether.mapPLens ["bytes"])
 
         let f =
-            Field.initWithUnit 4 (BaseUnit Byte)
+            Field.initWithUnit 4 Bytes
 
         let msg : Message =
             let m = Message.event "info" "read ${bytes} on connection ${connectionId}"
             Lens.setPartial l f m
 
         let msg' =
-            Message.event "debug" "read ${bytes} on connection ${connectionId}"
-            |> Message.fieldUnit "bytes" 4 (BaseUnit Byte)
+            // can we use https://github.com/SuaveIO/suave/blob/master/src/Suave/Sscanf.fs#L61 to
+            // let F# type-check the string, picking the `value` parameter (2nd) of `fieldUnit` function call?
+            Message.event "debug" "read %i on connection ${connectionId}"
+            |> Message.fieldUnit "noBytesRead" 4 Bytes
             |> Message.field "connectionId" "session-haf23456743"
 
         msg
