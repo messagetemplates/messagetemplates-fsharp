@@ -1,0 +1,15 @@
+﻿<Properties StartupItem="MessageTemplates/MessageTemplates.xproj">
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
+  <MonoDevelop.Ide.Workbench />
+  <MonoDevelop.Ide.DebuggingService.Breakpoints>
+    <BreakpointStore />
+  </MonoDevelop.Ide.DebuggingService.Breakpoints>
+  <MonoDevelop.Ide.DebuggingService.PinnedWatches />
+  <DisabledProjects>
+    <String>MessageTemplates/MessageTemplates.xproj</String>
+    <String>MessageTemplates.Tests/MessageTemplates.Tests.xproj</String>
+    <String>MessageTemplates.PerfTests/MessageTemplates.PerfTests.csproj</String>
+    <String>MessageTemplates/MessageTemplates.Profile259.csproj</String>
+    <String>FsMessageTemplates.Tests/FsMessageTemplates.Tests.fsproj</String>
+  </DisabledProjects>
+</Properties>

@@ -10,8 +10,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>18ef9026-d9cc-4be7-86e9-f7e1bf69845f</ProjectGuid>
+    <ProjectGuid>{18EF9026-D9CC-4BE7-86E9-F7E1BF69845F}</ProjectGuid>
     <OutputType>Library</OutputType>
     <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -35,7 +34,6 @@
   </Choose>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <Tailcalls>false</Tailcalls>
     <OutputPath>bin\Debug\</OutputPath>
@@ -51,6 +49,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <WarningLevel>3</WarningLevel>
     <DocumentationFile>bin\Release\FsMessageTemplates.Tests.XML</DocumentationFile>
+    <DebugSymbols>true</DebugSymbols>
   </PropertyGroup>
   <Choose>
     <When Condition="'$(VisualStudioVersion)' == '11.0'">
@@ -84,19 +83,13 @@
     <Content Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\MessageTemplates\MessageTemplates.Profile259.csproj">
-      <Name>MessageTemplates.Profile259</Name>
-      <Project>{ea4e4a86-ae2f-4a35-a2b1-ba7894ce3f95}</Project>
-      <Private>True</Private>
-    </ProjectReference>
     <Reference Include="mscorlib" />
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Numerics" />
     <ProjectReference Include="..\FsMessageTemplates\FsMessageTemplates.fsproj">
       <Name>FsMessageTemplates</Name>
-      <Project>{a3ffe923-b675-4e01-a085-6bb7c669ccff}</Project>
-      <Private>True</Private>
+      <Project>{A3FFE923-B675-4E01-A085-6BB7C669CCFF}</Project>
     </ProjectReference>
   </ItemGroup>
   <Choose>
