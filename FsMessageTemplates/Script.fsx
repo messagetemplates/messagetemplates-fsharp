@@ -6,7 +6,7 @@
 
 #load "../FsMessageTemplates.Tests/Tk.fs"
 
-open FsMessageTemplates.MessageTemplates
+open FsMessageTemplates
 
 type TestItem = { Template: string
                   Values: System.Collections.IEnumerable // eeew
@@ -45,6 +45,7 @@ let testData = [
 ]
 
 testData
-|> Seq.map (fun test -> test, parse test.Template)
+|> Seq.map (fun test -> test, Parser.parse test.Template)
 //|> Seq.map (fun (test, templ) -> captureProperties templ (test.Values |> Seq.cast<obj> |> Seq.toArray)) 
 |> Seq.toArray
+

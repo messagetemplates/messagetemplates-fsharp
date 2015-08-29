@@ -8,18 +8,14 @@ type Direction = Left = 0 | Right = 1
 
 [<AutoOpen>]
 module Extensions =
+
     type DestrHint with
         member inline this.ToDestrChar () = if this = DestrHint.Default then ""
-                                            elif this = DestrHint.Destructure then "@"
-                                            else "$"
+                                                elif this = DestrHint.Destructure then "@"
+                                                else "$"
         static member inline FromChar c =   if c = '@' then DestrHint.Destructure
-                                            elif c = '$' then DestrHint.Stringify
-                                            else DestrHint.Default
-
-    let inline tryParseInt32 s = System.Int32.TryParse(s, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture)
-    let inline parseIntOrNegative1 s =
-        if System.String.IsNullOrEmpty(s) then -1
-        else match tryParseInt32 s with true, n -> n | _ -> -1
+                                                elif c = '$' then DestrHint.Stringify
+                                                else DestrHint.Default
 
     type System.Text.StringBuilder with
         /// Appends the text if the condition is true, returning the string builer for chaining.
@@ -119,6 +115,11 @@ module Empty =
     let textTokenArray = [| textToken |]
 
 module Parser =
+    /// Parses a text token inside the template string, starting at a specified character number within the
+    /// template string, and returning the 'next' character index + the parsed text token. The StringBuilder
+    /// is used as a temporary buffer for collecting the text token characters, and is cleared before returning.
+    /// The text token is 'finished' when an open brace is encountered (or the end of the template string is
+    /// reached (whichever comes first).
     let inline parseTextToken (sb:StringBuilder) (startAt:int) (template:string) : int*Token =
         let chars = template
         let tlen = chars.Length
@@ -176,23 +177,49 @@ module Parser =
     /// just like System.String.IndexOf(char) but within a string range
     let inline rngIndexOf (s:string) (rng:Range) (c:char) = tryGetFirstCharRng ((=) c) s rng 
 
+    /// Attemps to parse an integer from the range within a string. Returns Int32.MinValue if the string does
+    /// not contain an integer. The minus sign '-' is allowed only as the first character.
+    let inline tryParseIntFromRng (invalidValue:int) (s:string) (rng:Range) =
+        if rng.Length = 1 && '0' <= s.[0] && s.[0] <= '9' then
+            int (s.[rng.Start]) - 48
+        else
+            let indexOfLastCharPlus1 = rng.End+1
+            let rec inside isNeg numSoFar i =
+                if i = indexOfLastCharPlus1 then
+                    if isNeg then -numSoFar else numSoFar
+                else
+                    let c = s.[i]
+                    if c = '-' then
+                        if i = rng.Start then inside true (numSoFar) (i+1)
+                        else invalidValue // no '-' character allowed other than first char
+                    elif '0' <= c && c <= '9' then
+                        inside isNeg (10*numSoFar + int c - 48) (i+1)
+                    else invalidValue
+
+            inside false 0 rng.Start
+
+    /// Attemps to parse an integer from the string. Returns -1 if the string does
+    /// not contain an integer.
+    let inline parseIntOrNegative1 s =
+        if System.String.IsNullOrEmpty(s) then -1
+        else tryParseIntFromRng -1 s (Range(0, s.Length-1))
+
     let inline tryParseAlignInfoRng (s:string) (rng:Range option) : AlignInfo =
         match s, rng with
         | _, None -> AlignInfo(isValid=true)
         | s, Some rng when (rng.Start > rng.End) || (hasAnyInvalidRng isValidInAlignment s rng) ->
             AlignInfo(isValid=false)
         | s, Some rng ->
-            let alignSubString = rng.GetSubString s
-            let lastDashIdx = alignSubString.LastIndexOf('-')
-            let width = match lastDashIdx with
-                        | 0 -> int (alignSubString.Substring(1)) // skip dash for the numeric alignment
-                        | -1 -> int alignSubString // no dash, must be all numeric
-                        | _ -> 0 // dash is not allowed to be anywhere else
+            let invalidAlignWidth = System.Int32.MinValue
+            let width = 
+                match tryParseIntFromRng invalidAlignWidth s rng with
+                | System.Int32.MinValue -> 0 // not a valid align number (e.g. dash in wrong spot)
+                | n -> n
             if width = 0 then AlignInfo(isValid=false)
             else
-                let isNegativeAlignWidth = lastDashIdx >= 0
+                let isNegativeAlignWidth = width < 0
                 let direction = if isNegativeAlignWidth then Direction.Left else Direction.Right
-                AlignInfo(direction, width)
+                AlignInfo(direction, abs(width))
 
     let inline tryGetPropInSubString (t:string) (within : Range) : Token =
         /// Given a template such has "Hello, {@name,-10:abc}!" and a *within* range
@@ -226,7 +253,7 @@ module Parser =
                  | alignInfo ->
                     let format = if formatRange.IsSome then (formatRange.Value.GetSubString t) else null
                     Prop(within.Start - 1,
-                        PropertyToken(propertyName, parseIntOrNegative1 propertyName, destr, alignInfo, format))
+                         PropertyToken(propertyName, parseIntOrNegative1 propertyName, destr, alignInfo, format))
 
     let parseTokens (mt:string) =
         let tlen = mt.Length
@@ -418,24 +445,24 @@ module Destructure =
 
             // Recursively destructure the child properties
             let rec loopDestrChildren i acc = 
-                if i >= rzPubProps.Count then List.rev acc
+                if i < 0 then acc
                 else
                     let pi = rzPubProps.[i]
                     try
                         let propValue = pi.GetValue(r.Value)
                         let propTpv = { Name=pi.Name; Value=r.TryAgainWithValue propValue }
-                        loopDestrChildren (i+1) (propTpv :: acc)
+                        loopDestrChildren (i-1) (propTpv :: acc)
                     with
                         | :? TargetParameterCountException as ex ->
                             r.Log("The property accessor {0} is a non-default indexer", [|pi|])
-                            loopDestrChildren (i+1) (acc)
+                            loopDestrChildren (i-1) (acc)
                         | :? TargetInvocationException as ex ->
                             r.Log("The property accessor {0} threw exception {1}", [| pi; ex; |])
                             let propValue = "The property accessor threw an exception:" + ex.InnerException.GetType().Name
                             let propTpv = { Name=pi.Name; Value=r.TryAgainWithValue propValue }
-                            loopDestrChildren (i+1) (propTpv :: acc)
+                            loopDestrChildren (i-1) (propTpv :: acc)
 
-            let childStructureValues = loopDestrChildren 0 []
+            let childStructureValues = loopDestrChildren (rzPubProps.Count-1) []
             StructureValue(typeTag, childStructureValues)
 
     /// A destructurer that does nothing by returning emptyKeepTrying()
@@ -483,6 +510,8 @@ module Destructure =
         | tpv -> tpv
 
 module Capturing =
+    /// Determines if a TemplatePropertyValue is considered 'empty' (i.e. null) during the
+    /// destructuring process. This is to avoid lots of Option<'T> allocations.
     let inline isEmptyKeepTrying (tpv) = Destructure.isEmptyKeepTrying (tpv)
 
     let createCustomDestructurer (tryScalars:Destructurer option) (tryCustomObjects: Destructurer option) : Destructurer =
@@ -490,6 +519,9 @@ module Capturing =
 
     let defaultDestructureNoCustoms : Destructurer = Destructure.tryAllWithCustom None None
 
+    /// Captures properties, matching the obj arguments to properties either positionally 
+    /// (if all properties are positional) or from left-to-right if one or more are non-positional. The
+    /// Destructurer is used to convert the obj arguments into TemplatePropertyValue objects.
     let capturePropertiesWith (log:SelfLogger) (destr:Destructurer) (maxDepth:int) (t:Template) (args: obj[]) =
         if (args = null || args.Length = 0) && t.HasAnyProperties then Array.empty
         elif not t.HasAnyProperties then Array.empty
