@@ -72,12 +72,14 @@ and TemplatePropertyValue =
 | SequenceValue of TemplatePropertyValue list
 | StructureValue of typeTag:string * values:PropertyNameAndValue list
 | DictionaryValue of data: ScalarKeyValuePair list
+    static member Empty : TemplatePropertyValue
 /// A property and it's associated destructured value.
 and PropertyNameAndValue = { Name:string; Value:TemplatePropertyValue }
 
 /// A function that attempts to destructure a property and value object into a 
 /// more friendly (and immutable) <see cref="TemplatePropertyValue" />. This returns
-/// Unchecked.defaultOf TemplatePropertyValue (i.e. null) if the conversion failed.
+/// Unchecked.defaultOf TemplatePropertyValue (i.e. null; aka TemplatePropertyValue.Empty)
+/// if the destructuring was not possible.
 type Destructurer = DestructureRequest -> TemplatePropertyValue
 and
     /// Describes a request for an object to be destructured into a
@@ -97,8 +99,6 @@ module Capturing =
     val createCustomDestructurer : tryScalars: Destructurer option
                                    -> tryObjects: Destructurer option
                                    -> Destructurer
-
-    val inline isEmptyKeepTrying : TemplatePropertyValue -> bool
 
     /// Extracts the properties for a template from the array of objects.
     val captureProperties: template:Template -> args:obj[] -> PropertyNameAndValue seq

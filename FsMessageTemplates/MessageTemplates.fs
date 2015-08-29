@@ -75,6 +75,7 @@ and TemplatePropertyValue =
 | StructureValue of typeTag:string * values:PropertyNameAndValue list
 | DictionaryValue of data: ScalarKeyValuePair list
     static member ScalarNull = ScalarValue null
+    static member Empty = Unchecked.defaultof<TemplatePropertyValue>
 
 [<AutoOpen>]
 module Log =
@@ -312,7 +313,6 @@ module Destructure =
     open System
 
     // perf
-    let inline emptyKeepTrying() = Unchecked.defaultof<TemplatePropertyValue>
     let inline isEmptyKeepTrying (tpv:TemplatePropertyValue) = Object.ReferenceEquals(tpv, null)
     let inline tryCastAs<'T> (o:obj) =  match o with | :? 'T as res -> res | _ -> Unchecked.defaultof<'T>
     
@@ -328,7 +328,7 @@ module Destructure =
     let inline tryBuiltInTypesOrNull (r:DestructureRequest) =
         if r.Value = null then ScalarValue null 
         elif scalarTypeHash.Contains(r.Value.GetType()) then (ScalarValue r.Value)
-        else emptyKeepTrying()
+        else TemplatePropertyValue.Empty
 
     let inline tryNullable (r:DestructureRequest) =
         let t = r.Value.GetType()
@@ -338,17 +338,17 @@ module Destructure =
             | n when (Object.ReferenceEquals(null, n)) -> (ScalarValue null)
             | n when (not n.HasValue) -> (ScalarValue null)
             | n when n.HasValue -> r.TryAgainWithValue(box (n.GetValueOrDefault()))
-            | _ -> emptyKeepTrying()
-        else emptyKeepTrying()
+            | _ -> TemplatePropertyValue.Empty
+        else TemplatePropertyValue.Empty
 
     let inline tryEnum (r:DestructureRequest) =
         match tryCastAs<System.Enum>(r.Value) with
-        | e when (Object.ReferenceEquals(null, e)) -> emptyKeepTrying()
+        | e when (Object.ReferenceEquals(null, e)) -> TemplatePropertyValue.Empty
         | e -> (ScalarValue (e))
 
     let inline tryByteArrayMaxBytes (maxBytes:int) (r:DestructureRequest) =
         match tryCastAs<System.Byte[]>(r.Value) with
-        | bytes when (Object.ReferenceEquals(null, bytes)) -> emptyKeepTrying()
+        | bytes when (Object.ReferenceEquals(null, bytes)) -> TemplatePropertyValue.Empty
         | bytes when bytes.Length <= maxBytes -> ScalarValue bytes
         | bytes ->
             let inline toHexString (b:byte) = b.ToString("X2")
@@ -362,7 +362,7 @@ module Destructure =
         match r.Value with
         | :? Type as t -> ScalarValue t
         | :? System.Reflection.MemberInfo as m -> ScalarValue m
-        | _ -> emptyKeepTrying()
+        | _ -> TemplatePropertyValue.Empty
 
     let inline tryScalarDestructure (r:DestructureRequest) =
         match tryBuiltInTypesOrNull r with
@@ -374,7 +374,7 @@ module Destructure =
                     match tryByteArray r with
                     | ekt4 when isEmptyKeepTrying ekt4 ->
                         match tryReflectionTypes r with
-                        | ekt5 when isEmptyKeepTrying ekt5 -> emptyKeepTrying()
+                        | ekt5 when isEmptyKeepTrying ekt5 -> TemplatePropertyValue.Empty
                         | tpv -> tpv
                     | tpv -> tpv
                 | tpv -> tpv
@@ -383,15 +383,15 @@ module Destructure =
 
 
     let inline tryNull (r:DestructureRequest) =
-        match r.Value with | null -> ScalarValue null | _ -> emptyKeepTrying()
+        match r.Value with | null -> ScalarValue null | _ -> TemplatePropertyValue.Empty
     let inline tryStringifyDestructurer (r:DestructureRequest) =
-        match r.Hint with | DestrHint.Stringify -> ScalarValue (r.Value.ToString()) | _ -> emptyKeepTrying()
+        match r.Hint with | DestrHint.Stringify -> ScalarValue (r.Value.ToString()) | _ -> TemplatePropertyValue.Empty
 
     let inline tryDelegateString (r:DestructureRequest) =
-        if r.Hint <> DestrHint.Destructure then emptyKeepTrying()
+        if r.Hint <> DestrHint.Destructure then TemplatePropertyValue.Empty
         else
             match tryCastAs<System.Delegate>(r.Value) with
-            | e when (Object.ReferenceEquals(null, e)) -> emptyKeepTrying()
+            | e when (Object.ReferenceEquals(null, e)) -> TemplatePropertyValue.Empty
             | e -> (ScalarValue (string e))
     
     open System.Reflection
@@ -407,7 +407,7 @@ module Destructure =
     let inline tryEnumerableDestr (r:DestructureRequest) =
         let valueType = r.Value.GetType()
         match tryCastAs<System.Collections.IEnumerable>(r.Value) with
-        | e when Object.ReferenceEquals(null, e) -> emptyKeepTrying()
+        | e when Object.ReferenceEquals(null, e) -> TemplatePropertyValue.Empty
         | e when isScalarDict valueType ->
             let mutable keyProp, valueProp = Unchecked.defaultof<PropertyInfo>, Unchecked.defaultof<PropertyInfo>
             let getKey o = if keyProp = null then keyProp <- o.GetType().GetRuntimeProperty("Key")
@@ -432,7 +432,7 @@ module Destructure =
             (p.Name <> "Item" || p.GetIndexParameters().Length = 0)
 
     let inline tryObjectStructureDestructuring (r:DestructureRequest) =
-        if r.Hint <> DestrHint.Destructure then emptyKeepTrying()
+        if r.Hint <> DestrHint.Destructure then TemplatePropertyValue.Empty
         else
             let ty = r.Value.GetType()
             let typeTag = match ty.Name with
@@ -465,8 +465,8 @@ module Destructure =
             let childStructureValues = loopDestrChildren (rzPubProps.Count-1) []
             StructureValue(typeTag, childStructureValues)
 
-    /// A destructurer that does nothing by returning emptyKeepTrying()
-    let inline alwaysKeepTrying (_:DestructureRequest) = emptyKeepTrying()
+    /// A destructurer that does nothing by returning TemplatePropertyValue.Empty
+    let inline alwaysKeepTrying (_:DestructureRequest) = TemplatePropertyValue.Empty
 
     /// Attempts all built-in destructurers in the correct order, falling
     /// back to 'scalarStringCatchAllDestr' (stringify) if no better option
@@ -498,7 +498,7 @@ module Destructure =
                                     match tryObjectStructureDestructuring request with
                                     | tpv when isEmptyKeepTrying tpv ->
                                         match scalarStringCatchAllDestr request with
-                                        | tpv when isEmptyKeepTrying tpv -> emptyKeepTrying()
+                                        | tpv when isEmptyKeepTrying tpv -> TemplatePropertyValue.Empty
                                         | tpv -> tpv
                                     | tpv -> tpv
                                 | tpv -> tpv
@@ -634,7 +634,7 @@ module Formatting =
         elif valueCount > 2 && values.[2].Name = nme then values.[2].Value
         elif valueCount > 3 && values.[3].Name = nme then values.[3].Value
         elif valueCount > 4 && values.[4].Name = nme then values.[4].Value
-        else Destructure.emptyKeepTrying()
+        else TemplatePropertyValue.Empty
 
     let inline getByNameDict (valuesDict: System.Collections.Generic.IDictionary<string, TemplatePropertyValue>) nme =
         let tpv = ref Unchecked.defaultof<TemplatePropertyValue>
@@ -648,7 +648,7 @@ module Formatting =
         let valueCount = values.Length
         let getValueForPropName =
             match valueCount with
-            | 0 -> fun _ -> Destructure.emptyKeepTrying()
+            | 0 -> fun _ -> TemplatePropertyValue.Empty
             | 1 | 2 | 3 | 4 | 5 -> getByName1to5 values
             | _ -> getByNameDict (createValuesByPropNameDictionary values)
 

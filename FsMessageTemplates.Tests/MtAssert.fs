@@ -27,7 +27,7 @@ type MtAssert() =
                 if exists then ScalarValue(r.Value) else emptyKeepTrying
             let destrNoneForNull (r: DestructureRequest) (d:Destructurer) =
                 match d (DestructureRequest (r.Destructurer, r.Value, hint=r.Hint)) with
-                | tpv when Capturing.isEmptyKeepTrying tpv -> None
+                | tpv when tpv = TemplatePropertyValue.Empty -> None
                 | tpv -> Some tpv
             let tryDestrs : Destructurer = fun r ->
                 match additionalDestrs |> Seq.tryPick (destrNoneForNull r) with
@@ -59,7 +59,7 @@ type MtAssert() =
                 if exists then ScalarValue(r.Value) else emptyKeepTrying
             let destrNoneForNull (r: DestructureRequest) (d:Destructurer) =
                 match d (DestructureRequest (r.Destructurer, r.Value, hint=r.Hint)) with
-                | tpv when Capturing.isEmptyKeepTrying tpv -> None
+                | tpv when tpv = TemplatePropertyValue.Empty -> None
                 | tpv -> Some tpv
             let tryDestrs : Destructurer = fun r ->
                 match additionalDestrs |> Seq.tryPick (destrNoneForNull r) with
