@@ -10,3 +10,4 @@ nuget xunit.runner.visualstudio 2.0.1 version_in_path: true
 nuget PerfUtil
 nuget FSharp.Charting
 nuget Serilog framework: >= net45
+nuget NamedFormat

@@ -16,7 +16,10 @@ IF ['%APPVEYOR%'] == ['True'] (
 	"set PATH=%PATH%;C:\\Program Files (x86)\\Microsoft SDKs\\F#\\3.1\\Framework\\v4.0\\""
 ) 
 
-FsiAnyCPU -O --crossoptimize+ --exec MessageTemplates.PerfTests\Script.fsx
+FsiAnyCPU -O --tailcalls+ --crossoptimize+ --exec MessageTemplates.PerfTests\Script.fsx
+@if ERRORLEVEL 1 goto :failure
+
+FsiAnyCPU -O --tailcalls+ --crossoptimize+ --exec MessageTemplates.PerfTests\PerfTests.fsx
 @if ERRORLEVEL 1 goto :failure
 
 goto :eof

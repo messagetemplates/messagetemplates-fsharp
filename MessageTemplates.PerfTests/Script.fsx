@@ -44,7 +44,7 @@ module StringFormatComptible =
                                     System.IO.File.AppendAllText(name+" output.txt", tw.ToString())
             member __.Init () = init (tw) }
 
-    let noInit (tw) = ()
+    let noInit (_) = ()
 
     let MtFs = parseFormatTest "MessageT F#" noInit (fun tw template args->
         FsFormat.fprintsm tw template args)
@@ -174,6 +174,21 @@ module FormatTemplate =
     let FsPrintf = anyTemplateFormatTest "F# sprintf" (fun () -> ()) (fun () ->
         Printf.sprintf "Release %O and %s and %s" theVersion "blah" "blah" |> ignore)
 
+    open Serilog
+    let initSerilog (tw) =
+        Serilog.Log.Logger <-
+            Serilog.LoggerConfiguration()
+                .MinimumLevel.Verbose()
+                .WriteTo.TextWriter(tw)
+                .CreateLogger()
+
+    let Serilog = anyTemplateFormatTest
+                    "Serilog"
+                    (fun () ->
+                        initSerilog (new System.IO.StringWriter())
+                        "Release {$version} and {blah} and {blah2}") // return the string as serilog caches it anyway
+                    (fun (template) -> Serilog.Log.Verbose(template, args))
+
 // TODO: is it just too slow or am I doing something wrong?
 //    let Ant4St = anyTemplateFormatTest
 //                    "Antlr4.StringT"
@@ -186,7 +201,7 @@ module FormatTemplate =
                         (fun () -> System.String.Format("Version {0} and {1} and {2}", args) |> ignore)
 
     let all = new ImplementationComparer<IFormatTest>(
-                                    MtFs, [ MtCs; FsPrintf; StringFormat; (*Ant4St;*) ],
+                                    MtFs, [ MtCs; Serilog; FsPrintf; StringFormat; (*Ant4St;*) ],
                                     warmup=true, verbose=true)
 
 FormatTemplate.all.Run(

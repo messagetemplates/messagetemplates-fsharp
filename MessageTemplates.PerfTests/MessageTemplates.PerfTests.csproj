@@ -57,6 +57,7 @@
   </Choose>
   <ItemGroup>
     <Compile Include="Chair.cs" />
+    <Compile Include="StringInjectExtension.cs" />
     <Compile Include="PerfTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
@@ -72,6 +73,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Script.fsx" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="PerfTests.fsx" />
   </ItemGroup>
   <Choose>
     <When Condition="'$(VisualStudioVersion)' == '10.0' And '$(IsCodedUITest)' == 'True'">
