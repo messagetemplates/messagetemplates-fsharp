@@ -12,16 +12,18 @@ type TestTemplate =
 
 module TestInputs =
     type Priority = { p1: string }
-    let t1 = { Title = "you have priority {p1}"
+    let t1 = { Title = "single string arg"
                TokenValues = [ Literal "you have priority "; NamedProperty("p1", "one"); Literal "\n" ]
                DictionaryOfNamesAndValues = ["p1", box "one"] |> dict
                ObjectWithNamedProps = { p1="one" } }
 
-    type Person = { name: string }
-    let t2 = { Title = "Hello, {name}"
-               TokenValues = [ Literal "hello, "; NamedProperty("name", "adam"); Literal "\n" ]
-               DictionaryOfNamesAndValues = ["name", box "adam"] |> dict
-               ObjectWithNamedProps = { name="adam" } }
+    type Person = { name: string; manager: string }
+    let t2 = { Title = "two string args"
+               TokenValues = [ Literal "hello, "; NamedProperty("name", "adam")
+                               Literal ", your manager is "; NamedProperty("manager", "adam")
+                               Literal "\n" ]
+               DictionaryOfNamesAndValues = ["name", box "adam"; "manager", box "adam"] |> dict
+               ObjectWithNamedProps = { name="adam"; manager="adam" } }
 
 module Features =   
     /// Allows a tested implementation to configure it's output with the provided TextWriter
@@ -273,7 +275,7 @@ type IFormatTest =
     inherit ITestable
     abstract DoIt : unit -> unit
     
-let createNamedFormatTest testTemplate tw (impl: Implementations.Implementation<_,_,_,_,_>) =
+let createParseCaptureFormatTest testTemplate tw (impl: Implementations.Implementation<_,_,_,_,_>) =
     let template = impl.initTemplate testTemplate
     let args = impl.initTemplateArgs testTemplate
     let state = impl.initOutput tw
@@ -283,21 +285,31 @@ let createNamedFormatTest testTemplate tw (impl: Implementations.Implementation<
         member __.Fini () = ()
         member __.Init () = () }
 
+let createCaptureFormatTest testTemplate tw (impl: Implementations.Implementation<_,_,_,_,_>) =
+    let template = impl.parse.Value (impl.initTemplate testTemplate)
+    let args = impl.initTemplateArgs testTemplate
+    let state = impl.initOutput tw
+    { new IFormatTest with
+        member __.Name = impl.Name
+        member __.DoIt () = impl.captureFormat.Value template args state
+        member __.Fini () = ()
+        member __.Init () = () }
+
 open Implementations
 let createComparer tt =
     let tw = new System.IO.StringWriter() :> System.IO.TextWriter
-    let theOne = createNamedFormatTest tt tw fsMessageTemplates
+    let theOne = createCaptureFormatTest tt tw fsMessageTemplates
     let theOthers = [
-        createNamedFormatTest tt tw csMessageTemplates
-        createNamedFormatTest tt tw serilog
+        createCaptureFormatTest tt tw csMessageTemplates
+        createParseCaptureFormatTest tt tw serilog
         // createNamedFormatTest tt tw ioStringBuilder
         // createNamedFormatTest tt tw ioTextWriter
-        createNamedFormatTest tt tw stringInject
-        createNamedFormatTest tt tw haackFormat
-        createNamedFormatTest tt tw hanselmanFormat
-        createNamedFormatTest tt tw henriFormat
-        createNamedFormatTest tt tw jamesFormat
-        createNamedFormatTest tt tw oskarFormat
+        createParseCaptureFormatTest tt tw stringInject
+        createParseCaptureFormatTest tt tw haackFormat
+        createParseCaptureFormatTest tt tw hanselmanFormat
+        createParseCaptureFormatTest tt tw henriFormat
+        createParseCaptureFormatTest tt tw jamesFormat
+        createParseCaptureFormatTest tt tw oskarFormat
     ]
     ImplementationComparer(theOne, theOthers, warmup=true, verbose=true, throwOnError=false)
 
@@ -305,7 +317,7 @@ let comparers = [
     TestInputs.t1, createComparer TestInputs.t1
     TestInputs.t2, createComparer TestInputs.t2 ]
 
-comparers |> List.iter (fun (tt, c) -> c.Run(id="100k x " + tt.Title, repeat=100000, testF=fun t -> t.DoIt()))
+comparers |> List.iter (fun (tt, c) -> c.Run(id="(cached) 100k x " + tt.Title, repeat=100000, testF=fun t -> t.DoIt()))
 
 #load "../packages/FSharp.Charting/FSharp.Charting.fsx"
 open FSharp.Charting
