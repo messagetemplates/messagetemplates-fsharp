@@ -309,6 +309,7 @@ module Parser =
         if allPos then properties |> Array.sortInPlaceBy (fun p -> p.Pos)
         Template(s, tokens, not allPos, properties)
 
+
 module Destructure =
     open System
 
@@ -409,11 +410,8 @@ module Destructure =
         match tryCastAs<System.Collections.IEnumerable>(r.Value) with
         | e when Object.ReferenceEquals(null, e) -> TemplatePropertyValue.Empty
         | e when isScalarDict valueType ->
-            let mutable keyProp, valueProp = Unchecked.defaultof<PropertyInfo>, Unchecked.defaultof<PropertyInfo>
-            let getKey o = if keyProp = null then keyProp <- o.GetType().GetRuntimeProperty("Key")
-                           keyProp.GetValue(o)
-            let getValue o = if valueProp = null then valueProp <- o.GetType().GetRuntimeProperty("Value")
-                             valueProp.GetValue(o)
+            let getKey o = o.GetType().GetRuntimeProperty("Key").GetValue(o)
+            let getValue o = o.GetType().GetRuntimeProperty("Value").GetValue(o)
             let skvps = e |> Seq.cast<obj>
                           |> Seq.map (fun o -> getKey o, getValue o)
                           |> Seq.map (fun (key, value) ->
@@ -695,3 +693,842 @@ module Formatting =
 
     let fprintm (template:Template) (tw:TextWriter) (args:obj[]) =
         captureThenFormat tw template args
+
+
+/// Using functional ideoms from Chiron
+module Next =
+    // copy-n-paste from https://raw.githubusercontent.com/xyncro/aether/master/src/Aether/Aether.fs
+    module Aether =
+
+        (* Types
+
+           Types defining lenses and isomorphisms (both total
+           and partial as standard pairs. These can be implemented implicitly,
+           so an assembly *providing* lenses without also consuming them
+           requires no dependency on Aether, just an implicit structuring. *)
+
+        /// Total lens from a -> b
+        type Lens<'a,'b> = ('a -> 'b) * ('b -> 'a -> 'a)
+
+        /// Partial lens from a -> b
+        type PLens<'a,'b> = ('a -> 'b option) * ('b -> 'a -> 'a)
+
+        // Isomorphisms
+
+        /// Total isomorphism of a <> b
+        type Iso<'a,'b> = ('a -> 'b) * ('b -> 'a)
+
+        /// Partial isomorphism of a <> b
+        type PIso<'a,'b> = ('a -> 'b option) * ('b -> 'a)
+
+        (* Functions
+
+           Functions for using lenses to get, set and modify values within a target
+           instance. *)
+
+        [<RequireQualifiedAccess>]
+        module Lens =
+
+            /// Get a value using a total lens
+            let get ((g, _): Lens<'a,'b>) = 
+                fun a -> g a
+
+            /// Get a value option using a partial lens
+            let getPartial ((g, _): PLens<'a,'b>) = 
+                fun a -> g a
+
+            /// Get a value or a default using a partial lens
+            let getPartialOrElse ((g, _): PLens<'a,'b>) = 
+                fun b a -> g a |> function | Some b -> b | _ -> b
+
+            /// Set a value using a total lens
+            let set ((_, s): Lens<'a,'b>) =
+                fun b a -> s b a
+
+            /// Set a value using a partial lens
+            let setPartial ((_, s): PLens<'a,'b>) =
+                fun b a -> s b a
+
+            /// Modify a value using a total lens
+            let map ((g, s): Lens<'a,'b>) = 
+                fun f a -> s (f (g a)) a
+
+            /// Modify a value using a partial lens
+            let mapPartial ((g, s): PLens<'a,'b>) = 
+                fun f a -> Option.map f (g a) |> function | Some b -> s b a | _ -> a
+
+        (* Compositions
+
+           Functions for composing lenses and isomorphisms, each of which
+           returns a new lens of a total or partial type based on the lenses
+           or isomorphisms composed. It is more common (and significantly less
+           verbose) to use the infix operator forms of these compositions (though note
+           that Aether.Operators is not open by default and should be opened explicitly). *)
+
+        [<RequireQualifiedAccess>]
+        module Compose =
+
+            /// Compose a total lens and a total lens, giving a total lens
+            let totalLensTotalLens ((g1, s1): Lens<'a,'b>) ((g2, s2): Lens<'b,'c>) : Lens<'a,'c> =
+                (fun a -> g2 (g1 a)),
+                (fun c a -> s1 (s2 c (g1 a)) a)
+
+            /// Compose a total lens and a partial lens, giving a partial lens
+            let totalLensPartialLens ((g1, s1): Lens<'a,'b>) ((g2, s2): PLens<'b,'c>) : PLens<'a,'c> =
+                (fun a -> g2 (g1 a)),
+                (fun c a -> s1 (s2 c (g1 a)) a)
+
+            /// Compose a partial lens and a total lens, giving a partial lens
+            let partialLensTotalLens ((g1, s1): PLens<'a,'b>) ((g2, s2): Lens<'b,'c>) : PLens<'a,'c> =
+                (fun a -> Option.map g2 (g1 a)),
+                (fun c a -> Option.map (s2 c) (g1 a) |> function | Some b -> s1 b a | _ -> a)
+
+            /// Compose two partial lenses, giving a partial lens
+            let partialLensPartialLens ((g1, s1): PLens<'a,'b>) ((g2, s2): PLens<'b,'c>) : PLens<'a,'c> =
+                (fun a -> Option.bind g2 (g1 a)),
+                (fun c a -> Option.map (s2 c) (g1 a) |> function | Some b -> s1 b a | _ -> a)
+
+            /// Compose a total lens with a total isomorphism, giving a total lens
+            let totalLensTotalIsomorphism ((g, s): Lens<'a,'b>) ((f, t): Iso<'b,'c>) : Lens<'a,'c> =
+                (fun a -> f (g a)),
+                (fun c a -> s (t c) a)
+
+            /// Compose a total lens with a partial isomorphism, giving a partial lens
+            let totalLensPartialIsomorphism ((g, s): Lens<'a,'b>) ((f, t): PIso<'b,'c>) : PLens<'a,'c> =
+                (fun a -> f (g a)),
+                (fun c a -> s (t c) a)
+
+            /// Compose a partial lens with a total isomorphism, giving a partial lens
+            let partialLensTotalIsomorphism ((g, s): PLens<'a,'b>) ((f, t): Iso<'b, 'c>) : PLens<'a,'c> =
+                (fun a -> Option.map f (g a)),
+                (fun c a -> s (t c) a)
+
+            /// Compose a partial lens with a partial isomorphism, giving a partial lens
+            let partialLensPartialIsomorphism ((g, s): PLens<'a,'b>) ((f, t): PIso<'b,'c>) : PLens<'a,'c> =
+                (fun a -> Option.bind f (g a)),
+                (fun c a -> s (t c) a)
+
+        (* Lenses
+
+           Various lenses implemented for common types such as tuples,
+           lists and maps, along with an id lens (which is useful for composing
+           a lens which has not specific "lensing" elements but is implicitly a chain
+           of one or more isomorphisms. Having an id lens enables the root composition. *)
+
+        /// Identity lens returning the original item regardless of modifiction
+        let idLens : Lens<'a,'a> =
+            (fun x -> x), (fun x _ -> x) 
+
+        /// First item of a tuple giving a total lens
+        let fstLens : Lens<('a * 'b),'a> =
+            fst, (fun a t -> a, snd t)
+                
+        /// Second item of a tuple giving a total lens
+        let sndLens : Lens<('a * 'b),'b> =
+            snd, (fun b t -> fst t, b)
+
+        /// Head of a list giving a partial lens
+        let headPLens : PLens<'v list, 'v> =
+            (function | h :: _ -> Some h | _ -> None),
+            (fun v -> function | _ :: t -> v :: t | l -> l)
+
+        /// Position of a list giving a partial lens
+        let listPLens (i: int) : PLens<'v list, 'v> =
+            (function | l when List.length l > i -> Some (List.nth l i) | _ -> None), 
+            (fun v l -> List.mapi (fun i' x -> if i = i' then v else x) l)
+
+        /// Tail of a list giving a partial lens
+        let tailPLens : PLens<'v list, 'v list> =
+            (function | _ :: t -> Some t | _ -> None),
+            (fun t -> function | h :: _ -> h :: t | [] -> t)
+
+        /// Key of a map giving a partial lens
+        let mapPLens (k: 'k) : PLens<Map<'k,'v>,'v> =
+            Map.tryFind k, Map.add k
+
+        (* Operators
+
+           Operators are an optional feature of Aether and so must be explicitly opened
+           when needed. *)
+
+        module Operators =
+
+            (* Composition Operators
+
+               Operators as syntactical alternatives to more verbose composition
+               functions given. These are expected to be much more commonly used
+               and syntactially provide more clues as to their function. *)
+
+            /// Compose a total lens and a total lens, giving a total lens
+            let (>-->) l1 l2 =
+                Compose.totalLensTotalLens l1 l2
+
+            /// Compose a total lens and a partial lens, giving a partial lens
+            let (>-?>) l1 l2 =
+                Compose.totalLensPartialLens l1 l2
+
+            /// Compose a partial lens and a total lens, giving a partial lens
+            let (>?->) l1 l2 =
+                Compose.partialLensTotalLens l1 l2
+
+            /// Compose two partial lenses, giving a partial lens
+            let (>??>) l1 l2 =
+                Compose.partialLensPartialLens l1 l2
+
+            /// Compose a total lens with a total isomorphism, giving a total lens
+            let (<-->) l i =
+                Compose.totalLensTotalIsomorphism l i
+
+            /// Compose a total lens with a partial isomorphism, giving a partial lens
+            let (<-?>) l i =
+                Compose.totalLensPartialIsomorphism l i
+
+            /// Compose a partial lens with a total isomorphism, giving a partial lens
+            let (<?->) l i =
+                Compose.partialLensTotalIsomorphism l i
+
+            /// Compose a partial lens with a partial isomorphism, giving a partial lens
+            let (<??>) l i =
+                Compose.partialLensPartialIsomorphism l i
+
+            (* Function Operators
+
+               Operators as infix alternatives to some of the standard get, set,
+               modify functions (getL, setL, etc.) Should likely be used rather 
+               sparingly and in specific controlled areas unless you're aiming for 
+               symbol soup. *)
+
+            /// Get a value using a total lens
+            let (^.) (a: 'a) (l: Lens<'a,'b>) : 'b =
+                Lens.get l a
+
+            /// Get a value using a partial lens
+            let (^?.) (a: 'a) (l: PLens<'a,'b>) : 'b option =
+                Lens.getPartial l a
+
+            /// Set a value using a total lens
+            let (^=) (b: 'b) (l: Lens<'a,'b>) : 'a -> 'a =
+                Lens.set l b
+
+            /// Set a value using a partial lens
+            let (^?=) (b: 'b) (l: PLens<'a,'b>) : 'a -> 'a =
+                Lens.setPartial l b
+
+            /// Modify a value using a total lens
+            let (^%=) (f: 'b -> 'b) (l: Lens<'a,'b>) : 'a -> 'a =
+                Lens.map l f
+
+            /// Modify a value using a partial lens
+            let (^?%=) (f: 'b -> 'b) (l: PLens<'a,'b>) : 'a -> 'a =
+                Lens.mapPartial l f
+
+    open System
+    open Aether
+    open Aether.Operators
+
+    type ContentType = string
+
+    type Value =
+        | String of string
+        | Bool of bool // NOTE: new
+        | Float of decimal // NOTE: changed from float
+        | Int64 of int64
+        | BigInt of bigint
+        | Binary of byte [] * ContentType
+        | Fraction of int * int
+        | Object of Map<string, Value> // NOTE: moved from ComplexValue
+        | Array of Value list // NOTE: moved from ComplexValue
+
+        (* Isomorphisms *)
+
+        static member StringPIso : PIso<Value, string> =
+            (function | String x -> Some x
+                      | _ -> None), String
+
+        static member BoolPIso : PIso<Value, bool> =
+            (function | Bool x -> Some x
+                      | _ -> None), Bool
+
+        static member FloatPIso : PIso<Value, decimal> =
+            (function | Float x -> Some x
+                      | _ -> None), Float
+
+        static member IntPIso : PIso<Value, int64> =
+            (function | Int64 x -> Some x
+                      | _ -> None), Int64
+
+        static member BigIntPIso : PIso<Value, bigint> =
+            (function | BigInt x -> Some x
+                      | _ -> None), BigInt
+
+        static member BinaryPIso : PIso<Value, byte [] * ContentType> =
+            (function | Binary (bs, ct) -> Some (bs, ct)
+                      | _ -> None), Binary
+
+        static member FractionPIso : PIso<Value, int * int> =
+            (function | Fraction (n, d) -> Some (n, d)
+                      | _ -> None), Fraction
+
+        static member ArrayPIso : PIso<Value, Value list> =
+            (function | Array x -> Some x
+                      | _ -> None), Array
+
+        static member ObjectPIso : PIso<Value, Map<string, Value>> =
+            (function | Object x -> Some x
+                      | _ -> None), Object
+
+        (* Lenses *)
+
+        static member StringPLens : PLens<Value, string> =
+            idLens <-?> Value.StringPIso
+
+        static member BoolPLens : PLens<Value, bool> =
+            idLens <-?> Value.BoolPIso
+
+        static member FloatPLens : PLens<Value, decimal> =
+            idLens <-?> Value.FloatPIso
+
+        static member IntPLens : PLens<Value, int64> =
+            idLens <-?> Value.IntPIso
+
+        static member BigIntPLens : PLens<Value, bigint> =
+            idLens <-?> Value.BigIntPIso
+
+        static member BinaryPLens : PLens<Value, byte[] * ContentType> =
+            idLens <-?> Value.BinaryPIso
+
+        static member FractionPLens : PLens<Value, int * int> =
+            idLens <-?> Value.FractionPIso
+
+        static member ArrayPLens : PLens<Value, Value list> =
+            idLens <-?> Value.ArrayPIso
+
+        static member ObjectPLens : PLens<Value, Map<string, Value>> =
+            idLens <-?> Value.ObjectPIso
+
+    module Escaping =
+        let private unescaped i =
+                i >= 0x20 && i <= 0x21
+             || i >= 0x23 && i <= 0x5b
+             || i >= 0x5d && i <= 0x10ffff
+
+        let escape (s: string) =
+            let rec escape r =
+                function | [] -> r
+                         | h :: t when (unescaped (int h)) ->
+                            escape (r @ [ h ]) t
+                         | h :: t ->
+                            let n =
+                                match h with
+                                | '"' -> [ '\\'; '"' ]
+                                | '\\' -> [ '\\'; '\\' ]
+                                | '\b' -> [ '\\'; 'b' ]
+                                | '\f' -> [ '\\'; 'f' ]
+                                | '\n' -> [ '\\'; 'n' ]
+                                | '\r' -> [ '\\'; 'r' ]
+                                | '\t' -> [ '\\'; 't' ]
+                                | x -> [ '\\'; 'u' ] @ [ for c in ((int x).ToString ("X4")) -> unbox c ]
+
+                            escape (r @ n) t
+
+            new string (List.toArray (escape [] [ for c in s -> unbox c ]))
+
+    module Destructure =
+        ()
+
+    [<AutoOpen>]
+    module Capture =
+
+        // TODO: this structure is both a Reader and Writer monad, but only needs
+        // to be a writer monad
+        type Value<'a> =
+            Value -> ValueResult<'a> * Value
+
+        and ValueResult<'a> =
+            | ValueResult of 'a
+            | Error of string
+
+        [<RequireQualifiedAccess>]
+        module Value =
+
+            let inline init (a: 'a) : Value<'a> = 
+                fun json ->
+                    ValueResult a, json
+
+            let inline error (e: string) : Value<'a> =
+                fun json ->
+                    Error e, json
+
+            let inline internal ofResult result =
+                fun json ->
+                    result, json
+
+            let inline bind (m: Value<'a>) (f: 'a -> Value<'b>) : Value<'b> =
+                fun json ->
+                    match m json with
+                    | ValueResult a, json -> (f a) json
+                    | Error e, json -> Error e, json
+
+            let inline apply (f: Value<'a -> 'b>) (m: Value<'a>) : Value<'b> =
+                bind f (fun f' ->
+                    bind m (fun m' ->
+                        init (f' m')))
+
+            let inline map (f: 'a -> 'b) (m: Value<'a>) : Value<'b> =
+                bind m (fun m' ->
+                    init (f m'))
+
+            let inline map2 (f: 'a -> 'b -> 'c) (m1: Value<'a>) (m2: Value<'b>) : Value<'c> =
+                apply (apply (init f) m1) m2
+
+    (* Operators
+
+       Symbolic operators for working with Value<'a> functions, providing
+       an operator based concise alternative to the primitive Json<'a> combinators
+       given as part of Functional.
+       
+       This module is not opened by default, as symbolic operators are a matter
+       of taste and may also clash with other operators from other libraries. *)
+
+    module Operators =
+
+        let inline (>>=) m f =
+            Value.bind m f
+
+        let inline (=<<) f m =
+            Value.bind m f
+
+        let inline (<*>) f m =
+            Value.apply f m
+
+        let inline (<!>) f m =
+            Value.map f m
+
+        let inline (>>.) m f =
+            Value.bind m (fun _ -> f)
+
+        let inline (.>>) m f =
+            Value.bind (fun _ -> m) f
+
+        let inline ( *>) m1 m2 =
+            Value.map2 (fun _ x -> x) m1 m2
+
+        let inline ( <*) m1 m2 =
+            Value.map2 (fun x _ -> x) m1 m2
+
+        let inline (>=>) m1 m2 =
+            Value.bind (fun x -> m1 x) m2
+
+        let inline (<=<) m1 m2 =
+            Value.bind (fun x -> m2 x) m1
+
+    [<AutoOpen>]
+    module Formatting =
+
+        (* Helpers *)
+
+        type private Formatter<'a> =
+            'a -> StringBuilder -> StringBuilder
+
+        type private Separator =
+            StringBuilder -> StringBuilder
+
+        let private append (s: string) (b: StringBuilder) =
+            b.Append s
+
+        let private appendf (s: string) (v1: obj) (b: StringBuilder) =
+            b.AppendFormat (s, v1)
+
+        let private join<'a> (f: Formatter<'a>) (s: Separator) =
+            let rec join values (b: StringBuilder) =
+                match values with
+                | [] -> b
+                | h :: [] -> f h b
+                | h :: t -> (f h >> s >> join t) b
+
+            join
+
+        (* Formatters *)
+
+        let rec private formatValue =
+                function | String x -> formatString x
+                         | Bool x -> formatBool x
+                         | Float x -> formatFloat x
+                         | Int64 x -> formatInt x
+                         | BigInt x -> formatBigInt x
+                         | Binary (bs, ct) -> formatBinary (bs, ct)
+                         | Fraction (n, d) -> formatFraction (n, d)
+                         | Object x -> formatObject x
+                         | Array x -> formatArray x
+
+        and private formatArray =
+            function | x ->
+                           append "[" 
+                        >> join formatValue (append ",") x 
+                        >> append "]"
+
+        and private formatFloat =
+            function | x -> append (string x)
+
+        and private formatBool =
+            function | x -> append (string x)
+
+        and private formatInt =
+            function | x -> append (string x)
+
+        and private formatBigInt =
+            function | x -> append (string x)
+
+        and private formatBinary =
+            function | (bs, ct) -> append (BitConverter.ToString(bs).Replace("-", ""))
+
+        and private formatFraction =
+            function | (n, d) -> append ("[ " + string n + " / " + string d + " ]")
+
+        and private formatObject =
+            function | x -> 
+                           append "{" 
+                        >> join (fun (k, v) -> appendf "\"{0}\":" (Escaping.escape k) >> formatValue v)
+                                (append ",")
+                                (Map.toList x) 
+                        >> append "}"
+
+        and private formatString =
+            function | x -> appendf "\"{0}\"" (Escaping.escape x)
+
+        [<RequireQualifiedAccess>]
+        module Value =
+
+            let format value =
+                StringBuilder ()
+                |> formatValue value
+                |> string
+
+    (* Lens
+
+       Functional lens based access to nested Json data strcutures,
+       using Aether format lenses. Uses Value<'a> based functions, so
+       can be used monadicly. *)
+
+    [<AutoOpen>]
+    module Lens =
+
+        (* Functions *)
+
+        [<RequireQualifiedAccess>]
+        module Value =
+
+            let getLens l : Value<_> =
+                fun value ->
+                    ValueResult (Lens.get l value), value
+
+            let getLensPartial l : Value<_> =
+                fun value ->
+                    match Lens.getPartial l value with
+                    | Some x -> ValueResult x, value
+                    | _ -> Error (sprintf "couldn't use lens %A on value '%A'" l value), value
+
+            let tryGetLensPartial l : Value<_> =
+                fun value ->
+                    ValueResult (Lens.getPartial l value), value
+
+            let setLens l v : Value<_> =
+                fun value ->
+                    ValueResult (), Lens.set l v value
+
+            let setLensPartial l v : Value<_> =
+                fun value ->
+                    ValueResult (), Lens.setPartial l v value
+
+            let mapLens l f : Value<_> =
+                fun value ->
+                    ValueResult (), Lens.map l f value
+
+            let mapLensPartial l f : Value<_> =
+                fun value ->
+                    ValueResult (), Lens.mapPartial l f value
+
+    [<AutoOpen>]
+    module Mapping =
+
+        open Operators
+
+        (* To
+        
+            *)
+
+        (* Defaults *)
+
+        type ToValueDefaults = ToValueDefaults with
+
+            (* Basic Types *)
+
+            static member inline ToValue (x: bool) =
+                Value.setLensPartial Value.BoolPLens x
+
+            static member inline ToValue (x: decimal) =
+                Value.setLensPartial Value.FloatPLens x
+
+            static member inline ToValue (x: float) =
+                Value.setLensPartial Value.FloatPLens (decimal x)
+
+            static member inline ToValue (x: int) =
+                Value.setLensPartial Value.FloatPLens (decimal x)
+
+            static member inline ToValue (x: int16) =
+                Value.setLensPartial Value.IntPLens (int64 x)
+
+            static member inline ToValue (x: int64) =
+                Value.setLensPartial Value.IntPLens x
+
+            static member inline ToValue (x: single) =
+                Value.setLensPartial Value.FloatPLens (decimal x)
+
+            static member inline ToValue (x: string) =
+                Value.setLensPartial Value.StringPLens x
+
+            static member inline ToValue (x: uint16) =
+                Value.setLensPartial Value.IntPLens (int64 x)
+
+            static member inline ToValue (x: uint32) =
+                Value.setLensPartial Value.IntPLens (int64 x)
+
+            static member inline ToValue (x: uint64) =
+                Value.setLensPartial Value.FloatPLens (decimal x)
+
+            (* Common Types *)
+
+            static member inline ToValue (x: DateTime) =
+                Value.setLensPartial Value.StringPLens (x.ToUniversalTime().ToString("o"))
+            
+            static member inline ToValue (x: DateTimeOffset) =
+                Value.setLensPartial Value.StringPLens (x.ToString("o"))
+
+            static member inline ToValue (x: Guid) =
+                Value.setLensPartial Value.StringPLens (string x)
+
+            (* Json Type *)
+
+            static member inline ToValue (x: Value) =
+                Value.setLens idLens x
+
+        (* Mapping Functions
+
+           Functions for applying the ToJson function to data structures to produce
+           new Json instances. *)
+
+        let inline internal toValueDefaults (a: ^a, _: ^b) =
+            ((^a or ^b) : (static member ToValue: ^a -> unit Value) a)
+
+        let inline internal toValue (x: 'a) =
+            snd (toValueDefaults (x, ToValueDefaults) (Object (Map.empty)))
+
+        (* Defaults *)
+
+        type ToValueDefaults with
+
+            (* Arrays *)
+
+            static member inline ToValue (x: 'a array) =
+                Value.setLens idLens (Array ((Array.toList >> List.map toValue) x))
+
+            (* Lists *)
+
+            static member inline ToValue (x: 'a list) =
+                Value.setLens idLens (Array (List.map toValue x))
+
+            (* Maps *)
+
+            static member inline ToValue (x: Map<string,'a>) =
+                Value.setLens idLens (Object (Map.map (fun _ a -> toValue a) x))
+
+            (* Options *)
+
+            static member inline ToValue (x: 'a option) =
+                match x with | None -> Value.init ()
+                             | Some a -> Value.setLens idLens (toValue a)
+
+            (* Sets *)
+
+            static member inline ToValue (x: Set<'a>) =
+                Value.setLens idLens (Array ((Set.toList >> List.map toValue) x))
+
+            (* Tuples *)
+
+            static member inline ToValue ((a, b)) =
+                Value.setLens idLens (Array [ toValue a; toValue b ])
+
+            static member inline ToValue ((a, b, c)) =
+                Value.setLens idLens (Array [ toValue a; toValue b; toValue c ])
+
+        [<RequireQualifiedAccess>]
+        module Value =
+
+            let inline write key value =
+                Value.setLensPartial (Value.ObjectPLens >??> mapPLens key) (toValue value)
+
+            let inline serialize a =
+                toValue a
+
+    type Units =
+        | Bits
+        | Bytes
+        | Seconds
+        | Metres
+        | Scalars
+        | Amperes
+        | Kelvins
+        | Moles
+        | Candelas
+        | Mul of Units * Units
+        | Pow of Units * Units
+        | Div of Units * Units
+        | Root of Units
+        | Sqrt of Units
+        | Log10 of Units // Log of base:float * BaseUnit
+
+    type LogContext =
+        { datacenter : string
+          hostname   : string
+          service    : string
+          ns         : string option
+          func       : string option
+          file       : string option
+          lineNo     : uint32 option
+          envVersion : string }
+
+        static member Create(service : string) =
+          { datacenter = "dc1"
+            hostname   = "coinduction"
+            service    = service
+            ns         = None
+            func       = None
+            file       = None
+            lineNo     = None
+            envVersion = "0.0.0" }
+
+    type PointName = string list
+
+    type PointValue =
+        /// Value at point in time
+        | Gauge of Value * Units
+        /// Any sort of derived measure
+        | Derived of Value * Units
+        /// All simple-valued fields' values can be templated into the template string
+        /// when outputting the value in the target.
+        | Event of template:string
+
+    type Field = Field of Value * Units option // move outside this module
+        
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>] // remove when field moved outside
+    module Field =
+
+        let inline initWithUnit value units =
+            Field (Value.serialize value, Some units)
+
+        let inline init value =
+            Field (Value.serialize value, None)
+
+    type Message =
+      { name      : PointName
+        value     : PointValue
+        /// the semantic-logging data
+        fields    : Map<PointName, Field>
+        /// the principal/actor/user/tenant/act-as/oauth-id data
+        session   : Value // NOTE: changed from Map<PointName, Field>
+        /// where in the code?
+        context   : LogContext
+        /// what urgency?
+        level     : string
+        /// when?
+        timestamp : int64 }
+
+        static member fields_ : Lens<Message, Map<PointName, Field>> =
+            (fun x -> x.fields),
+            (fun v x -> { x with fields = v })
+
+    type Logger =
+        abstract log : Message -> unit
+
+    type Logging =
+        static member get(modulee, file, line) =
+            { new Logger with
+                member x.log m = () }
+        
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module Message =
+
+        let event level msg =
+            { name = [] // check in logger
+              value = Event msg
+              fields = Map.empty
+              session = Object Map.empty // default, hoist to static
+              context = LogContext.Create "" // fix, take from logger
+              level   = level // fix
+              timestamp = 0L } // fix
+
+        let private property name =
+            Compose.totalLensPartialLens Message.fields_ (Aether.mapPLens [name])
+
+        let inline field name value =
+            Lens.setPartial (property name) (Field.init value)
+
+        let inline fieldUnit name value units =
+            Lens.setPartial (property name) (Field.initWithUnit value units)
+
+        let private formatString (template:string) (args : Map<PointName, Field>) =
+            let template = Parser.parse template
+            let sb       = StringBuilder()
+            template.Tokens |> Seq.map (function | Text t -> t
+                                                 | Prop p -> let (Field (value, units)) = args |> Map.find p
+                                                             Value.format value)
+                            |> Seq.iter (append sb)
+            sb.ToString()
+
+        let format (m : Message) =
+            match m.value with
+            | Event template ->
+                formatString template m.fields
+            | _ -> failwith "TODO"
+
+module Usage =
+    open Next
+    open Next.Aether
+    open Next.Aether.Operators
+    open Next.Operators
+
+    let (<+>) xs x = 
+        xs @ x
+
+    let logger =
+        Logging.get(modulee="MessageTemplates.Usage", file=__SOURCE_FILE__, line=__LINE__)
+
+    let sample () =
+        let valuesInObj =
+               Value.write "bytes" 4
+            *> Value.write "sessionId" "session-haf25643256"
+
+        let l =
+            Compose.totalLensPartialLens Message.fields_ (Aether.mapPLens ["bytes"])
+
+        let f =
+            Field.initWithUnit 4 Bytes
+
+        let msg : Message =
+            let m = Message.event "info" "read ${bytes} on connection ${connectionId}"
+            Lens.setPartial l f m
+
+        let msg' =
+            // can we use https://github.com/SuaveIO/suave/blob/master/src/Suave/Sscanf.fs#L61 to
+            // let F# type-check the string, picking the `value` parameter (2nd) of `fieldUnit` function call?
+            Message.event "debug" "read %i on connection ${connectionId}"
+            |> Message.fieldUnit "noBytesRead" 4 Bytes
+            |> Message.field "connectionId" "session-haf23456743"
+
+        msg
+
+    let formatting () =
+
+        let m = sample ()
+
+        Message.format m // => string
