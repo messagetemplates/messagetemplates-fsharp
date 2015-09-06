@@ -11,11 +11,11 @@ module Extensions =
 
     type DestrHint with
         member inline this.ToDestrChar () = if this = DestrHint.Default then ""
-                                                elif this = DestrHint.Destructure then "@"
-                                                else "$"
+                                            elif this = DestrHint.Destructure then "@"
+                                            else "$"
         static member inline FromChar c =   if c = '@' then DestrHint.Destructure
-                                                elif c = '$' then DestrHint.Stringify
-                                                else DestrHint.Default
+                                            elif c = '$' then DestrHint.Stringify
+                                            else DestrHint.Default
 
     type System.Text.StringBuilder with
         /// Appends the text if the condition is true, returning the string builer for chaining.
@@ -82,7 +82,7 @@ module Log =
     /// Describes a function for logging warning messages.
     type SelfLogger = (string * obj[]) -> unit
 
-    /// An inline null logger; for ignoring any warning messages.
+    /// A logger which ignores any warning messages.
     let inline nullLogger (_: string, _: obj[]) = ()
 
 module Defaults =
@@ -116,26 +116,34 @@ module Empty =
     let textTokenArray = [| textToken |]
 
 module Parser =
+    
+    /// Appends text characters from the template string started at a specified character index
+    /// and returns when the end of the template string is reached, or the start of a property
+    /// is encountered. Returns the next character index.
+    let inline appendTextUntilNextProp (startAt:int) (template:string) (append: char->unit) : int =
+        let chars = template
+        let tlen = chars.Length
+        let rec go i =
+            if i >= tlen then tlen
+            else
+                let c = chars.[i]
+                match c with
+                | '{' -> if (i+1) < tlen && chars.[i+1] = '{' then
+                            append c; go (i+2)
+                         else i // bail out at the start of a property
+                | '}' when (i+1) < tlen && chars.[i+1] = '}' -> append c; go (i+2)
+                | _ -> append c; go (i+1)
+        go startAt
+
     /// Parses a text token inside the template string, starting at a specified character number within the
     /// template string, and returning the 'next' character index + the parsed text token. The StringBuilder
     /// is used as a temporary buffer for collecting the text token characters, and is cleared before returning.
     /// The text token is 'finished' when an open brace is encountered (or the end of the template string is
     /// reached (whichever comes first).
     let inline parseTextToken (sb:StringBuilder) (startAt:int) (template:string) : int*Token =
-        let chars = template
-        let tlen = chars.Length
-        let inline append (ch:char) = sb.Append(ch) |> ignore
-        let rec go i =
-            if i >= tlen then tlen, Text(startAt, sb.ToStringAndClear())
-            else
-                let c = chars.[i]
-                match c with
-                | '{' -> if (i+1) < tlen && chars.[i+1] = '{' then append c; go (i+2)
-                         elif i = startAt then startAt, Empty.textToken
-                         else i, Text(startAt, sb.ToStringAndClear())
-                | '}' when (i+1) < tlen && chars.[i+1] = '}' -> append c; go (i+2)
-                | _ -> append c; go (i+1)
-        go startAt
+        let nextIndex = appendTextUntilNextProp startAt template (fun (ch:char) -> sb.Append(ch) |> ignore)
+        if nextIndex <> startAt then nextIndex, Token.Text(startAt, sb.ToStringAndClear())
+        else startAt, Empty.textToken
 
     let inline isLetterOrDigit c = System.Char.IsLetterOrDigit c
     let inline isValidInPropName c = c = '_' || System.Char.IsLetterOrDigit c
@@ -161,6 +169,8 @@ module Parser =
             if startFromIndex < startIndex then invalidArg "startFromIndex" "startFromIndex must be >= Start"
             Range(startIndex, this.End)
         override __.ToString() = (string startIndex) + ", " + (string endIndex)
+        member inline this.IsEmpty = startIndex = -1 && endIndex = -1
+        static member Empty = Range(-1, -1)
 
     let inline tryGetFirstCharRng predicate (s:string) (rng:Range) =
         let rec go i =
@@ -178,8 +188,8 @@ module Parser =
     /// just like System.String.IndexOf(char) but within a string range
     let inline rngIndexOf (s:string) (rng:Range) (c:char) = tryGetFirstCharRng ((=) c) s rng 
 
-    /// Attemps to parse an integer from the range within a string. Returns Int32.MinValue if the string does
-    /// not contain an integer. The minus sign '-' is allowed only as the first character.
+    /// Attemps to parse an integer from the range within a string. Returns Int32.MinValue if the
+    /// string does not contain an integer. The '-' is allowed only as the first character.
     let inline tryParseIntFromRng (invalidValue:int) (s:string) (rng:Range) =
         if rng.Length = 1 && '0' <= s.[0] && s.[0] <= '9' then
             int (s.[rng.Start]) - 48
@@ -205,12 +215,11 @@ module Parser =
         if System.String.IsNullOrEmpty(s) then -1
         else tryParseIntFromRng -1 s (Range(0, s.Length-1))
 
-    let inline tryParseAlignInfoRng (s:string) (rng:Range option) : AlignInfo =
+    let inline tryParseAlignInfoRng (s:string) (rng:Range) : AlignInfo =
         match s, rng with
-        | _, None -> AlignInfo(isValid=true)
-        | s, Some rng when (rng.Start > rng.End) || (hasAnyInvalidRng isValidInAlignment s rng) ->
+        | s, rng when (rng.Start > rng.End) || (hasAnyInvalidRng isValidInAlignment s rng) ->
             AlignInfo(isValid=false)
-        | s, Some rng ->
+        | s, rng ->
             let invalidAlignWidth = System.Int32.MinValue
             let width = 
                 match tryParseIntFromRng invalidAlignWidth s rng with
@@ -229,32 +238,77 @@ module Parser =
         /// anything 'invalid' is found then the first Range is a value of None.
         let nameRange, alignRange, formatRange =
             match (rngIndexOf t within ','), (rngIndexOf t within ':') with
-            | -1, -1 -> Some within, None, None // neither align nor format
-            | -1, fmtIdx -> Some (Range(within.Start, fmtIdx-1)), None, Some (Range(fmtIdx+1, within.End)) // has format part, but does not have align part
-            | alIdx, -1 -> Some (Range(within.Start, alIdx-1)), Some (Range(alIdx+1, within.End)), None // has align part, but does not have format part
+            | -1, -1 -> within, Range.Empty, Range.Empty // neither align nor format
+            | -1, fmtIdx -> Range(within.Start, fmtIdx-1), Range.Empty, Range(fmtIdx+1, within.End) // has format part, but does not have align part
+            | alIdx, -1 -> Range(within.Start, alIdx-1), Range(alIdx+1, within.End), Range.Empty // has align part, but does not have format part
             | alIdx, fmtIdx when alIdx < fmtIdx && alIdx <> (fmtIdx-1) -> // has both parts in correct order
-                let align = Some (Range(alIdx+1, fmtIdx-1))
-                let fmt = Some (Range(fmtIdx+1, within.End))
-                Some (Range(within.Start, alIdx-1)), align, fmt
+                let align = Range(alIdx+1, fmtIdx-1)
+                let fmt = Range(fmtIdx+1, within.End)
+                Range(within.Start, alIdx-1), align, fmt
             | alIdx, fmtIdx when alIdx > fmtIdx ->
-                Some (Range(within.Start, fmtIdx-1)), None, Some (Range(fmtIdx+1, within.End)) // has format part, no align (but one or more commas *inside* the format string)
-            | _, _ -> None, None, None // hammer time; you can't split this
+                Range(within.Start, fmtIdx-1), Range.Empty, Range(fmtIdx+1, within.End) // has format part, no align (but one or more commas *inside* the format string)
+            | _, _ -> Range.Empty, Range.Empty, Range.Empty // hammer time; you can't split this
 
-        match nameRange, alignRange, formatRange with
-        | None, _, _ -> Empty.propToken
-        | Some nameAndDestr, _, _ ->
-            let destr = DestrHint.FromChar t.[nameAndDestr.Start]
+        if nameRange.IsEmpty then Empty.propToken
+        else
+            let destr = DestrHint.FromChar t.[nameRange.Start]
             let propertyName = match destr with
-                               | DestrHint.Default -> nameAndDestr.GetSubString t
-                               | _ -> Range(nameAndDestr.Start+1, nameAndDestr.End).GetSubString t
+                               | DestrHint.Default -> nameRange.GetSubString t
+                               | _ -> Range(nameRange.Start+1, nameRange.End).GetSubString t
             if propertyName = "" || (hasAnyInvalid isValidInPropName propertyName) then Empty.propToken
-            elif formatRange.IsSome && (hasAnyInvalidRng isValidInFormat t formatRange.Value) then Empty.propToken
-            else match (tryParseAlignInfoRng t alignRange) with
-                 | ai when ai.IsValid = false -> Empty.propToken
-                 | alignInfo ->
-                    let format = if formatRange.IsSome then (formatRange.Value.GetSubString t) else null
-                    Prop(within.Start - 1,
-                         PropertyToken(propertyName, parseIntOrNegative1 propertyName, destr, alignInfo, format))
+            elif (not formatRange.IsEmpty) && (hasAnyInvalidRng isValidInFormat t formatRange) then Empty.propToken
+            else
+                if alignRange.IsEmpty then
+                    let format = if formatRange.IsEmpty then null else formatRange.GetSubString t
+                    let pt = PropertyToken(propertyName, parseIntOrNegative1 propertyName, destr, AlignInfo.Empty, format)
+                    Prop(within.Start - 1, pt)
+                else
+                    let ai = tryParseAlignInfoRng t alignRange
+                    if not ai.IsValid then Empty.propToken
+                    else
+                        let format = if formatRange.IsEmpty then null else formatRange.GetSubString t
+                        let pt = PropertyToken(propertyName, parseIntOrNegative1 propertyName, destr, ai, format)
+                        Prop(within.Start - 1, pt)
+
+    /// Parses the property token in the template string from the start character index, and
+    /// calls the 'foundProp' method. If the property is malformed, the 'appendTextChar' method
+    /// is called instead for each character consumed. Finally, the next character index is returned.
+    let findPropOrAppendText (start:int) (template:string) (appendTextChar: char->unit)
+                                                           (foundProp: PropertyToken->unit) : int =
+        let first = start
+        let inline appendAll first last = for i = first to last do appendTextChar template.[i]
+
+        // skip over characters after the open-brace, until we reach a character that
+        // is *NOT* a valid part of the property tag. this will be the close brace character
+        // if the template is actually a well-formed property tag.
+        let nextInvalidCharIndex =
+            match tryGetFirstChar (not << isValidCharInPropTag) template (first+1) with
+            | -1 -> template.Length | idx -> idx
+
+        // if we stopped at the end of the string or the last char wasn't a close brace
+        // then we treat all the characters we found as a text token, and finish.
+        if nextInvalidCharIndex = template.Length || template.[nextInvalidCharIndex] <> '}' then
+            appendAll first (nextInvalidCharIndex - 1)
+            nextInvalidCharIndex
+        else
+            // skip over the trailing "}" close prop tag
+            let nextIndex = nextInvalidCharIndex + 1
+            let propInsidesRng = Range(first + 1, nextIndex - 2)
+            match tryGetPropInSubString template propInsidesRng with
+            | t when obj.ReferenceEquals(t, Empty.propToken) -> appendAll first (nextIndex - 1)
+            | Prop (_,pt) -> foundProp pt
+            | _ -> appendAll first (nextIndex - 1)
+
+            nextIndex
+
+    let parsePropertyToken (buffer:StringBuilder) (start:int) (mt:string) (rz: ResizeArray<Token>) : int =
+        let appendChar (ch:char) = buffer.Append(ch) |> ignore
+        let mutable wasProperty = false
+        let foundProp (p:PropertyToken) = rz.Add(Token.Prop(start, p)); wasProperty <- true
+        let nextIndex = findPropOrAppendText start mt appendChar foundProp
+        if not wasProperty then
+            rz.Add(Token.Text(start, buffer.ToStringAndClear()))
+        nextIndex
 
     let parseTokens (mt:string) =
         let tlen = mt.Length
@@ -267,32 +321,20 @@ module Parser =
                 else match parseTextToken sb start mt with
                      | next, tok when next <> start ->
                         rz.Add tok; go next
-                     | _, _ -> // no text token parsed, try a property
-                        let inline getc idx = mt.[idx]
-                        let first = start
-
-                        // skip over characters after the open-brace, until we reach a character that
-                        // is *NOT* a valid part of the property tag. this will be the close brace character
-                        // if the template is actually a well-formed property tag.
-                        let nextInvalidCharIndex =
-                            match tryGetFirstChar (not << isValidCharInPropTag) mt (first+1) with
-                            | -1 -> tlen | idx -> idx
-
-                        // if we stopped at the end of the string or the last char wasn't a close brace
-                        // then we treat all the characters we found as a text token, and finish.
-                        if nextInvalidCharIndex = tlen || getc nextInvalidCharIndex <> '}' then
-                            rz.Add (Token.Text(first, mt.Substring(first, nextInvalidCharIndex - first)))
-                            go nextInvalidCharIndex
-                        else
-                            // skip over the trailing "}" close prop tag
-                            let nextIndex = nextInvalidCharIndex + 1
-                            let propInsidesRng = Range(first + 1, nextIndex - 2)
-                            match tryGetPropInSubString mt propInsidesRng with
-                            | p when obj.ReferenceEquals(p, Empty.propToken) ->
-                                rz.Add (Token.Text(first, (mt.Substring(first, nextIndex - first))))
-                                go nextIndex
-                            | p -> rz.Add p; go nextIndex
+                     | _, _ ->
+                        // no text token parsed, try a property. note that this will
+                        // append a text token if the property turns out to be malformed.
+                        go (parsePropertyToken sb start mt rz)
             go 0
+    
+    let parseParts (s:string) (foundText: char->unit) (foundProp: PropertyToken->unit) =
+        let tlen = s.Length
+        let rec go start =
+            if start >= tlen then ()
+            else match appendTextUntilNextProp start s foundText with
+                 | next when next <> start -> go next
+                 | _ -> go (findPropOrAppendText start s foundText foundProp)
+        go 0
 
     let parse (s:string) =
         let tokens = s |> parseTokens
@@ -519,6 +561,43 @@ module Capturing =
 
     let defaultDestructureNoCustoms : Destructurer = Destructure.tryAllWithCustom None None
 
+    let capturePositionals (log:SelfLogger) (destr:Destructurer) (maxDepth:int)
+                           (template:string) (props:PropertyToken[]) (args:obj[]) =
+        let result = ref (Array.zeroCreate<PropertyNameAndValue>(args.Length))
+        for p in props do
+            if p.Pos < 0 || p.Pos >= args.Length then
+                log("Unassigned positional value {0} in: {1}", [|p.Pos; template|])
+            else
+                // only destructure it once
+                if obj.ReferenceEquals(null, Array.get !result p.Pos) then
+                    let req = DestructureRequest(destr, args.[p.Pos], maxDepth, hint=p.Destr)
+                    Array.set !result p.Pos { Name=p.Name; Value=destr req }
+
+        let mutable next = 0
+        for i = 0 to (!result).Length - 1 do
+            let resultElem = Array.get !result i
+            if not (obj.ReferenceEquals(null, resultElem)) then
+                Array.set !result next (Array.get !result i)
+                next <- next + 1
+
+        if next <> (!result).Length then
+            System.Array.Resize(result, next)
+
+        !result
+
+    let captureNamed (log:SelfLogger) (destr:Destructurer) (maxDepth:int)
+                     (template:string) (props:PropertyToken[]) (args:obj[]) =
+        let mutable matchedRun = props.Length
+        if props.Length <> args.Length then
+            matchedRun <- min props.Length args.Length
+            log("property count does not match parameter count: {0}", [|template|])
+        let result = Array.zeroCreate<PropertyNameAndValue>(matchedRun)
+        for i = 0 to matchedRun-1 do
+            let p = props.[i]
+            let req = DestructureRequest(destr, args.[i], maxDepth, hint=p.Destr)
+            Array.set result i { Name=p.Name; Value=destr req }
+        result
+
     /// Captures properties, matching the obj arguments to properties either positionally 
     /// (if all properties are positional) or from left-to-right if one or more are non-positional. The
     /// Destructurer is used to convert the obj arguments into TemplatePropertyValue objects.
@@ -526,18 +605,9 @@ module Capturing =
         if (args = null || args.Length = 0) && t.HasAnyProperties then Array.empty
         elif not t.HasAnyProperties then Array.empty
         else
-            let positionalsByPos = t.PositionalsByPos
-            let props = if positionalsByPos <> null then positionalsByPos else t.Named
-            let mutable matchedRun = props.Length
-            if props.Length <> args.Length then
-                matchedRun <- min props.Length args.Length
-                log("property count does not match parameter count: {0}", [|t.FormatString|])
-            let result = Array.zeroCreate<PropertyNameAndValue>(matchedRun)
-            for i = 0 to matchedRun-1 do
-                let p = props.[i]
-                let req = DestructureRequest(destr, args.[i], maxDepth, hint=p.Destr)
-                Array.set result i { Name=p.Name; Value=destr req }
-            result
+            let props = if t.PositionalsByPos <> null then t.PositionalsByPos else t.Named
+            let capturer = if t.PositionalsByPos <> null then capturePositionals else captureNamed
+            capturer log destr maxDepth t.FormatString props args
 
     let capturePropertiesCustom (d: Destructurer) (maxDepth: int) (t: Template) (args: obj[]) =
         capturePropertiesWith nullLogger d maxDepth t args
@@ -557,15 +627,17 @@ module Formatting =
     /// value to the provided TextWriter. The provided format string is only
     /// used for a ScalarValue v when v implements System.IFormattable.
     /// TODO: ICustomFormattable?
-    let rec writePropValue (w: TextWriter) (pv: TemplatePropertyValue) (format: string) =
-        match pv with
+    let rec writePropValue (w: TextWriter) (tpv: TemplatePropertyValue) (format: string) =
+        match tpv with
         | ScalarValue sv ->
             match sv with
             | null -> w.Write "null"
             | :? string as s ->
-                w.Write "\""
-                w.Write (s.Replace("\"", "\\\""))
-                w.Write "\""
+                if format = "l" then w.Write s
+                else
+                    w.Write "\""
+                    w.Write (s.Replace("\"", "\\\""))
+                    w.Write "\""
             | :? System.IFormattable as f ->
                 w.Write (f.ToString(format, w.FormatProvider))
             | _ -> w.Write(sv.ToString())
@@ -637,7 +709,7 @@ module Formatting =
         else TemplatePropertyValue.Empty
 
     let inline getByNameDict (valuesDict: System.Collections.Generic.IDictionary<string, TemplatePropertyValue>) nme =
-        let tpv = ref Unchecked.defaultof<TemplatePropertyValue>
+        let tpv = ref TemplatePropertyValue.Empty
         valuesDict.TryGetValue (nme, tpv) |> ignore
         !tpv
 
@@ -646,18 +718,20 @@ module Formatting =
                         nullLogger Capturing.defaultDestructureNoCustoms Defaults.maxDepth
                         template values
         let valueCount = values.Length
-        let getValueForPropName =
+        let getValueForPropName = 
             match valueCount with
             | 0 -> fun _ -> TemplatePropertyValue.Empty
             | 1 | 2 | 3 | 4 | 5 -> getByName1to5 values
             | _ -> getByNameDict (createValuesByPropNameDictionary values)
-
         for t in template.Tokens do
             match t with
-            | Token.Text _ as tt -> writeToken w tt Unchecked.defaultof<TemplatePropertyValue>
-            | Token.Prop (_, pd) as tp ->
+            | Token.Text _ as tt -> writeToken w tt TemplatePropertyValue.Empty
+            | Token.Prop (_, pd) as tp -> 
                 let value = getValueForPropName pd.Name
                 writeToken w tp value
+
+    let parseCaptureFormat (tw: TextWriter) (template: string) (args: obj[]) =
+        captureThenFormat tw (Parser.parse template) args
 
     let format template values =
         use tw = new StringWriter()
@@ -667,31 +741,32 @@ module Formatting =
     let formatCustom (t:Template) w getValueByName =
         for tok in t.Tokens do
             match tok with
-            | Token.Text _ as tt -> writeToken w tt Unchecked.defaultof<TemplatePropertyValue>
+            | Token.Text _ as tt -> writeToken w tt TemplatePropertyValue.Empty
             | Token.Prop (_, pd) as tp ->
                 let value = getValueByName pd.Name
                 writeToken w tp value
 
-    let bprintsm (sb:StringBuilder) (template:string) (args:obj[]) =
+    let bprintsm (sb:StringBuilder) template args =
         use tw = new StringWriter(sb)
-        captureThenFormat tw (Parser.parse template) args
+        parseCaptureFormat tw template args
 
-    let sprintsm (p:System.IFormatProvider) (template:string) (args:obj[]) =
+    let sprintsm (p:System.IFormatProvider) template args =
         use tw = new StringWriter(p)
-        captureThenFormat tw (Parser.parse template) args
+        parseCaptureFormat tw template args
         tw.ToString()
 
-    let fprintsm (tw:TextWriter) (template:string) (args:obj[]) =
-        captureThenFormat tw (Parser.parse template) args
+    let fprintsm (tw:TextWriter) template args =
+        parseCaptureFormat tw template args
 
-    let bprintm (template:Template) (sb:StringBuilder) (args:obj[]) =
+    let bprintm template (sb:StringBuilder) args =
         use tw = new StringWriter(sb)
         captureThenFormat tw template args
 
-    let sprintm (template:Template) (provider:System.IFormatProvider) (args:obj[]) =
+    let sprintm template (provider:System.IFormatProvider) args =
         use tw = new StringWriter(provider)
         captureThenFormat tw template args
         tw.ToString()
 
-    let fprintm (template:Template) (tw:TextWriter) (args:obj[]) =
+    let fprintm template tw args =
         captureThenFormat tw template args
+

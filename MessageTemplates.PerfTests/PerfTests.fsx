@@ -2,28 +2,51 @@
 /// Describes the string template parts in an fairly generic way
 type TestTemplateToken =
     | Literal of raw:string
-    | NamedProperty of name:string * value:obj
+    | NamedProperty of name:string * value:obj * format:string
+    | DestrNamedProp of destrHint:string * name:string * value:obj * format:string
 
 type TestTemplate =
     { Title: string
+      /// The messge template parts and values
       TokenValues: TestTemplateToken list
+      /// A pre-built dictionary of of names and values, for those implementations which
+      /// require dictionary input.
       DictionaryOfNamesAndValues: System.Collections.Generic.IDictionary<string, obj>
-      ObjectWithNamedProps: obj }
+      /// An object with public properties and values; for those implementations which require
+      /// an object as input.
+      ObjectWithNamedProps: obj
+      /// The expected rendered result
+      ExpectedOutput: string }
 
-module TestInputs =
-    type Priority = { p1: string }
-    let t1 = { Title = "single string arg"
-               TokenValues = [ Literal "you have priority "; NamedProperty("p1", "one"); Literal "\n" ]
-               DictionaryOfNamesAndValues = ["p1", box "one"] |> dict
-               ObjectWithNamedProps = { p1="one" } }
+module TestCases =
+    let fmtLitStringNoQuotes = "l"
+    type t1ArgsObj = { p1: string }
+    let t1 = { Title = "named 1x string"
+               TokenValues = [ Literal "you have priority "; NamedProperty("p1", "one", fmtLitStringNoQuotes); Literal "\n" ]
+               DictionaryOfNamesAndValues = dict ["p1", box "one"]
+               ObjectWithNamedProps = { p1="one" }
+               ExpectedOutput = "you have priority one\n" }
 
-    type Person = { name: string; manager: string }
-    let t2 = { Title = "two string args"
-               TokenValues = [ Literal "hello, "; NamedProperty("name", "adam")
-                               Literal ", your manager is "; NamedProperty("manager", "adam")
+    type t2ArgsObj = { name: string; manager: string }
+    let t2 = { Title = "named 2x string"
+               TokenValues = [ Literal "hello, "; NamedProperty("name", "adam", fmtLitStringNoQuotes)
+                               Literal ", your manager is "; NamedProperty("manager", "john", fmtLitStringNoQuotes)
                                Literal "\n" ]
-               DictionaryOfNamesAndValues = ["name", box "adam"; "manager", box "adam"] |> dict
-               ObjectWithNamedProps = { name="adam"; manager="adam" } }
+               DictionaryOfNamesAndValues = dict ["name", box "adam"; "manager", box "john"]
+               ObjectWithNamedProps = { name="adam"; manager="john" }
+               ExpectedOutput = "hello, adam, your manager is john\n" }
+
+module DestructuringTestCases = 
+    let fmtLitStringNoQuotes = "l"
+    type Person = { Name: string; Manager: string }
+    let t3Person = { Name="Adam"; Manager="john" }
+    let t3Arg0 = DestrNamedProp("@", "0", t3Person, fmtLitStringNoQuotes)
+    let t3RepeatCount = 7
+    let t3 = { Title = "same pos " + string t3RepeatCount + " destr"
+               TokenValues = List.replicate t3RepeatCount t3Arg0
+               DictionaryOfNamesAndValues = dict [ "0", box t3Arg0 ]
+               ObjectWithNamedProps = null
+               ExpectedOutput = String.replicate t3RepeatCount "Person { Name: \"Adam\", Manager: \"john\" }" }
 
 module Features =   
     /// Allows a tested implementation to configure it's output with the provided TextWriter
@@ -108,9 +131,28 @@ module Implementations =
 
     let private initUsingTextWriter : Features.OutputInitialiser<System.IO.TextWriter> = fun tw -> tw
 
-    /// Creates a named format template string such as "Hello, {name}" from the common test templates.
+    let fmtOrEmpty fmt = if fmt = "" then "" else ":" + fmt
+
+    /// Creates a named format template string such as "Hello, {name:l}" from the common test templates.
     let private namedFormatStringTemplateCreator : Features.ParseInputCreator<string> =
-        fun tt -> tt.TokenValues |> List.map (function Literal raw -> raw | NamedProperty (n,_) -> "{" + n + "}") |> String.concat ""
+        fun tt ->
+            tt.TokenValues
+            |> List.map (function
+                | Literal raw -> raw
+                | NamedProperty (name,_, fmt) -> "{" + name + (fmtOrEmpty fmt) + "}"
+                | DestrNamedProp (destr,name,_,fmt) -> "{" + destr + name + (fmtOrEmpty fmt) + "}"
+            )
+            |> String.concat ""
+
+    /// Creates a named format template string such as "Hello, {name}" from the common test templates.
+    let private namedFormatStringNoFmtTemplateCreator : Features.ParseInputCreator<string> =
+        fun tt ->
+            tt.TokenValues
+            |> List.map (function
+                | Literal raw -> raw
+                | NamedProperty (name,_,_) -> "{" + name + "}"
+                | _ -> failwith "cannot handle this kind")
+            |> String.concat ""
 
     /// Creates a positional format template string such as "Hello, {0}" from the common test templates.
     let private positionalFormatStringTemplateCreator : Features.ParseInputCreator<string> =
@@ -120,13 +162,18 @@ module Implementations =
             tt.TokenValues
             |> List.map (function
                 | Literal raw -> raw
-                | NamedProperty (n,_) -> "{" + string (nextPos()) + "}")
+                | NamedProperty (_,_,fmt) -> "{" + string (nextPos()) + (fmtOrEmpty fmt) + "}"
+                | _ -> failwith "cannot handle this kind")
             |> String.concat ""
 
     /// Given a TestTemplate as input, this creates an obj[] of property values for input to
     /// the format implementations.
     let private positionalFormatArgsArrayCreator : Features.TemplateArgsCreator<obj[]> =
-        fun tt -> tt.TokenValues |> List.choose (function NamedProperty (_,v) -> Some v | _ -> None) |> Array.ofList
+        fun tt -> tt.TokenValues
+                  |> List.choose (function
+                    | NamedProperty (_,v,_) -> Some v
+                    | DestrNamedProp (_,_,v,_) -> Some v
+                    | _ -> None) |> Array.ofList
 
     let private fsPickValueByName (pnvs: FsMessageTemplates.PropertyNameAndValue seq) name =
         pnvs |> Seq.pick (fun pnv -> if pnv.Name = name then Some (pnv.Value) else None)
@@ -193,10 +240,11 @@ module Implementations =
 
     let ioStringBuilder = {
         Name                = "StringBuilder"
-        initOutput          = fun tw -> new System.Text.StringBuilder()
+        initOutput          = fun tw -> tw, System.Text.StringBuilder()
         initTemplate        = positionalFormatStringTemplateCreator
         initTemplateArgs    = positionalFormatArgsArrayCreator
-        parseCaptureFormat  = fun mt vals sb -> sb.AppendFormat(mt, vals) |> ignore
+        parseCaptureFormat  = fun mt vals (tw, sb) -> 
+                                tw.Write(sb.Clear().AppendFormat(mt, vals).ToString())
         parse               = None // no way to pre-parse this
         capture             = None // no way to parse or capture property names
         captureFormat       = None // no way to parse or capture property names
@@ -207,14 +255,14 @@ module Implementations =
         fun tt ->
             let ht = System.Collections.Hashtable()
             tt.TokenValues
-            |> List.choose (function NamedProperty (n,v) -> Some (n, v) | _ -> None)
+            |> List.choose (function NamedProperty (n,v,_) -> Some (n, v) | _ -> None)
             |> List.iter (fun (n,v) -> ht.Add(n, v))
             ht
 
     let stringInject = {
         Name                = "StringInject"
         initOutput          = initUsingTextWriter
-        initTemplate        = namedFormatStringTemplateCreator
+        initTemplate        = namedFormatStringNoFmtTemplateCreator
         initTemplateArgs    = nameValueHashtableArgsCreator
         parseCaptureFormat  = fun mt vals tw -> tw.Write(StringInject.StringInjectExtension.Inject(mt, vals))
         parse               = None // no way to pre-parse this
@@ -225,12 +273,14 @@ module Implementations =
 
     open NamedFormat
 
-    let private createNamedImpl name format : Implementation<string, obj, System.IO.TextWriter, unit, unit> =
+    let private createNamedImpl name (formatter: string->obj->string) : Implementation<string, obj, System.IO.TextWriter, unit, unit> =
         { Name                = name
           initOutput          = initUsingTextWriter
-          initTemplate        = namedFormatStringTemplateCreator
+          initTemplate        = namedFormatStringNoFmtTemplateCreator
           initTemplateArgs    = fun tt -> tt.ObjectWithNamedProps
-          parseCaptureFormat  = fun mt args tw -> tw.Write(format=format mt args)
+          parseCaptureFormat  = fun mt args tw ->
+                                    let result = formatter mt args
+                                    tw.Write(result)
           parse               = None // no way to pre-parse this
           capture             = None // no way to parse or capture property names
           captureFormat       = None // no way to parse or capture property names
@@ -274,50 +324,89 @@ module Implementations =
 type IFormatTest =
     inherit ITestable
     abstract DoIt : unit -> unit
-    
+    abstract Output : System.IO.TextWriter
+
 let createParseCaptureFormatTest testTemplate tw (impl: Implementations.Implementation<_,_,_,_,_>) =
+
+    printfn "%s: initialising with '%s'" impl.Name testTemplate.Title
+
     let template = impl.initTemplate testTemplate
+    printfn "%s: template = '%A'" impl.Name template
+
     let args = impl.initTemplateArgs testTemplate
+    printfn "%s: args = '%A'" impl.Name args
+
     let state = impl.initOutput tw
+    
+    printfn "%s: ensuring output is expected '%s'" impl.Name (testTemplate.ExpectedOutput.Replace("\n", "\\n"))
+    let actualOutput = impl.parseCaptureFormat template args state; tw.ToString()
+    if actualOutput <> testTemplate.ExpectedOutput then
+        failwithf "Test '%s', Impl '%s':\nExpected: %s\nActual: %s" testTemplate.Title impl.Name testTemplate.ExpectedOutput actualOutput
+
     { new IFormatTest with
         member __.Name = impl.Name
         member __.DoIt () = impl.parseCaptureFormat template args state
         member __.Fini () = ()
-        member __.Init () = () }
+        member __.Init () = ()
+        member __.Output = tw }
 
 let createCaptureFormatTest testTemplate tw (impl: Implementations.Implementation<_,_,_,_,_>) =
+    
+    printfn "%s: initialising with '%s'" impl.Name testTemplate.Title
+
     let template = impl.parse.Value (impl.initTemplate testTemplate)
+    printfn "%s: template '%A' -> '%A'" impl.Name testTemplate.TokenValues template
+
     let args = impl.initTemplateArgs testTemplate
+    printfn "%s: args = '%A'" impl.Name args
+
     let state = impl.initOutput tw
+
+    printfn "%s: ensuring output is expected '%s'" impl.Name (testTemplate.ExpectedOutput.Replace("\n", "\\n"))
+    let actualOutput = impl.captureFormat.Value template args state; tw.ToString()
+    if actualOutput <> testTemplate.ExpectedOutput then
+        failwithf "Test '%s', Impl '%s':\nExpected: %s\nActual: %s" testTemplate.Title impl.Name testTemplate.ExpectedOutput actualOutput
+
     { new IFormatTest with
         member __.Name = impl.Name
         member __.DoIt () = impl.captureFormat.Value template args state
         member __.Fini () = ()
-        member __.Init () = () }
+        member __.Init () = ()
+        member __.Output = tw }
 
 open Implementations
-let createComparer tt =
-    let tw = new System.IO.StringWriter() :> System.IO.TextWriter
-    let theOne = createCaptureFormatTest tt tw fsMessageTemplates
+let newTw () = new System.IO.StringWriter() :> System.IO.TextWriter
+
+let createAllNamedOrPosComparer tt =
+    let theOne = createCaptureFormatTest tt (newTw()) fsMessageTemplates
     let theOthers = [
-        createCaptureFormatTest tt tw csMessageTemplates
-        createParseCaptureFormatTest tt tw serilog
-        // createNamedFormatTest tt tw ioStringBuilder
-        // createNamedFormatTest tt tw ioTextWriter
-        createParseCaptureFormatTest tt tw stringInject
-        createParseCaptureFormatTest tt tw haackFormat
-        createParseCaptureFormatTest tt tw hanselmanFormat
-        createParseCaptureFormatTest tt tw henriFormat
-        createParseCaptureFormatTest tt tw jamesFormat
-        createParseCaptureFormatTest tt tw oskarFormat
+        createCaptureFormatTest tt (newTw()) csMessageTemplates
+        createParseCaptureFormatTest tt (newTw()) serilog
+        createParseCaptureFormatTest tt (newTw()) ioStringBuilder
+        createParseCaptureFormatTest tt (newTw()) ioTextWriter
+        createParseCaptureFormatTest tt (newTw()) stringInject
+        createParseCaptureFormatTest tt (newTw()) haackFormat
+        createParseCaptureFormatTest tt (newTw()) hanselmanFormat
+        createParseCaptureFormatTest tt (newTw()) henriFormat
+        createParseCaptureFormatTest tt (newTw()) jamesFormat
+        createParseCaptureFormatTest tt (newTw()) oskarFormat
     ]
-    ImplementationComparer(theOne, theOthers, warmup=true, verbose=true, throwOnError=false)
+    tt, ImplementationComparer(theOne, theOthers, warmup=true, verbose=true, throwOnError=false)
+
+let createAllDestructuringComparer tt =
+    let theOne = createCaptureFormatTest tt (newTw()) fsMessageTemplates
+    let theOthers = [
+        createCaptureFormatTest tt (newTw()) csMessageTemplates
+        createParseCaptureFormatTest tt (newTw()) serilog
+    ]
+    tt, ImplementationComparer(theOne, theOthers, warmup=true, verbose=true, throwOnError=false)
 
 let comparers = [
-    TestInputs.t1, createComparer TestInputs.t1
-    TestInputs.t2, createComparer TestInputs.t2 ]
+    createAllNamedOrPosComparer TestCases.t1
+    createAllNamedOrPosComparer TestCases.t2
+    createAllDestructuringComparer DestructuringTestCases.t3 ]
 
-comparers |> List.iter (fun (tt, c) -> c.Run(id="(cached) 100k x " + tt.Title, repeat=100000, testF=fun t -> t.DoIt()))
+comparers |> List.iter (fun (tt, c) -> c.Run(id="100k x " + tt.Title, repeat=100000, testF=fun t -> t.DoIt()))
 
 #load "../packages/FSharp.Charting/FSharp.Charting.fsx"
 open FSharp.Charting

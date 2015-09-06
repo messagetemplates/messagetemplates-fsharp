@@ -1,29 +1,24 @@
 ﻿module FsTests.Capture
 
 open System
-open Swensen.Unquote
-
 open Tk
 open FsMessageTemplates
 open Asserts
 
 [<LangTheory; LangCsFsData>]
 let ``no values provided yields no properties`` (lang) =
-    let actual = capture lang "this {will} {capture} {nothing}, I hope" []
-    let expected : PropertyNameAndValue list = []
-    test <@ actual = expected @>
+    MtAssert.DestructuredAs(lang, "this {will} {capture} {nothing}, I hope", [||], [])
 
 [<LangTheory; LangCsFsData>]
 let ``one named property and one value yields the correct named property`` (lang) =
-    let actual = capture lang "this {will} work, I hope" ["might"]
-    test <@ actual = [ PropertyNameAndValue("will", ScalarValue "might") ] @>
+    MtAssert.DestructuredAs(lang, "this {will} work, I hope", [|"might"|],
+        expected = [ PropertyNameAndValue("will", ScalarValue "might") ])
 
 [<LangTheory; LangCsFsData>]
 let ``one enumerable property yeilds a sequence value`` (lang) =
-    let actual = capture lang "this {will} work, I hope" [ [|1..3|] ]
-    let expectedValue = SequenceValue [ ScalarValue 1; ScalarValue 2; ScalarValue 3; ]
-    let expected =  [ PropertyNameAndValue("will", expectedValue) ]
-    test <@ actual = expected @>
+    MtAssert.DestructuredAs(lang, "this {will} work, I hope", [|[|1..3|]|],
+        expected = [ PropertyNameAndValue("will", SequenceValue
+                        [ ScalarValue 1; ScalarValue 2; ScalarValue 3; ])])
 
 type Chair() =
     member __.Back with get() = "straight"
@@ -39,38 +34,40 @@ let chairStructureValue =
 [<LangTheory; LangCsFsData>]
 let ``a destructured dictionary yeilds dictionary values`` (lang) =
     let inputDictionary = System.Collections.Generic.Dictionary(dict [| "key", Chair(); |])
-    let actual = capture lang "this {@will} work, I hope" [ inputDictionary ]
-    let expected = [ PropertyNameAndValue("will", DictionaryValue [ ScalarValue "key", chairStructureValue ]) ]
-    test <@ actual = expected @>
+    MtAssert.DestructuredAs(lang, "this {@will} work, I hope", [| inputDictionary |],
+        expected = [ PropertyNameAndValue("will", DictionaryValue [ ScalarValue "key", chairStructureValue ]) ])
 
 [<LangTheory; LangCsFsData>]
 let ``an F# 'dict' (which is not Dictionary<_,_>) yeilds a sequence->structure value`` (lang) =
     let inputDictionary = dict [| "firstDictEntryKey", Chair(); |]
-    let actual = capture lang "this {@will} work, I hope" [ inputDictionary ]
-    let expected = [ PropertyNameAndValue("will", SequenceValue [StructureValue("KeyValuePair`2", [ PropertyNameAndValue("Key", ScalarValue "firstDictEntryKey")
-                                                                                                    PropertyNameAndValue("Value", chairStructureValue)
-                                                                                                  ])
-                                                                ])
-                   ]
-    test <@ actual = expected @>
+    MtAssert.DestructuredAs(lang, "this {@will} work, I hope", [| inputDictionary |],
+        expected = [
+            PropertyNameAndValue("will",
+                SequenceValue [
+                    StructureValue("KeyValuePair`2",
+                        [ PropertyNameAndValue("Key", ScalarValue "firstDictEntryKey")
+                          PropertyNameAndValue("Value", chairStructureValue) ])
+                ])
+            ])
 
 [<LangTheory; LangCsFsData>]
 let ``a class instance is captured as a structure value`` (lang) =
-    let actual = capture lang "I sat at {@Chair}" [Chair()]
-    let expected : PropertyNameAndValue list = [ PropertyNameAndValue("Chair", chairStructureValue) ]
-    test <@ actual = expected @>
+    MtAssert.DestructuredAs(lang, "I sat at {@Chair}", [|Chair()|],
+        [ PropertyNameAndValue("Chair", chairStructureValue) ])
 
 [<LangTheory; LangCsFsData>]
 let ``one positional property and one value yields the correct positional property`` (lang) =
-    let actual = capture lang "this {0} work, I hope" ["will"]
-    test <@ actual = [ PropertyNameAndValue("0", ScalarValue "will") ] @>
+    MtAssert.DestructuredAs(lang, "this {0} work, I hope", [|"will"|], [ PropertyNameAndValue("0", ScalarValue "will") ])
 
 [<LangTheory; LangCsFsData>]
 let ``multiple positional property and the same number of values yields the correct positional properties`` (lang) =
-    let actual = capture lang "{0} {1} {2}, I hope" ["this"; 10; true]
-    test <@ actual = [ PropertyNameAndValue("0", ScalarValue ("this"))
-                       PropertyNameAndValue("1", ScalarValue (10))
-                       PropertyNameAndValue("2", ScalarValue (true)) ] @>
+    MtAssert.DestructuredAs(lang, "{0} {1} {2} {3} {4} {5}, I hope", [|"this"; 10; true;"this"; 10; true|],
+        [ PropertyNameAndValue("0", ScalarValue ("this"))
+          PropertyNameAndValue("1", ScalarValue (10))
+          PropertyNameAndValue("2", ScalarValue (true))
+          PropertyNameAndValue("3", ScalarValue ("this"))
+          PropertyNameAndValue("4", ScalarValue (10))
+          PropertyNameAndValue("5", ScalarValue (true)) ])
 
 type MyScalarEnum = Zero=0 | One=1 | Two=2
 
@@ -111,10 +108,9 @@ let getScalarExpected (v:obj, e:ExpectedScalarResult) =
 [<LangTheory; LangCsFsData>]
 let ``scalar types are captured correctly when positional`` (lang) =
     let positionalFmtString = String.Join(" ", (scalars |> Seq.mapi (fun i _ -> "{" + string i + "}")))
-    let valuesArray = scalars |> Seq.map (scalarInputAsObj) |> Seq.toList
+    let valuesArray = scalars |> Seq.map (scalarInputAsObj) |> Seq.toArray
     let expected = scalars |> List.mapi (fun i s -> PropertyNameAndValue(string i, ScalarValue (getScalarExpected s)))
-    let actual = capture lang positionalFmtString valuesArray
-    test <@ actual = expected @>
+    MtAssert.DestructuredAs(lang, positionalFmtString, valuesArray, expected)
 
 [<LangTheory; LangCsFsData>]
 let ``scalar types are captured correctly when positionally out of order`` (lang) =
@@ -122,50 +118,44 @@ let ``scalar types are captured correctly when positionally out of order`` (lang
     let posTokensStringsOutOfOrder = numberedOutOfOrder |> Seq.map (fun (i, _) -> "{" + string i + "}")
     let outOfOrder = numberedOutOfOrder |> List.map (fun (i, items) -> items)
     let positionalFmtString = String.Join(" ", posTokensStringsOutOfOrder)
-    let values = outOfOrder |> Seq.map (scalarInputAsObj) |> Seq.toList
+    let values = outOfOrder |> Seq.map (scalarInputAsObj) |> Seq.toArray
     let expected = outOfOrder |> List.mapi (fun i s -> PropertyNameAndValue(string i, ScalarValue (getScalarExpected s)))
-    let actual = capture lang positionalFmtString values
-    test <@ actual = expected @>
+    MtAssert.DestructuredAs(lang, positionalFmtString, values, expected)
 
 [<LangTheory; LangCsFsData>]
 let ``scalar types are captured correctly when named`` (lang) =
     let namedFmtString = String.Join(" ", (scalars |> Seq.mapi (fun i v -> "{named" + (string i) + "}")))
-    let values = scalars |> Seq.map (fun s -> (scalarInputAsObj s)) |> Seq.toList
+    let values = scalars |> Seq.map (fun s -> (scalarInputAsObj s)) |> Seq.toArray
     let expected = scalars |> List.mapi (fun i s -> PropertyNameAndValue("named" + string i, ScalarValue (getScalarExpected s)))
-    let actual = capture lang namedFmtString values
-    test <@ actual = expected @>
+    MtAssert.DestructuredAs(lang, namedFmtString, values, expected)
 
 [<LangTheory; LangCsFsData>]
 let ``multiple positional property capture the correct integral scalar types`` (lang) =
-    let values = [  box     1s
-                    box     2us
-                    box     3
-                    box     4u
-                    box     5L
-                    box     6UL ]
-    let actual = capture lang "{0} {1} {2}, I hope, {3} {4} {5}" values
-    test <@ actual = [ PropertyNameAndValue("0", ScalarValue (box 1s))
-                       PropertyNameAndValue("1", ScalarValue (box 2us))
-                       PropertyNameAndValue("2", ScalarValue (box 3))
-                       PropertyNameAndValue("3", ScalarValue (box 4u))
-                       PropertyNameAndValue("4", ScalarValue (box 5L))
-                       PropertyNameAndValue("5", ScalarValue (box 6UL)) ] @>
+    let values : obj[] = [| 1s; 2us; 3; 4u; 5L; 6UL |]
+    MtAssert.DestructuredAs(lang, "{0} {1} {2}, I hope, {3} {4} {5}", values,
+        [ PropertyNameAndValue("0", ScalarValue (box 1s))
+          PropertyNameAndValue("1", ScalarValue (box 2us))
+          PropertyNameAndValue("2", ScalarValue (box 3))
+          PropertyNameAndValue("3", ScalarValue (box 4u))
+          PropertyNameAndValue("4", ScalarValue (box 5L))
+          PropertyNameAndValue("5", ScalarValue (box 6UL)) ])
 
 [<LangTheory; LangCsFsData>]
 let ``multiple positional nullable properties capture the correct integral scalar types`` (lang) =
-    let values = [  box     (Nullable 1s)
-                    box     (Nullable 2us)
-                    box     (Nullable 3)
-                    box     (Nullable 4u)
-                    box     (Nullable 5L)
-                    box     (Nullable 6UL) ]
-    let actual = capture lang "{0} {1} {2}, I hope, {3} {4} {5}" values
-    test <@ actual = [ PropertyNameAndValue("0", ScalarValue (box 1s))
-                       PropertyNameAndValue("1", ScalarValue (box 2us))
-                       PropertyNameAndValue("2", ScalarValue (box 3))
-                       PropertyNameAndValue("3", ScalarValue (box 4u))
-                       PropertyNameAndValue("4", ScalarValue (box 5L))
-                       PropertyNameAndValue("5", ScalarValue (box 6UL)) ] @>
+    let values : obj[] = [|
+        (Nullable 1s)
+        (Nullable 2us)
+        (Nullable 3)
+        (Nullable 4u)
+        (Nullable 5L)
+        (Nullable 6UL)|]
+    MtAssert.DestructuredAs(lang, "{0} {1} {2}, I hope, {3} {4} {5}", values,
+        [ PropertyNameAndValue("0", ScalarValue (box 1s))
+          PropertyNameAndValue("1", ScalarValue (box 2us))
+          PropertyNameAndValue("2", ScalarValue (box 3))
+          PropertyNameAndValue("3", ScalarValue (box 4u))
+          PropertyNameAndValue("4", ScalarValue (box 5L))
+          PropertyNameAndValue("5", ScalarValue (box 6UL)) ])
 
 type MyDu = Case1 | Case2
 type MyDuWithTuple =

@@ -142,7 +142,7 @@ module AnyFormat =
 
     let allBasicFormatters = new ImplementationComparer<IFormatTest>(
                                     MtFs, [ MtCs; StringFormat; StringBuilder
-                                            FsPrintf; StringWriter; Ant4St ],
+                                            FsPrintf; StringWriter; (*Ant4St*) ],
                                     warmup=true, verbose=true)
 
 AnyFormat.allBasicFormatters.Run(

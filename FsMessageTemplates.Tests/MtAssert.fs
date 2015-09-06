@@ -51,7 +51,7 @@ type MtAssert() =
             let captured = CsToFs.CsMt.CaptureWith(maxDepth, additionalScalars, csDestrs, mt, values)
             let propsByName = captured |> Seq.map (fun tp -> tp.Name, tp.Value) |> dict |> Dictionary<string, CsToFs.CsTemplatePropertyValue>
             mt.Render(properties=propsByName, formatProvider=provider)
-        | "F#" ->
+        | "F#" ->           
             let mt = FsMessageTemplates.Parser.parse template
             let emptyKeepTrying = Unchecked.defaultof<TemplatePropertyValue>
             let tryScalars : Destructurer = fun r ->
@@ -71,10 +71,46 @@ type MtAssert() =
                               |> dict
             let getValueByName name =
                 let exists, value = propsByName.TryGetValue(name)
-                if exists then value else Unchecked.defaultof<TemplatePropertyValue>
+                if exists then value else TemplatePropertyValue.Empty
             use tw = new System.IO.StringWriter(formatProvider=provider)
             FsMessageTemplates.Formatting.formatCustom mt tw getValueByName
-            tw.ToString()
+            let formatCustomOutput = tw.ToString()
+
+            // if invariant and no custom scalars and types provided, verify 'format' gives the same result
+            // if maxDepth is different, we also can't assert the other overloads produce the same output, as
+            // only formatCustom allows this to change.
+            if maxDepth=10 && additionalScalars = Seq.empty<Type> && additionalDestrs = Seq.empty<Destructurer> then
+                if provider = invariantProvider then
+                    // format should be the same
+                    let formatOutput = FsMessageTemplates.Formatting.format mt values
+                    Xunit.Assert.Equal (formatCustomOutput, formatOutput)
+                    
+                    // bprintm should be the same
+                    let sb = System.Text.StringBuilder()
+                    FsMessageTemplates.Formatting.bprintm mt sb values
+                    Xunit.Assert.Equal (formatCustomOutput, sb.ToString())
+
+                    // bprintsm should be the same
+                    sb.Clear() |> ignore
+                    FsMessageTemplates.Formatting.bprintsm sb template values
+                    Xunit.Assert.Equal (formatCustomOutput, sb.ToString())
+                
+                // fprintm should be the same
+                use fprintTw = new System.IO.StringWriter(formatProvider=provider)
+                FsMessageTemplates.Formatting.fprintm mt fprintTw values
+                Xunit.Assert.Equal (formatCustomOutput, fprintTw.ToString())
+
+                // fprintsm should be the same
+                use fprintsTw = new System.IO.StringWriter(formatProvider=provider)
+                FsMessageTemplates.Formatting.fprintsm fprintsTw template values
+                Xunit.Assert.Equal (formatCustomOutput, fprintsTw.ToString())
+
+                // sprint*m should be the same
+                Xunit.Assert.Equal (formatCustomOutput, FsMessageTemplates.Formatting.sprintm mt provider values)
+                Xunit.Assert.Equal (formatCustomOutput, FsMessageTemplates.Formatting.sprintsm provider template values)
+
+            formatCustomOutput
+
         | other -> failwithf "unexpected lang %s" other
 
     static member DestructuredAs(lang, template, values, expected, ?maxDepth, ?additionalScalars, ?additionalDestrs) =
