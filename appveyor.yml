@@ -6,7 +6,7 @@ init:
 
 # this turns of AppVeyor automatic searching for test-assemblies, not the actual testing
 test_script:
-  - dnx MessageTemplates.Tests test
+  # - dnx MessageTemplates.Tests test
   - packages\xunit.runner.console\tools\xunit.console.x86.exe FsMessageTemplates.Tests\bin\Release\FsMessageTemplates.Tests.dll
   - vstest.console /Logger:AppVeyor MessageTemplates.PerfTests\bin\Release\MessageTemplates.PerfTests.exe
   - fsiAnyCPU -O --tailcalls+ --crossoptimize+ --exec MessageTemplates.PerfTests\Script.fsx --exportCharts
