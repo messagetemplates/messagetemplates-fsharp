@@ -331,7 +331,7 @@ let createParseCaptureFormatTest testTemplate tw (impl: Implementations.Implemen
     printfn "%s: initialising with '%s'" impl.Name testTemplate.Title
 
     let template = impl.initTemplate testTemplate
-    printfn "%s: template = '%A'" impl.Name template
+    printfn "%s: template = '%s'" impl.Name ((string template).Replace("\n", "\\n"))
 
     let args = impl.initTemplateArgs testTemplate
     printfn "%s: args = '%A'" impl.Name args
@@ -355,7 +355,6 @@ let createCaptureFormatTest testTemplate tw (impl: Implementations.Implementatio
     printfn "%s: initialising with '%s'" impl.Name testTemplate.Title
 
     let template = impl.parse.Value (impl.initTemplate testTemplate)
-    printfn "%s: template '%A' -> '%A'" impl.Name testTemplate.TokenValues template
 
     let args = impl.initTemplateArgs testTemplate
     printfn "%s: args = '%A'" impl.Name args
