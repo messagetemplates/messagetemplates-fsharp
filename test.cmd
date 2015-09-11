@@ -1,4 +1,4 @@
-dnx MessageTemplates.Tests test
+dnx -p MessageTemplates.Tests test
 @if ERRORLEVEL 1 goto :failure
 
 packages\xunit.runner.console\tools\xunit.console.x86.exe FsMessageTemplates.Tests\bin\Release\FsMessageTemplates.Tests.dll

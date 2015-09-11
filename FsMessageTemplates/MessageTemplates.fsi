@@ -1,6 +1,7 @@
 ﻿namespace FsMessageTemplates
 
-/// A hint at how a property should be destructured.
+/// A hint at how a property should be destructured. The '@' character means 
+/// 'Destructure' whereas the '$' means stringify.
 type DestrHint = Default = 0 | Stringify = 1 | Destructure = 2
 
 /// The alignment direction.
@@ -61,7 +62,7 @@ type Template =
     member FormatString : string
     member Properties : PropertyToken seq
     member internal Named : PropertyToken []
-    member internal PositionalsByPos : PropertyToken []
+    member internal Positionals : PropertyToken []
 
 /// A key and value pair, used as part of <see cref="TemplatePropertyValue.DictionaryValue" />.
 type ScalarKeyValuePair = TemplatePropertyValue * TemplatePropertyValue
@@ -86,7 +87,7 @@ and
     /// TemplatePropertyValue.
     [<Class; NoEquality; NoComparison>]
     DestructureRequest =
-        new: destructurer:Destructurer * value:obj * ?maxDepth:int * ?currentDepth:int * ?hint:DestrHint -> DestructureRequest
+        new: destructurer:Destructurer * value:obj * maxDepth:int * currentDepth:int * hint:DestrHint -> DestructureRequest
         member Hint: DestrHint
         member Value: obj
         member Destructurer: Destructurer

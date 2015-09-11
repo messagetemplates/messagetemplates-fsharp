@@ -60,11 +60,13 @@ type Token =
     override x.ToString() = match x with | Text (_, s) -> s | Prop (_, pd) -> (string pd)
 
 type Template(formatString:string, tokens: Token[], isNamed:bool, properties:PropertyToken[]) =
+    let named = if isNamed then properties else Unchecked.defaultof<PropertyToken[]>
+    let positional = if isNamed then Unchecked.defaultof<PropertyToken[]> else properties
     member this.Tokens = tokens :> Token seq
     member this.FormatString = formatString
     member this.Properties = properties :> PropertyToken seq
-    member internal this.Named = if isNamed then properties else Unchecked.defaultof<PropertyToken[]>
-    member internal this.PositionalsByPos = if isNamed then Unchecked.defaultof<PropertyToken[]> else properties
+    member internal this.Named = named
+    member internal this.Positionals = positional
     member internal this.HasAnyProperties = properties.Length > 0
 
 type ScalarKeyValuePair = TemplatePropertyValue * TemplatePropertyValue
@@ -74,7 +76,6 @@ and TemplatePropertyValue =
 | SequenceValue of TemplatePropertyValue list
 | StructureValue of typeTag:string * values:PropertyNameAndValue list
 | DictionaryValue of data: ScalarKeyValuePair list
-    static member ScalarNull = ScalarValue null
     static member Empty = Unchecked.defaultof<TemplatePropertyValue>
 
 [<AutoOpen>]
@@ -87,25 +88,32 @@ module Log =
 
 module Defaults =
     let maxDepth = 10
+    let scalarNull = ScalarValue null
 
 type Destructurer = DestructureRequest -> TemplatePropertyValue
 and
     [<NoEquality; NoComparison>]
-    DestructureRequest(destructurer:Destructurer, value:obj, ?maxDepth:int, ?currentDepth:int, ?hint:DestrHint) =
-        member x.Hint = defaultArg hint DestrHint.Default
+    DestructureRequest(destructurer:Destructurer, value:obj, maxDepth:int, currentDepth:int, hint:DestrHint) =
+        member x.Hint = hint
         member x.Value = value
         member x.Destructurer = destructurer
-        member x.MaxDepth = defaultArg maxDepth 10
-        member x.CurrentDepth = defaultArg currentDepth 1
+        member x.MaxDepth = maxDepth
+        member x.CurrentDepth = currentDepth
         member internal x.Log = nullLogger
         /// During destructuring, this is called to 'recursively' destructure child properties
         /// or sequence elements.
-        member inline internal x.TryAgainWithValue (newValue:obj, ?newDestructurer: Destructurer) =
+        member inline internal x.TryAgainWithValue (newValue:obj) =
             let nextDepth = x.CurrentDepth + 1
-            if nextDepth > x.MaxDepth then TemplatePropertyValue.ScalarNull
+            if nextDepth > x.MaxDepth then Defaults.scalarNull
             else 
-                let destructurer = defaultArg newDestructurer x.Destructurer
-                let childRequest = DestructureRequest(destructurer, newValue, x.MaxDepth, nextDepth, x.Hint)
+                let childRequest = DestructureRequest(destructurer, newValue, maxDepth, nextDepth, hint)
+                // now invoke the full destructurer again on the new value
+                x.Destructurer childRequest
+        member inline internal x.TryAgainWithValueAndDestr (newValue:obj, destructurer:Destructurer) =
+            let nextDepth = x.CurrentDepth + 1
+            if nextDepth > x.MaxDepth then Defaults.scalarNull
+            else 
+                let childRequest = DestructureRequest(destructurer, newValue, maxDepth, nextDepth, hint)
                 // now invoke the full destructurer again on the new value
                 x.Destructurer childRequest
 
@@ -114,6 +122,7 @@ module Empty =
     let textToken = Text(0, "")
     let propToken = Prop(0, PropertyToken.Empty)
     let textTokenArray = [| textToken |]
+    let scalarNull = Defaults.scalarNull
 
 module Parser =
     
@@ -348,7 +357,6 @@ module Parser =
                 if pt.IsPositional then anyPos <- true else allPos <- false
             | _ -> ()
         let properties = rzProps.ToArray()
-        if allPos then properties |> Array.sortInPlaceBy (fun p -> p.Pos)
         Template(s, tokens, not allPos, properties)
 
 module Destructure =
@@ -425,7 +433,7 @@ module Destructure =
 
 
     let inline tryNull (r:DestructureRequest) =
-        match r.Value with | null -> ScalarValue null | _ -> TemplatePropertyValue.Empty
+        match r.Value with | null -> Empty.scalarNull | _ -> TemplatePropertyValue.Empty
     let inline tryStringifyDestructurer (r:DestructureRequest) =
         match r.Hint with | DestrHint.Stringify -> ScalarValue (r.Value.ToString()) | _ -> TemplatePropertyValue.Empty
 
@@ -462,7 +470,7 @@ module Destructure =
                             // only attempt the built-in scalars for the keyValue, because only
                             // scalar values are supported as dictionary keys. However, do full 
                             // destructuring for the dictionary entry values.
-                            r.TryAgainWithValue (key, tryScalarDestructure), r.TryAgainWithValue (value))
+                            r.TryAgainWithValueAndDestr (key, tryScalarDestructure), r.TryAgainWithValue (value))
                           |> Seq.toList
             DictionaryValue skvps
         | e -> SequenceValue(e |> Seq.cast<obj> |> Seq.map r.TryAgainWithValue |> Seq.toList)
@@ -516,12 +524,9 @@ module Destructure =
     /// destructuring at the appropriate points in the pipline. Note this is
     /// called recursively in a tight loop during the process of capturing
     /// template property values, which means it needs to be fairly fast.
-    let inline tryAllWithCustom (tryCustomScalarTypes: Destructurer option)
-                                (tryCustomDestructure: Destructurer option)
+    let inline tryAllWithCustom (tryCustomScalarTypes: Destructurer)
+                                (tryCustomDestructure: Destructurer)
                                 (request: DestructureRequest) =
-        let tryCustomDestructure = defaultArg tryCustomDestructure alwaysKeepTrying
-        let tryCustomScalarTypes = defaultArg tryCustomScalarTypes alwaysKeepTrying
-
         // Performance :(
         match tryNull request with
         | tpv when isEmptyKeepTrying tpv ->
@@ -557,9 +562,11 @@ module Capturing =
     let inline isEmptyKeepTrying (tpv) = Destructure.isEmptyKeepTrying (tpv)
 
     let createCustomDestructurer (tryScalars:Destructurer option) (tryCustomObjects: Destructurer option) : Destructurer =
+        let tryScalars = if tryScalars.IsSome then tryScalars.Value else Destructure.alwaysKeepTrying
+        let tryCustomObjects = if tryCustomObjects.IsSome then tryCustomObjects.Value else Destructure.alwaysKeepTrying
         Destructure.tryAllWithCustom tryScalars tryCustomObjects
 
-    let defaultDestructureNoCustoms : Destructurer = Destructure.tryAllWithCustom None None
+    let defaultDestructureNoCustoms : Destructurer = Destructure.tryAllWithCustom Destructure.alwaysKeepTrying Destructure.alwaysKeepTrying
 
     let capturePositionals (log:SelfLogger) (destr:Destructurer) (maxDepth:int)
                            (template:string) (props:PropertyToken[]) (args:obj[]) =
@@ -570,7 +577,7 @@ module Capturing =
             else
                 // only destructure it once
                 if obj.ReferenceEquals(null, Array.get !result p.Pos) then
-                    let req = DestructureRequest(destr, args.[p.Pos], maxDepth, hint=p.Destr)
+                    let req = DestructureRequest(destr, args.[p.Pos], maxDepth, 1, hint=p.Destr)
                     Array.set !result p.Pos { Name=p.Name; Value=destr req }
 
         let mutable next = 0
@@ -594,7 +601,7 @@ module Capturing =
         let result = Array.zeroCreate<PropertyNameAndValue>(matchedRun)
         for i = 0 to matchedRun-1 do
             let p = props.[i]
-            let req = DestructureRequest(destr, args.[i], maxDepth, hint=p.Destr)
+            let req = DestructureRequest(destr, args.[i], maxDepth, 1, hint=p.Destr)
             Array.set result i { Name=p.Name; Value=destr req }
         result
 
@@ -605,8 +612,8 @@ module Capturing =
         if (args = null || args.Length = 0) && t.HasAnyProperties then Array.empty
         elif not t.HasAnyProperties then Array.empty
         else
-            let props = if t.PositionalsByPos <> null then t.PositionalsByPos else t.Named
-            let capturer = if t.PositionalsByPos <> null then capturePositionals else captureNamed
+            let props = if t.Positionals <> null then t.Positionals else t.Named
+            let capturer = if t.Positionals <> null then capturePositionals else captureNamed
             capturer log destr maxDepth t.FormatString props args
 
     let capturePropertiesCustom (d: Destructurer) (maxDepth: int) (t: Template) (args: obj[]) =

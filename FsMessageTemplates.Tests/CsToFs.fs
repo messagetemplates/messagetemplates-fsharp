@@ -85,14 +85,14 @@ let createTpvFactory (destr: Destructurer) : MessageTemplates.Core.ITemplateProp
     { new MessageTemplates.Core.ITemplatePropertyValueFactory with
           member __.CreatePropertyValue(value: obj, destructureObjects: bool) : MessageTemplates.Structure.TemplatePropertyValue = 
             let hint = if destructureObjects then DestrHint.Destructure else DestrHint.Default
-            let req = DestructureRequest (destr, value, hint=hint)
+            let req = DestructureRequest (destr, value, 10, 1, hint=hint)
             destr req |> createCsTpvFromFsTpv
     }
 
 let fsDestrToCsDestrPolicy (destr: Destructurer) =
     { new MessageTemplates.Core.IDestructuringPolicy with
             member x.TryDestructure(value: obj, pvf: MessageTemplates.Core.ITemplatePropertyValueFactory, result: byref<MessageTemplates.Structure.TemplatePropertyValue>): bool = 
-                let req = DestructureRequest(destr, value, hint=DestrHint.Destructure)
+                let req = DestructureRequest(destr, value, 10, 1, hint=DestrHint.Destructure)
                 let tpv = destr req |> createCsTpvFromFsTpv
                 result <- tpv
                 true
