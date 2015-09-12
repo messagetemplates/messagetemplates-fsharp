@@ -20,33 +20,36 @@ type TestTemplate =
 
 module TestCases =
     let fmtLitStringNoQuotes = "l"
-    type t1ArgsObj = { p1: string }
-    let t1 = { Title = "named 1x string"
-               TokenValues = [ Literal "you have priority "; NamedProperty("p1", "one", fmtLitStringNoQuotes); Literal "\n" ]
-               DictionaryOfNamesAndValues = dict ["p1", box "one"]
-               ObjectWithNamedProps = { p1="one" }
-               ExpectedOutput = "you have priority one\n" }
+    type OneStringNamed_p1 = { p1: string }
+    let named1string =
+        { Title = "named 1x string"
+          TokenValues = [ Literal "you have priority "; NamedProperty("p1", "one", fmtLitStringNoQuotes); Literal "\n" ]
+          DictionaryOfNamesAndValues = dict ["p1", box "one"]
+          ObjectWithNamedProps = { p1="one" }
+          ExpectedOutput = "you have priority one\n" }
 
-    type t2ArgsObj = { name: string; manager: string }
-    let t2 = { Title = "named 2x string"
-               TokenValues = [ Literal "hello, "; NamedProperty("name", "adam", fmtLitStringNoQuotes)
-                               Literal ", your manager is "; NamedProperty("manager", "john", fmtLitStringNoQuotes)
-                               Literal "\n" ]
-               DictionaryOfNamesAndValues = dict ["name", box "adam"; "manager", box "john"]
-               ObjectWithNamedProps = { name="adam"; manager="john" }
-               ExpectedOutput = "hello, adam, your manager is john\n" }
+    type NameAndManager = { name: string; manager: string }
+    let named2string =
+        { Title = "named 2x string"
+          TokenValues = [ Literal "hello, "; NamedProperty("name", "adam", fmtLitStringNoQuotes)
+                          Literal ", your manager is "; NamedProperty("manager", "john", fmtLitStringNoQuotes)
+                          Literal "\n" ]
+          DictionaryOfNamesAndValues = dict ["name", box "adam"; "manager", box "john"]
+          ObjectWithNamedProps = { name="adam"; manager="john" }
+          ExpectedOutput = "hello, adam, your manager is john\n" }
 
 module DestructuringTestCases = 
     let fmtLitStringNoQuotes = "l"
     type Person = { Name: string; Manager: string }
-    let t3Person = { Name="Adam"; Manager="john" }
-    let t3Arg0 = DestrNamedProp("@", "0", t3Person, fmtLitStringNoQuotes)
-    let t3RepeatCount = 7
-    let t3 = { Title = "same pos " + string t3RepeatCount + " destr"
-               TokenValues = List.replicate t3RepeatCount t3Arg0
-               DictionaryOfNamesAndValues = dict [ "0", box t3Arg0 ]
-               ObjectWithNamedProps = null
-               ExpectedOutput = String.replicate t3RepeatCount "Person { Name: \"Adam\", Manager: \"john\" }" }
+    let samePosRepDestPerson = { Name="Adam"; Manager="john" }
+    let samePosRepDestArg0 = DestrNamedProp("@", "0", samePosRepDestPerson, fmtLitStringNoQuotes)
+    let repeatCount = 7
+    let samePosRepDestr =
+        { Title = "same pos " + string repeatCount + " destr"
+          TokenValues = List.replicate repeatCount samePosRepDestArg0
+          DictionaryOfNamesAndValues = dict [ "0", box samePosRepDestArg0 ]
+          ObjectWithNamedProps = null
+          ExpectedOutput = String.replicate repeatCount "Person { Name: \"Adam\", Manager: \"john\" }" }
 
 module Features =   
     /// Allows a tested implementation to configure it's output with the provided TextWriter
@@ -401,15 +404,17 @@ let createAllDestructuringComparer tt =
     tt, ImplementationComparer(theOne, theOthers, warmup=true, verbose=true, throwOnError=false)
 
 let comparers = [
-    createAllNamedOrPosComparer TestCases.t1
-    createAllNamedOrPosComparer TestCases.t2
-    createAllDestructuringComparer DestructuringTestCases.t3 ]
+    createAllNamedOrPosComparer TestCases.named1string
+    createAllNamedOrPosComparer TestCases.named2string
+    createAllDestructuringComparer DestructuringTestCases.samePosRepDestr ]
 
 comparers |> List.iter (fun (tt, c) -> c.Run(id="100k x " + tt.Title, repeat=100000, testF=fun t -> t.DoIt()))
 
 #load "../packages/FSharp.Charting/FSharp.Charting.fsx"
 open FSharp.Charting
 open PerfUtil
+
+let exportFolder = System.IO.Path.Combine(__SOURCE_DIRECTORY__, "..\\artifacts\\perfcharts\\")
 
 // simple plot function
 let plot yaxis (metric : PerfResult -> float) (results : PerfResult list) =
@@ -419,15 +424,16 @@ let plot yaxis (metric : PerfResult -> float) (results : PerfResult list) =
     ch.ShowChart() |> ignore
 
     let nameFixedForExport = name.Value.ToString().Replace("[|\"","_").Replace("\"|]", "_") + ".png"
-    let exportFolder = System.IO.Path.Combine(__SOURCE_DIRECTORY__, "..\\artifacts\\perfcharts\\")
     System.IO.Directory.CreateDirectory(exportFolder) |> ignore
     let fileName = System.IO.Path.Combine(exportFolder, nameFixedForExport)
     System.Console.WriteLine("saving {0}", fileName)
     ch.SaveChartAs (fileName, ChartTypes.ChartImageFormat.Png)
 
 // read performance tests from 'Tests' module and run them
-comparers
-|> List.map (fun (tt, c) -> c.GetTestResults())
-|> List.concat
+let allTestResults = comparers |> List.map (fun (tt, c) -> c.GetTestResults()) |> List.concat
+// save the results as an XML file
+TestSession.toFile (System.IO.Path.Combine(exportFolder, "perftests.xml")) allTestResults
+// graph them
+allTestResults
 |> TestSession.groupByTest
 |> Map.iter (fun _ r -> plot "milliseconds" (fun t -> t.Elapsed.TotalMilliseconds) r)

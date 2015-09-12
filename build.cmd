@@ -2,10 +2,10 @@
 .paket\paket.exe install
 @if ERRORLEVEL 1 goto :failure
 
-call dnu restore MessageTemplates
+call dnu restore MessageTemplates --lock
 @if ERRORLEVEL 1 goto :failure
 
-call dnu restore MessageTemplates.Tests
+call dnu restore MessageTemplates.Tests --lock
 @if ERRORLEVEL 1 goto :failure
 
 msbuild /m /p:Configuration=Release

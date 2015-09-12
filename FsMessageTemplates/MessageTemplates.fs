@@ -45,7 +45,7 @@ type PropertyToken(name:string, pos:int, destr:DestrHint, align: AlignInfo, form
     member __.Align = align
     member __.Format = format
     member x.IsPositional with get() = x.Pos >= 0
-    member private x.AppendPropertyString (sb:StringBuilder, includeDestr:bool, name:string) =
+    member internal x.AppendPropertyString (sb:StringBuilder, includeDestr:bool, name:string) =
         sb  .Append("{")
             .AppendIf(includeDestr && x.Destr <> DestrHint.Default, x.Destr.ToDestrChar())
             .Append(name)
@@ -681,11 +681,13 @@ module Formatting =
     /// For properties, the System.String.Format rules are applied, including alignment
     /// and System.IFormattable rules, along with the additional MessageTemplates rules
     /// for named properties and destructure-formatting.
-    let inline writeToken (w: TextWriter) (token:Token) (value:TemplatePropertyValue) =
+    let inline writeToken (buffer: StringBuilder) (w: TextWriter) (token:Token) (value:TemplatePropertyValue) =
         match token, value with
         | Token.Text (_, raw), _ -> w.Write raw
         | Token.Prop (_, pt), pv ->
-            if Destructure.isEmptyKeepTrying pv then w.Write pt // calls ToString on the token
+            if Destructure.isEmptyKeepTrying pv then
+                let propertyTokenAsString = pt.AppendPropertyString(buffer, true, pt.Name).ToStringAndClear()
+                w.Write propertyTokenAsString
             else
                 if pt.Align.IsEmpty then
                     writePropValue w pv pt.Format
@@ -730,12 +732,13 @@ module Formatting =
             | 0 -> fun _ -> TemplatePropertyValue.Empty
             | 1 | 2 | 3 | 4 | 5 -> getByName1to5 values
             | _ -> getByNameDict (createValuesByPropNameDictionary values)
+        let buffer = StringBuilder()
         for t in template.Tokens do
             match t with
-            | Token.Text _ as tt -> writeToken w tt TemplatePropertyValue.Empty
+            | Token.Text _ as tt -> writeToken buffer w tt TemplatePropertyValue.Empty
             | Token.Prop (_, pd) as tp -> 
                 let value = getValueForPropName pd.Name
-                writeToken w tp value
+                writeToken buffer w tp value
 
     let parseCaptureFormat (tw: TextWriter) (template: string) (args: obj[]) =
         captureThenFormat tw (Parser.parse template) args
@@ -746,12 +749,13 @@ module Formatting =
         tw.ToString()
 
     let formatCustom (t:Template) w getValueByName =
+        let buffer = StringBuilder()
         for tok in t.Tokens do
             match tok with
-            | Token.Text _ as tt -> writeToken w tt TemplatePropertyValue.Empty
+            | Token.Text _ as tt -> writeToken buffer w tt TemplatePropertyValue.Empty
             | Token.Prop (_, pd) as tp ->
                 let value = getValueByName pd.Name
-                writeToken w tp value
+                writeToken buffer w tp value
 
     let bprintsm (sb:StringBuilder) template args =
         use tw = new StringWriter(sb)

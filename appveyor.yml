@@ -19,8 +19,8 @@ install:
   - set PATH=%PROGRAMFILES(x86)%\MSBuild\14.0\Bin;%PROGRAMFILES(x86)%\Microsoft SDKs\F#\4.0\Framework\v4.0\;%PATH%
   - dnvm install 1.0.0-beta7 -persistent -alias default
   - .paket\paket.exe restore
-  - dnu restore MessageTemplates
-  - dnu restore MessageTemplates.Tests
+  - dnu restore MessageTemplates --lock
+  - dnu restore MessageTemplates.Tests --lock
   - set DNX_BUILD_VERSION=%APPVEYOR_BUILD_NUMBER%
 build:
   verbosity: minimal
@@ -31,4 +31,4 @@ build:
 artifacts:
 - path: artifacts\bin\MessageTemplates\$(configuration)\*.nupkg
 - path: FsMessageTemplates\bin\Release\FsMessageTemplates.*
-- path: artifacts\perfcharts\*.png
+- path: artifacts\perfcharts\*
