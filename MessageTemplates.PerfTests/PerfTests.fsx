@@ -1,15 +1,33 @@
-﻿
-/// Describes the string template parts in an fairly generic way
+﻿#r "System.IO"
+#I "bin/Release/"
+#r "FsMessageTemplates"
+#r "MessageTemplates"
+#r "MessageTemplates.PerfTests"
+
+type PropFormat = {
+    Format: string
+    Hint: FsMessageTemplates.DestrHint
+    Align: FsMessageTemplates.AlignInfo option }
+    with
+        member x.ToNamedFormatString (name) = 
+            let align = if x.Align.IsSome then x.Align.Value else FsMessageTemplates.AlignInfo.Empty
+            let pt = FsMessageTemplates.PropertyToken(name, -1, x.Hint, align, x.Format)
+            pt.ToString()
+
+        static member Empty = { Format=""; Hint=FsMessageTemplates.DestrHint.Default; Align=None }
+        static member LitStr = { PropFormat.Empty with Format="l" }
+        static member Destructure = { PropFormat.Empty with Hint=FsMessageTemplates.DestrHint.Destructure }
+
+/// Describes the tested string templates in a generic-enough way
 type TestTemplateToken =
     | Literal of raw:string
-    | NamedProperty of name:string * value:obj * format:string
-    | DestrNamedProp of destrHint:string * name:string * value:obj * format:string
+    | Prop of name:string * value:obj * format:PropFormat
 
 type TestTemplate =
     { Title: string
       /// The messge template parts and values
       TokenValues: TestTemplateToken list
-      /// A pre-built dictionary of of names and values, for those implementations which
+      /// A pre-built dictionary of names and values, for those implementations which
       /// require dictionary input.
       DictionaryOfNamesAndValues: System.Collections.Generic.IDictionary<string, obj>
       /// An object with public properties and values; for those implementations which require
@@ -19,11 +37,10 @@ type TestTemplate =
       ExpectedOutput: string }
 
 module TestCases =
-    let fmtLitStringNoQuotes = "l"
     type OneStringNamed_p1 = { p1: string }
     let named1string =
         { Title = "named 1x string"
-          TokenValues = [ Literal "you have priority "; NamedProperty("p1", "one", fmtLitStringNoQuotes); Literal "\n" ]
+          TokenValues = [Literal "you have priority "; Prop("p1", "one", PropFormat.LitStr); Literal "\n"]
           DictionaryOfNamesAndValues = dict ["p1", box "one"]
           ObjectWithNamedProps = { p1="one" }
           ExpectedOutput = "you have priority one\n" }
@@ -31,18 +48,17 @@ module TestCases =
     type NameAndManager = { name: string; manager: string }
     let named2string =
         { Title = "named 2x string"
-          TokenValues = [ Literal "hello, "; NamedProperty("name", "adam", fmtLitStringNoQuotes)
-                          Literal ", your manager is "; NamedProperty("manager", "john", fmtLitStringNoQuotes)
+          TokenValues = [ Literal "hello, "; Prop("name", "adam", PropFormat.LitStr)
+                          Literal ", your manager is "; Prop("manager", "john", PropFormat.LitStr)
                           Literal "\n" ]
           DictionaryOfNamesAndValues = dict ["name", box "adam"; "manager", box "john"]
           ObjectWithNamedProps = { name="adam"; manager="john" }
           ExpectedOutput = "hello, adam, your manager is john\n" }
 
 module DestructuringTestCases = 
-    let fmtLitStringNoQuotes = "l"
     type Person = { Name: string; Manager: string }
     let samePosRepDestPerson = { Name="Adam"; Manager="john" }
-    let samePosRepDestArg0 = DestrNamedProp("@", "0", samePosRepDestPerson, fmtLitStringNoQuotes)
+    let samePosRepDestArg0 = Prop("0", samePosRepDestPerson, { PropFormat.Destructure with Format="l" })
     let repeatCount = 7
     let samePosRepDestr =
         { Title = "same pos " + string repeatCount + " destr"
@@ -50,6 +66,17 @@ module DestructuringTestCases =
           DictionaryOfNamesAndValues = dict [ "0", box samePosRepDestArg0 ]
           ObjectWithNamedProps = null
           ExpectedOutput = String.replicate repeatCount "Person { Name: \"Adam\", Manager: \"john\" }" }
+
+module AlignmentTestCases = 
+    let fmtLitStringNoQuotes = "l"
+    let posIsmAr10Values = [10..20]
+    let posIsmAr10Toks = posIsmAr10Values |> List.mapi (fun idx num -> Prop(string idx, num, PropFormat.Empty))
+    let posIsmAr10 =
+        { Title = "pos int*str*decimal AR10"
+          TokenValues = [Literal "hello, "] @ posIsmAr10Toks
+          DictionaryOfNamesAndValues = dict [ "0", box 9 ]
+          ObjectWithNamedProps = null // not supported for this test
+          ExpectedOutput = "hello, " }
 
 module Features =   
     /// Allows a tested implementation to configure it's output with the provided TextWriter
@@ -86,12 +113,6 @@ module Features =
     type Formatter<'ParsedTemplate, 'CapturedProperties, 'OutputSink> =
         'ParsedTemplate -> 'CapturedProperties -> 'OutputSink -> unit
 
-#r "System.IO"
-#I "bin/Release/"
-#r "FsMessageTemplates"
-#r "MessageTemplates"
-#r "MessageTemplates.PerfTests"
-
 #I "../packages/PerfUtil/lib/net40"
 #r "PerfUtil"
 
@@ -105,11 +126,14 @@ module Features =
 #I "../packages/NamedFormat/lib"
 #r "NamedFormat"
 
+#I "../packages/log4net/lib/net40-full"
+#r "log4net"
+
 open PerfUtil
 
 module Implementations =
     open System.Collections.Generic
-
+    
     /// Describes an implementation of the various features we are testing. All testables must
     /// have at least a name, and be capable of implementing the ParseCaptureFormat<'OutputSink>'
     /// style which takes a string template and the values as input, then writes the formatted
@@ -142,8 +166,7 @@ module Implementations =
             tt.TokenValues
             |> List.map (function
                 | Literal raw -> raw
-                | NamedProperty (name,_, fmt) -> "{" + name + (fmtOrEmpty fmt) + "}"
-                | DestrNamedProp (destr,name,_,fmt) -> "{" + destr + name + (fmtOrEmpty fmt) + "}"
+                | Prop (name,_,fmt) -> fmt.ToNamedFormatString (name)
             )
             |> String.concat ""
 
@@ -153,8 +176,7 @@ module Implementations =
             tt.TokenValues
             |> List.map (function
                 | Literal raw -> raw
-                | NamedProperty (name,_,_) -> "{" + name + "}"
-                | _ -> failwith "cannot handle this kind")
+                | Prop (name,_,_) -> "{" + name + "}")
             |> String.concat ""
 
     /// Creates a positional format template string such as "Hello, {0}" from the common test templates.
@@ -165,8 +187,7 @@ module Implementations =
             tt.TokenValues
             |> List.map (function
                 | Literal raw -> raw
-                | NamedProperty (_,_,fmt) -> "{" + string (nextPos()) + (fmtOrEmpty fmt) + "}"
-                | _ -> failwith "cannot handle this kind")
+                | Prop (_,_,fmt) -> fmt.ToNamedFormatString (string (nextPos())))
             |> String.concat ""
 
     /// Given a TestTemplate as input, this creates an obj[] of property values for input to
@@ -174,12 +195,19 @@ module Implementations =
     let private positionalFormatArgsArrayCreator : Features.TemplateArgsCreator<obj[]> =
         fun tt -> tt.TokenValues
                   |> List.choose (function
-                    | NamedProperty (_,v,_) -> Some v
-                    | DestrNamedProp (_,_,v,_) -> Some v
+                    | Prop (_,v,_) -> Some v
                     | _ -> None) |> Array.ofList
 
     let private fsPickValueByName (pnvs: FsMessageTemplates.PropertyNameAndValue seq) name =
         pnvs |> Seq.pick (fun pnv -> if pnv.Name = name then Some (pnv.Value) else None)
+        
+    let private nameValueHashtableArgsCreator : Features.TemplateArgsCreator<System.Collections.Hashtable> =
+        fun tt ->
+            let ht = System.Collections.Hashtable()
+            tt.TokenValues
+            |> List.choose (function Prop (n,v,_) -> Some (n, v) | _ -> None)
+            |> List.iter (fun (n,v) -> ht.Add(n, v))
+            ht
 
     let fsMessageTemplates = {
         Name                = "F# MessageTemplates"
@@ -211,7 +239,7 @@ module Implementations =
                                         tm.Render(dict, tw, tw.FormatProvider) }
 
     open Serilog
-
+    
     let serilog = {
         Name                = "Serilog"
         initOutput          = fun tw -> Serilog.LoggerConfiguration().WriteTo.TextWriter(tw, outputTemplate="{Message}").CreateLogger() 
@@ -227,6 +255,46 @@ module Implementations =
                                         logger
         captureFormat       = Some <| fun tm args logger -> logger.Information(tm.Text, args)
         format              = Some <| fun tm withCaptured _ -> withCaptured.Information(tm.Text)
+    }
+
+    open MessageTemplates.PerfTests.Logging
+
+    let liblogSerilog = {
+        Name                = "LibLog->Serilog"
+        initOutput          = fun tw ->
+                                Serilog.Log.Logger <- Serilog.LoggerConfiguration()
+                                    .WriteTo.TextWriter(tw, outputTemplate="{Message}")
+                                    .CreateLogger()
+                                let serilogProvider = Helper.ResolveLogProvider(Helper.LibLogKind.Serilog)
+                                LogProvider.SetCurrentLogProvider serilogProvider
+                                LogProvider.GetLogger "LibLog->Serilog PerfTests"
+        initTemplate        = namedFormatStringTemplateCreator
+        initTemplateArgs    = positionalFormatArgsArrayCreator
+        parseCaptureFormat  = fun mt vals logger -> logger.InfoFormat (mt, vals)
+        parse               = None // no way to pre-parse this
+        capture             = None // no way to parse or capture property names
+        captureFormat       = None // no way to parse or capture property names
+        format              = None // no way to parse or capture property names
+    }
+
+
+    let liblogLog4net = {
+        Name                = "LibLog->Log4Net"
+        initOutput          = fun tw ->
+                                let twa = log4net.Appender.TextWriterAppender(
+                                            Writer=tw, Layout=log4net.Layout.PatternLayout("%m"))
+                                twa.ActivateOptions()
+                                log4net.Config.BasicConfigurator.Configure(twa) |> ignore
+                                let log4netProvider = Helper.ResolveLogProvider(Helper.LibLogKind.Log4Net)
+                                LogProvider.SetCurrentLogProvider log4netProvider
+                                LogProvider.GetLogger "LibLogLog4netPerfTests"
+        initTemplate        = namedFormatStringNoFmtTemplateCreator
+        initTemplateArgs    = positionalFormatArgsArrayCreator
+        parseCaptureFormat  = fun mt vals logger -> logger.InfoFormat (mt, vals)
+        parse               = None // no way to pre-parse this
+        capture             = None // no way to parse or capture property names
+        captureFormat       = None // no way to parse or capture property names
+        format              = None // no way to parse or capture property names
     }
 
     let ioTextWriter = {
@@ -254,14 +322,6 @@ module Implementations =
         format              = None // no way to parse or capture property names
     }
     
-    let private nameValueHashtableArgsCreator : Features.TemplateArgsCreator<System.Collections.Hashtable> =
-        fun tt ->
-            let ht = System.Collections.Hashtable()
-            tt.TokenValues
-            |> List.choose (function NamedProperty (n,v,_) -> Some (n, v) | _ -> None)
-            |> List.iter (fun (n,v) -> ht.Add(n, v))
-            ht
-
     let stringInject = {
         Name                = "StringInject"
         initOutput          = initUsingTextWriter
@@ -384,6 +444,8 @@ let createAllNamedOrPosComparer tt =
     let theOthers = [
         createCaptureFormatTest tt (newTw()) csMessageTemplates
         createParseCaptureFormatTest tt (newTw()) serilog
+        createParseCaptureFormatTest tt (newTw()) liblogSerilog
+        createParseCaptureFormatTest tt (newTw()) liblogLog4net
         createParseCaptureFormatTest tt (newTw()) ioStringBuilder
         createParseCaptureFormatTest tt (newTw()) ioTextWriter
         createParseCaptureFormatTest tt (newTw()) stringInject
@@ -400,6 +462,7 @@ let createAllDestructuringComparer tt =
     let theOthers = [
         createCaptureFormatTest tt (newTw()) csMessageTemplates
         createParseCaptureFormatTest tt (newTw()) serilog
+        createParseCaptureFormatTest tt (newTw()) liblogSerilog
     ]
     tt, ImplementationComparer(theOne, theOthers, warmup=true, verbose=true, throwOnError=false)
 
@@ -418,9 +481,15 @@ let exportFolder = System.IO.Path.Combine(__SOURCE_DIRECTORY__, "..\\artifacts\\
 
 // simple plot function
 let plot yaxis (metric : PerfResult -> float) (results : PerfResult list) =
-    let values = results |> List.choose (fun r -> if r.HasFailed then None else Some (r.SessionId, metric r))
+    let values =
+        results
+        |> List.choose (fun r -> if r.HasFailed then None else Some (r.SessionId, metric r))
+        |> List.sortBy snd
+
     let name = results |> List.tryPick (fun r -> Some r.TestId)
     let ch = Chart.Bar(values, ?Name = name, ?Title = name, YTitle = yaxis)
+             |> Chart.With3D()
+
     ch.ShowChart() |> ignore
 
     let nameFixedForExport = name.Value.ToString().Replace("[|\"","_").Replace("\"|]", "_") + ".png"

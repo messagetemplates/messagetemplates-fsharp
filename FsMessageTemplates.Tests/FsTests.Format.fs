@@ -161,7 +161,7 @@ let ``an F# discriminated union object is formatted with provider correctly`` (l
                  + "ChairItem { c: ChairRecord { Back: \"straight\", Legs: [1, 2, 3, 4] }, Tag: 0, IsChairItem: True, IsReceiptItem: False }"
                  + " and "
                  + "ReceiptItem { r: ReceiptRecord { Sum: 12,345, When: 20/05/2013 16:39:00 }, Tag: 1, IsChairItem: False, IsReceiptItem: True }"
-    Asserts.MtAssert.RenderedAs(lang, template, values, expected, provider)
+    MtAssert.RenderedAs(lang, template, values, expected, provider)
 
 [<Theory; LangCsFsData>]
 let ``Rendered F# DU or Tuple fields are 'null' when depth is 1`` (lang) =
@@ -175,7 +175,7 @@ let ``Rendered F# DU or Tuple fields are 'null' when depth is 1`` (lang) =
                  + "Leaf { Item: null, Tag: null, IsSeq: null, IsLeaf: null, IsTrunk: null } and "
                  + "Trunk { Item1: null, Item2: null, Item3: null, Tag: null, IsSeq: null, IsLeaf: null, IsTrunk: null }"
     
-    Asserts.MtAssert.RenderedAs(lang, template, values, expected, provider, maxDepth=1)
+    MtAssert.RenderedAs(lang, template, values, expected, provider, maxDepth=1)
 
 [<Theory; LangCsFsData>]
 let ``Rendered F# DU or Tuple fields on level3 are 'null' when depth is 2`` (lang) =
@@ -193,7 +193,7 @@ let ``Rendered F# DU or Tuple fields on level3 are 'null' when depth is 2`` (lan
                  + "Trunk { Item1: 12,345, Item2: 20/05/2013 16:39:00 +09:30, Item3: [null, null], Tag: 2, IsSeq: False, IsLeaf: False, IsTrunk: True } and "
                  + "ChairItem { c: ChairRecord { Back: null, Legs: null }, Tag: 0, IsChairItem: True, IsReceiptItem: False }"
     
-    Asserts.MtAssert.RenderedAs(lang, template, values, expected, provider, maxDepth=2)
+    MtAssert.RenderedAs(lang, template, values, expected, provider, maxDepth=2)
 
 [<LangTheory; LangCsFsData>]
 let ``Destructred F# objects captured with a custom destructurer render with format provider`` (lang) =
@@ -213,4 +213,4 @@ and Trunk { Item1: 12,345, Item2: 20/05/2013 16:39:00 +09:30, Item3: [Leaf { Ite
 and Trunk { Item1: 1,1, Item2: 20/05/2013 16:39:00 +09:30, Item3: [Seq { nums: [1,1, 2,2, 3,3] }, Seq { nums: [4,4] }] }"
     let customFsharpDestr = CsToFs.toFsDestructurer (Destructurama.FSharpTypesDestructuringPolicy())
     let destr = FsMessageTemplates.Capturing.createCustomDestructurer None (Some customFsharpDestr)
-    Asserts.MtAssert.RenderedAs(lang, template, values, expected, provider, additionalDestrs=[destr])
+    MtAssert.RenderedAs(lang, template, values, expected, provider, additionalDestrs=[destr])
