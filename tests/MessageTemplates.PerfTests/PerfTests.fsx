@@ -477,7 +477,7 @@ comparers |> List.iter (fun (tt, c) -> c.Run(id="100k x " + tt.Title, repeat=100
 open FSharp.Charting
 open PerfUtil
 
-let exportFolder = System.IO.Path.Combine(__SOURCE_DIRECTORY__, "..\\artifacts\\perfcharts\\")
+let exportFolder = System.IO.Path.Combine(__SOURCE_DIRECTORY__, "..\\..\\artifacts\\perfcharts\\")
 
 // simple plot function
 let plot yaxis (metric : PerfResult -> float) (results : PerfResult list) =
