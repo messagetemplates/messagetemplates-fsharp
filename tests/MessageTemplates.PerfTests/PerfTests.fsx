@@ -478,6 +478,7 @@ open FSharp.Charting
 open PerfUtil
 
 let exportFolder = System.IO.Path.Combine(__SOURCE_DIRECTORY__, "..\\..\\artifacts\\perfcharts\\")
+System.IO.Directory.CreateDirectory(exportFolder)
 
 // simple plot function
 let plot yaxis (metric : PerfResult -> float) (results : PerfResult list) =
