@@ -1,33 +1,42 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.23107.0
-MinimumVisualStudioVersion = 10.0.40219.1
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".paket", ".paket", "{814101B7-5730-4AF7-BC5D-4B7B94F4336E}"
+# Visual Studio 2012
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".paket", ".paket", "{63297B98-5CED-492C-A5B7-A5B4F73CF142}"
 	ProjectSection(SolutionItems) = preProject
 		paket.dependencies = paket.dependencies
+		paket.lock = paket.lock
 	EndProjectSection
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{725D9A0A-C826-4139-9D0F-175120AC790B}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{A6A6AF7D-D6E3-442D-9B1E-58CC91879BE1}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tools", "tools", "{83F16175-43B1-4C90-A1EE-8E351C33435D}"
 	ProjectSection(SolutionItems) = preProject
-		.gitignore = .gitignore
-		appveyor.yml = appveyor.yml
-		global.json = global.json
-		README.md = README.md
-		test.cmd = test.cmd
+		docs\tools\generate.fsx = docs\tools\generate.fsx
+		docs\tools\templates\template.cshtml = docs\tools\templates\template.cshtml
 	EndProjectSection
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "MessageTemplates", "MessageTemplates\MessageTemplates.xproj", "{4BFADBD0-9E38-48AB-BFBD-D90F13F5264C}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "content", "content", "{8E6D5255-776D-4B61-85F9-73C37AA1FB9A}"
+	ProjectSection(SolutionItems) = preProject
+		docs\content\index.fsx = docs\content\index.fsx
+		docs\content\tutorial.fsx = docs\content\tutorial.fsx
+	EndProjectSection
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FsMessageTemplates", "FsMessageTemplates\FsMessageTemplates.fsproj", "{A3FFE923-B675-4E01-A085-6BB7C669CCFF}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "project", "project", "{BF60BC93-E09B-4E5F-9D85-95A519479D54}"
+	ProjectSection(SolutionItems) = preProject
+		build.fsx = build.fsx
+		README.md = README.md
+		RELEASE_NOTES.md = RELEASE_NOTES.md
+	EndProjectSection
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FsMessageTemplates.Tests", "FsMessageTemplates.Tests\FsMessageTemplates.Tests.fsproj", "{18EF9026-D9CC-4BE7-86E9-F7E1BF69845F}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{ED8079DD-2B06-4030-9F0F-DC548F98E1C4}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "MessageTemplates.Tests", "MessageTemplates.Tests\MessageTemplates.Tests.xproj", "{76BFEDD6-E686-47E6-BD7E-7062E0FA252F}"
+Project("{f2a71f9b-5d33-465a-a702-920d77279786}") = "FsMessageTemplates.Tests", "tests\FsMessageTemplates.Tests\FsMessageTemplates.Tests.fsproj", "{18EF9026-D9CC-4BE7-86E9-F7E1BF69845F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessageTemplates.Profile259", "MessageTemplates\MessageTemplates.Profile259.csproj", "{EA4E4A86-AE2F-4A35-A2B1-BA7894CE3F95}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessageTemplates.PerfTests", "tests\MessageTemplates.PerfTests\MessageTemplates.PerfTests.csproj", "{F93409C0-8D85-41C2-9D4A-137CF75059B9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessageTemplates.PerfTests", "MessageTemplates.PerfTests\MessageTemplates.PerfTests.csproj", "{F93409C0-8D85-41C2-9D4A-137CF75059B9}"
+Project("{f2a71f9b-5d33-465a-a702-920d77279786}") = "FsMessageTemplates", "src\FsMessageTemplates\FsMessageTemplates.fsproj", "{A3FFE923-B675-4E01-A085-6BB7C669CCFF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessageTemplates", "src\MessageTemplates\MessageTemplates.csproj", "{EA4E4A86-AE2F-4A35-A2B1-BA7894CE3F95}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -35,22 +44,14 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{4BFADBD0-9E38-48AB-BFBD-D90F13F5264C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{4BFADBD0-9E38-48AB-BFBD-D90F13F5264C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{4BFADBD0-9E38-48AB-BFBD-D90F13F5264C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{4BFADBD0-9E38-48AB-BFBD-D90F13F5264C}.Release|Any CPU.Build.0 = Release|Any CPU
-		{A3FFE923-B675-4E01-A085-6BB7C669CCFF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A3FFE923-B675-4E01-A085-6BB7C669CCFF}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A3FFE923-B675-4E01-A085-6BB7C669CCFF}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A3FFE923-B675-4E01-A085-6BB7C669CCFF}.Release|Any CPU.Build.0 = Release|Any CPU
 		{18EF9026-D9CC-4BE7-86E9-F7E1BF69845F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{18EF9026-D9CC-4BE7-86E9-F7E1BF69845F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{18EF9026-D9CC-4BE7-86E9-F7E1BF69845F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{18EF9026-D9CC-4BE7-86E9-F7E1BF69845F}.Release|Any CPU.Build.0 = Release|Any CPU
-		{76BFEDD6-E686-47E6-BD7E-7062E0FA252F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{76BFEDD6-E686-47E6-BD7E-7062E0FA252F}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{76BFEDD6-E686-47E6-BD7E-7062E0FA252F}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{76BFEDD6-E686-47E6-BD7E-7062E0FA252F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A3FFE923-B675-4E01-A085-6BB7C669CCFF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A3FFE923-B675-4E01-A085-6BB7C669CCFF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A3FFE923-B675-4E01-A085-6BB7C669CCFF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A3FFE923-B675-4E01-A085-6BB7C669CCFF}.Release|Any CPU.Build.0 = Release|Any CPU
 		{EA4E4A86-AE2F-4A35-A2B1-BA7894CE3F95}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{EA4E4A86-AE2F-4A35-A2B1-BA7894CE3F95}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EA4E4A86-AE2F-4A35-A2B1-BA7894CE3F95}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -59,6 +60,12 @@ Global
 		{F93409C0-8D85-41C2-9D4A-137CF75059B9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F93409C0-8D85-41C2-9D4A-137CF75059B9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F93409C0-8D85-41C2-9D4A-137CF75059B9}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{83F16175-43B1-4C90-A1EE-8E351C33435D} = {A6A6AF7D-D6E3-442D-9B1E-58CC91879BE1}
+		{8E6D5255-776D-4B61-85F9-73C37AA1FB9A} = {A6A6AF7D-D6E3-442D-9B1E-58CC91879BE1}
+		{18EF9026-D9CC-4BE7-86E9-F7E1BF69845F} = {ED8079DD-2B06-4030-9F0F-DC548F98E1C4}
+		{F93409C0-8D85-41C2-9D4A-137CF75059B9} = {ED8079DD-2B06-4030-9F0F-DC548F98E1C4}
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

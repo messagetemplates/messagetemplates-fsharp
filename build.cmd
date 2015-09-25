@@ -1,17 +1,17 @@
+@echo off
 
-.paket\paket.exe install
-@if ERRORLEVEL 1 goto :failure
+.paket\paket.bootstrapper.exe
+if errorlevel 1 (
+  exit /b %errorlevel%
+)
 
-call dnu restore MessageTemplates --lock
-@if ERRORLEVEL 1 goto :failure
+.paket\paket.exe restore
+if errorlevel 1 (
+  exit /b %errorlevel%
+)
 
-call dnu restore MessageTemplates.Tests --lock
-@if ERRORLEVEL 1 goto :failure
-
-msbuild /m /p:Configuration=Release
-@if ERRORLEVEL 1 goto :failure
-
-goto :eof
-
-:failure
-exit /b 1
+IF NOT EXIST build.fsx (
+  .paket\paket.exe update
+  packages\FAKE\tools\FAKE.exe init.fsx
+)
+packages\FAKE\tools\FAKE.exe build.fsx %*

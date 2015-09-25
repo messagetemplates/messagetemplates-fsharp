@@ -1,4 +1,4 @@
-﻿#r "System.IO"
+﻿#r "System"
 #I "bin/Release/"
 #r "FsMessageTemplates"
 #r "MessageTemplates"
@@ -9,7 +9,7 @@ type PropFormat = {
     Hint: FsMessageTemplates.DestrHint
     Align: FsMessageTemplates.AlignInfo option }
     with
-        member x.ToNamedFormatString (name) = 
+        member x.ToNamedFormatString (name) =
             let align = if x.Align.IsSome then x.Align.Value else FsMessageTemplates.AlignInfo.Empty
             let pt = FsMessageTemplates.PropertyToken(name, -1, x.Hint, align, x.Format)
             pt.ToString()
@@ -55,7 +55,7 @@ module TestCases =
           ObjectWithNamedProps = { name="adam"; manager="john" }
           ExpectedOutput = "hello, adam, your manager is john\n" }
 
-module DestructuringTestCases = 
+module DestructuringTestCases =
     type Person = { Name: string; Manager: string }
     let samePosRepDestPerson = { Name="Adam"; Manager="john" }
     let samePosRepDestArg0 = Prop("0", samePosRepDestPerson, { PropFormat.Destructure with Format="l" })
@@ -67,7 +67,7 @@ module DestructuringTestCases =
           ObjectWithNamedProps = null
           ExpectedOutput = String.replicate repeatCount "Person { Name: \"Adam\", Manager: \"john\" }" }
 
-module AlignmentTestCases = 
+module AlignmentTestCases =
     let fmtLitStringNoQuotes = "l"
     let posIsmAr10Values = [10..20]
     let posIsmAr10Toks = posIsmAr10Values |> List.mapi (fun idx num -> Prop(string idx, num, PropFormat.Empty))
@@ -78,7 +78,7 @@ module AlignmentTestCases =
           ObjectWithNamedProps = null // not supported for this test
           ExpectedOutput = "hello, " }
 
-module Features =   
+module Features =
     /// Allows a tested implementation to configure it's output with the provided TextWriter
     type OutputInitialiser<'OutputSink> = System.IO.TextWriter -> 'OutputSink
 
@@ -113,27 +113,27 @@ module Features =
     type Formatter<'ParsedTemplate, 'CapturedProperties, 'OutputSink> =
         'ParsedTemplate -> 'CapturedProperties -> 'OutputSink -> unit
 
-#I "../packages/PerfUtil/lib/net40"
+#I "../../packages/PerfUtil/lib/net40"
 #r "PerfUtil"
 
-#I "../packages/Antlr4.StringTemplate/lib/net35"
+#I "../../packages/Antlr4.StringTemplate/lib/net35"
 #r "Antlr4.StringTemplate"
 
-#I "../packages/Serilog/lib/net45"
+#I "../../packages/Serilog/lib/net45"
 #r "Serilog"
 #r "Serilog.FullNetFx"
 
-#I "../packages/NamedFormat/lib"
+#I "../../packages/NamedFormat/lib"
 #r "NamedFormat"
 
-#I "../packages/log4net/lib/net40-full"
+#I "../../packages/log4net/lib/net40-full"
 #r "log4net"
 
 open PerfUtil
 
 module Implementations =
     open System.Collections.Generic
-    
+
     /// Describes an implementation of the various features we are testing. All testables must
     /// have at least a name, and be capable of implementing the ParseCaptureFormat<'OutputSink>'
     /// style which takes a string template and the values as input, then writes the formatted
@@ -148,7 +148,7 @@ module Implementations =
           initTemplate:         Features.ParseInputCreator<'ParseInput>
           initTemplateArgs:     Features.TemplateArgsCreator<'FormatArgs>
 
-          /// Required. Takes the parsed template as input, the 
+          /// Required. Takes the parsed template as input, the
           parseCaptureFormat:   Features.ParseCaptureFormat<'ParseInput, 'FormatArgs, 'OutputSink>
 
           parse:                Features.TemplateParser<'ParseInput, 'ParsedTemplate> option
@@ -200,7 +200,7 @@ module Implementations =
 
     let private fsPickValueByName (pnvs: FsMessageTemplates.PropertyNameAndValue seq) name =
         pnvs |> Seq.pick (fun pnv -> if pnv.Name = name then Some (pnv.Value) else None)
-        
+
     let private nameValueHashtableArgsCreator : Features.TemplateArgsCreator<System.Collections.Hashtable> =
         fun tt ->
             let ht = System.Collections.Hashtable()
@@ -239,10 +239,10 @@ module Implementations =
                                         tm.Render(dict, tw, tw.FormatProvider) }
 
     open Serilog
-    
+
     let serilog = {
         Name                = "Serilog"
-        initOutput          = fun tw -> Serilog.LoggerConfiguration().WriteTo.TextWriter(tw, outputTemplate="{Message}").CreateLogger() 
+        initOutput          = fun tw -> Serilog.LoggerConfiguration().WriteTo.TextWriter(tw, outputTemplate="{Message}").CreateLogger()
         initTemplate        = namedFormatStringTemplateCreator
         initTemplateArgs    = positionalFormatArgsArrayCreator
         parseCaptureFormat  = fun mt vals logger -> logger.Information(mt, vals)
@@ -251,7 +251,7 @@ module Implementations =
                                         // TOOD: is this the most similar to to capture values ??
                                         let mutable logger : Serilog.ILogger = null
                                         for i = 0 to args.Length - 1 do
-                                            logger <- Serilog.Log.Logger.ForContext(string i, args.[i], destructureObjects=true)    
+                                            logger <- Serilog.Log.Logger.ForContext(string i, args.[i], destructureObjects=true)
                                         logger
         captureFormat       = Some <| fun tm args logger -> logger.Information(tm.Text, args)
         format              = Some <| fun tm withCaptured _ -> withCaptured.Information(tm.Text)
@@ -314,14 +314,14 @@ module Implementations =
         initOutput          = fun tw -> tw, System.Text.StringBuilder()
         initTemplate        = positionalFormatStringTemplateCreator
         initTemplateArgs    = positionalFormatArgsArrayCreator
-        parseCaptureFormat  = fun mt vals (tw, sb) -> 
+        parseCaptureFormat  = fun mt vals (tw, sb) ->
                                 tw.Write(sb.Clear().AppendFormat(mt, vals).ToString())
         parse               = None // no way to pre-parse this
         capture             = None // no way to parse or capture property names
         captureFormat       = None // no way to parse or capture property names
         format              = None // no way to parse or capture property names
     }
-    
+
     let stringInject = {
         Name                = "StringInject"
         initOutput          = initUsingTextWriter
@@ -367,7 +367,7 @@ module Implementations =
 //            | :? char -> "%c"
 //            | :? decimal -> "%M"
 //            | _ -> "%O"
-//    
+//
 //    let fsprintf = {
 //        Name                = "F# fprintf"
 //        initOutput          = initUsingTextWriter
@@ -400,7 +400,7 @@ let createParseCaptureFormatTest testTemplate tw (impl: Implementations.Implemen
     printfn "%s: args = '%A'" impl.Name args
 
     let state = impl.initOutput tw
-    
+
     printfn "%s: ensuring output is expected '%s'" impl.Name (testTemplate.ExpectedOutput.Replace("\n", "\\n"))
     let actualOutput = impl.parseCaptureFormat template args state; tw.ToString()
     if actualOutput <> testTemplate.ExpectedOutput then
@@ -414,7 +414,7 @@ let createParseCaptureFormatTest testTemplate tw (impl: Implementations.Implemen
         member __.Output = tw }
 
 let createCaptureFormatTest testTemplate tw (impl: Implementations.Implementation<_,_,_,_,_>) =
-    
+
     printfn "%s: initialising with '%s'" impl.Name testTemplate.Title
 
     let template = impl.parse.Value (impl.initTemplate testTemplate)
@@ -473,7 +473,7 @@ let comparers = [
 
 comparers |> List.iter (fun (tt, c) -> c.Run(id="100k x " + tt.Title, repeat=100000, testF=fun t -> t.DoIt()))
 
-#load "../packages/FSharp.Charting/FSharp.Charting.fsx"
+#load "../../packages/FSharp.Charting/FSharp.Charting.fsx"
 open FSharp.Charting
 open PerfUtil
 

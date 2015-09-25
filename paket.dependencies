@@ -1,5 +1,10 @@
 source https://nuget.org/api/v2
 
+nuget FSharp.Formatting
+nuget NUnit
+nuget NUnit.Runners
+nuget FAKE ~> 4.0.0
+nuget SourceLink.Fake
 nuget Antlr4.StringTemplate
 nuget FsCheck 2.0.3 framework: >= net45
 nuget LibLog
@@ -13,3 +18,6 @@ nuget PerfUtil
 nuget FSharp.Charting
 nuget Serilog framework: >= net45
 nuget NamedFormat
+nuget Fsharp.Core
+
+github fsharp/FAKE modules/Octokit/Octokit.fsx

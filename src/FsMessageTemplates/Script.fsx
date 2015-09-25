@@ -1,10 +1,8 @@
-﻿// Learn more about F# at http://fsharp.org. See the 'F# Tutorial' project
-// for more guidance on F# programming.
 
 #I "bin/Debug/"
 #r "FsMessageTemplates"
 
-#load "../FsMessageTemplates.Tests/Tk.fs"
+#load "../../tests/FsMessageTemplates.Tests/Tk.fs"
 
 open FsMessageTemplates
 
@@ -26,9 +24,8 @@ Formatting.format template [| User({Id=99; Name="John"}) |]
 //  "Hello, User { Item: User { Id: 99, Name: "John" }, Tag: 0, IsUser: True, IsManager: False }"
 
 (* What if I have a better way to capture values? *)
-#r "System.IO"
 let tw = new System.IO.StringWriter()
-Formatting.formatCustom template tw (function 
+Formatting.formatCustom template tw (function
                                     | "person" -> SequenceValue [ScalarValue 1; ScalarValue 2]
                                     | "unused" -> ScalarValue (box 213.456)
                                     | _ -> TemplatePropertyValue.Empty)
@@ -60,7 +57,7 @@ type TestItem = { Template: string
                   Values: System.Collections.IEnumerable // eeew
                   Expected: Token list
                   ExpectedString: string }
-    
+
 let testData = [
     { Template =        "test {test}";          Values = [123]
       ExpectedString =  "test 123"
@@ -87,12 +84,12 @@ let testData = [
       Expected =        [ Tk.text 0 "test "
                           Tk.propp 5 0
                           Tk.text 8 ";"
-                          Tk.propp 9 1 
+                          Tk.propp 9 1
                           Tk.text 12 ";"
                           Tk.propp 13 2 ] }
 ]
 
 testData
 |> Seq.map (fun test -> test, Parser.parse test.Template)
-|> Seq.map (fun (test, templ) -> Capturing.captureProperties templ (test.Values |> Seq.cast<obj> |> Seq.toArray)) 
+|> Seq.map (fun (test, templ) -> Capturing.captureProperties templ (test.Values |> Seq.cast<obj> |> Seq.toArray))
 |> Seq.toArray

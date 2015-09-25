@@ -1,7 +1,20 @@
 ﻿using System;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Diagnostics;
 using System.Linq;
+using Microsoft.VisualStudio.Tools.UnitTesting;
+
+#if NO_MSTEST
+namespace Microsoft.VisualStudio.Tools.UnitTesting
+{
+	class TestClass : Attribute { }
+	public class TestContext {
+		public string TestName { get; }
+	}
+	class TestInitialize : Attribute { }
+	class TestCleanup : Attribute { }
+	class TestMethod : Attribute { }
+}
+#endif
 
 namespace MessageTemplates.PerfTests
 {

@@ -1,34 +1,9 @@
-version: 1.0.0-beta.{build}
-
-# Fix line endings in Windows. (runs before repo cloning)
 init:
   - git config --global core.autocrlf input
-
-# this turns of AppVeyor automatic searching for test-assemblies, not the actual testing
-test_script:
-  - dnx MessageTemplates.Tests test
-  - packages\xunit.runner.console\tools\xunit.console.x86.exe FsMessageTemplates.Tests\bin\Release\FsMessageTemplates.Tests.dll
-  - vstest.console /Logger:AppVeyor MessageTemplates.PerfTests\bin\Release\MessageTemplates.PerfTests.exe
-  - fsi -O --tailcalls+ --crossoptimize+ --exec MessageTemplates.PerfTests\Script.fsx --exportCharts
-  - fsi -O --tailcalls+ --crossoptimize+ --exec MessageTemplates.PerfTests\PerfTests.fsx --exportCharts
-
-configuration: Release
-os: Visual Studio 2015
-platform: Any CPU
-install:
-  - set PATH=%PROGRAMFILES(x86)%\MSBuild\14.0\Bin;%PROGRAMFILES(x86)%\Microsoft SDKs\F#\4.0\Framework\v4.0\;%PATH%
-  - dnvm install 1.0.0-beta6 -persistent -alias default
-  - .paket\paket.exe restore
-  - dnu restore MessageTemplates --lock
-  - dnu restore MessageTemplates.Tests --lock
-  - set DNX_BUILD_VERSION=%APPVEYOR_BUILD_NUMBER%
-build:
-  verbosity: minimal
-  publish_nuget: true
-  publish_nuget_symbols: true
-  parallel: true
-
+build_script:
+  - cmd: build.cmd
+test: off
+version: 0.0.1.{build}
 artifacts:
-- path: artifacts\bin\MessageTemplates\$(configuration)\*.nupkg
-- path: FsMessageTemplates\bin\Release\FsMessageTemplates.*
-- path: artifacts\perfcharts\*
+  - path: bin
+    name: bin

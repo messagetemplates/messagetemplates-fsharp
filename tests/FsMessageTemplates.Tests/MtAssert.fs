@@ -49,7 +49,11 @@ type MtAssert() =
             let mt = MessageTemplates.Parsing.MessageTemplateParser().Parse template
             let csDestrs = additionalDestrs |> Seq.map CsToFs.fsDestrToCsDestrPolicy
             let captured = CsToFs.CsMt.CaptureWith(maxDepth, additionalScalars, csDestrs, mt, values)
-            let propsByName = captured |> Seq.map (fun tp -> tp.Name, tp.Value) |> dict |> Dictionary<string, CsToFs.CsTemplatePropertyValue>
+            let propsByName = captured
+                              |> Seq.map (fun tp -> tp.Name, tp.Value)
+                              |> dict
+                              |> fun idict -> Dictionary<string, CsToFs.CsTemplatePropertyValue>(idict)
+
             mt.Render(properties=propsByName, formatProvider=provider)
         | "F#" ->           
             let mt = FsMessageTemplates.Parser.parse template
