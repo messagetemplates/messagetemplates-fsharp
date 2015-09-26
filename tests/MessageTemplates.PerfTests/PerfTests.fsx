@@ -1,4 +1,6 @@
-﻿#r "System"
+﻿#r "System.IO"
+#r "System.Runtime"
+#r "System"
 #I "bin/Release/"
 #r "FsMessageTemplates"
 #r "MessageTemplates"
@@ -471,7 +473,7 @@ let comparers = [
     createAllNamedOrPosComparer TestCases.named2string
     createAllDestructuringComparer DestructuringTestCases.samePosRepDestr ]
 
-comparers |> List.iter (fun (tt, c) -> c.Run(id="100k x " + tt.Title, repeat=100000, testF=fun t -> t.DoIt()))
+comparers |> List.iter (fun (tt, c) -> c.Run(id="10k x " + tt.Title, repeat=10000, testF=fun t -> t.DoIt()))
 
 #load "../../packages/FSharp.Charting/FSharp.Charting.fsx"
 open FSharp.Charting

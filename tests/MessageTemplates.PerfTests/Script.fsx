@@ -1,4 +1,5 @@
-﻿
+﻿#r "System.IO"
+
 type Arguments = {
     ExportCharts: bool
     SaveOutput: bool }
@@ -8,16 +9,15 @@ let args = {
     SaveOutput = fsi.CommandLineArgs |> Array.contains ("--saveOutput")
 }
 
-#I "../packages/PerfUtil/lib/net40"
+#I "../../packages/PerfUtil/lib/net40"
 #r "PerfUtil"
 
-#I "../packages/Antlr4.StringTemplate/lib/net35"
+#I "../../packages/Antlr4.StringTemplate/lib/net35"
 #r "Antlr4.StringTemplate"
 
-#I "../packages/Serilog/lib/net45"
+#I "../../packages/Serilog/lib/net45"
 #r "Serilog"
 
-#r "System.IO"
 #I "bin/Release/"
 #r "FsMessageTemplates"
 #r "MessageTemplates"
@@ -240,7 +240,7 @@ FormatStringify.allBasicFormatters.Run(
     id="Format stringify Version", repeat=100000,
     testF=fun t -> t.DoIt())
 
-#load "../packages/FSharp.Charting/FSharp.Charting.fsx"
+#load "../../packages/FSharp.Charting/FSharp.Charting.fsx"
 open FSharp.Charting
 open PerfUtil
 
@@ -251,7 +251,7 @@ if args.ExportCharts then
         let name = results |> List.tryPick (fun r -> Some r.TestId)
         let ch = Chart.Bar(values, ?Name = name, ?Title = name, YTitle = yaxis)
         let nameFixedForExport = name.Value.ToString().Replace("[|\"","_").Replace("\"|]", "_") + ".png"
-        let exportFolder = System.IO.Path.Combine(__SOURCE_DIRECTORY__, "..\\artifacts\\perfcharts\\")
+        let exportFolder = System.IO.Path.Combine(__SOURCE_DIRECTORY__, "..\\..\\artifacts\\perfcharts\\")
         System.IO.Directory.CreateDirectory(exportFolder) |> ignore
         let fileName = System.IO.Path.Combine(exportFolder, nameFixedForExport)
         System.Console.WriteLine("saving {0}", fileName)

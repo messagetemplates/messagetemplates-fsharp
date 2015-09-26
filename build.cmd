@@ -1,8 +1,10 @@
 @echo off
 
-.paket\paket.bootstrapper.exe
-if errorlevel 1 (
-  exit /b %errorlevel%
+IF NOT EXIST .paket\paket.exe (
+  .paket\paket.bootstrapper.exe
+  if errorlevel 1 (
+    exit /b %errorlevel%
+  )
 )
 
 .paket\paket.exe restore
