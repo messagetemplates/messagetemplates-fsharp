@@ -28,17 +28,17 @@ Example
 This example demonstrates using a function defined in this sample library.
 
 *)
+#r "System.IO"
 #r "System"
-#r "MessageTemplates.dll"
+#r "MessageTemplates"
 
-MessageTemplates.MessageTemplate.Format("test {this}", "success")
-MessageTemplates.MessageTemplate.Format("test {this:l}", "success")
+printfn "%s" (MessageTemplates.MessageTemplate.Format("test {this}", "success"))
+printfn "%s" (MessageTemplates.MessageTemplate.Format("test {this:l}", "success"))
 
-// TODO
-//#r "FsMessageTemplates.dll"
-//open FsMessageTemplates.Formatting
-//
-//sprintsm "test {this}" [|"success"|]
+#r "FsMessageTemplates"
+let invariant = System.Globalization.CultureInfo.InvariantCulture
+open FsMessageTemplates.Formatting
+printfn "%s" (sprintsm invariant "test {this:l}" [|"success"|])
 
 (**
 Some more info
@@ -68,9 +68,9 @@ The library is available under Public Domain license, which allows modification 
 redistribution for both commercial and non-commercial purposes. For more information see the 
 [License file][license] in the GitHub repository. 
 
-  [content]: https://github.com/fsprojects/MessageTemplates/tree/master/docs/content
-  [gh]: https://github.com/fsprojects/MessageTemplates
-  [issues]: https://github.com/fsprojects/MessageTemplates/issues
-  [readme]: https://github.com/fsprojects/MessageTemplates/blob/master/README.md
-  [license]: https://github.com/fsprojects/MessageTemplates/blob/master/LICENSE.txt
+  [content]: https://github.com/adamchester/MessageTemplates/tree/master/docs/content
+  [gh]: https://github.com/adamchester/MessageTemplates
+  [issues]: https://github.com/adamchester/MessageTemplates/issues
+  [readme]: https://github.com/adamchester/MessageTemplates/blob/master/README.md
+  [license]: https://github.com/adamchester/MessageTemplates/blob/master/LICENSE.txt
 *)

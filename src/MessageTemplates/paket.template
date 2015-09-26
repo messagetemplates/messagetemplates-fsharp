@@ -1,0 +1,23 @@
+type project
+owners
+    Adam Chester, Serilog Contributors
+authors 
+    Adam Chester, Serilog Contributors
+projectUrl
+    http://github.com/adamchester/MessageTemplates
+iconUrl
+    https://raw.githubusercontent.com/adamchester/MessageTemplates/master/docs/files/img/logo.png
+licenseUrl
+    http://github.com/adamchester/MessageTemplates/blob/master/LICENSE.txt
+requireLicenseAcceptance
+    false
+copyright
+    Copyright 2015
+tags
+    message template serilog string format MessageTemplates
+summary
+    The ability to format named string values, and capture the properties.
+description
+    An implementation of {named} string replacements, which allows formatting, parsing, and capturing properties. MessageTemplates is compatible with the Serilog template format.
+
+

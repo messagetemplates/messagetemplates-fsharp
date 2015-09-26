@@ -27,13 +27,14 @@
     <DocumentationFile>bin\Debug\MessageTemplates.XML</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>pdbonly</DebugType>
+    <DebugType>full</DebugType>
     <Optimize>true</Optimize>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <OutputPath>bin\Release\</OutputPath>
     <DocumentationFile>bin\Release\MessageTemplates.XML</DocumentationFile>
+    <DebugSymbols>true</DebugSymbols>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Core\IDestructuringPolicy.cs" />
@@ -69,6 +70,9 @@
     <Compile Include="Structure\TemplateProperty.cs" />
     <Compile Include="Structure\TemplatePropertyValue.cs" />
     <Compile Include="ReadOnlyDictionaryNet40.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="paket.template" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Portable\$(TargetFrameworkVersion)\Microsoft.Portable.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it.

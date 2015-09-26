@@ -107,7 +107,7 @@ Target "RunTests" (fun _ ->
             TimeOut = TimeSpan.FromMinutes 5. })
 
     let extraFsiArgs = ["--crossoptimize+";"--tailcalls+";"--shadowcopyreferences-"]
-    let extraScriptArgs = ["--exportCharts",""]
+    let extraScriptArgs = ["exportCharts",""]
     if not <| executeFSIWithArgs "tests/MessageTemplates.PerfTests/" "PerfTests.fsx" extraFsiArgs extraScriptArgs then
       failwith "PerfTests/PerfTests.fsx documentation failed"
 
@@ -155,9 +155,9 @@ Target "PublishNuget" (fun _ ->
 // Generate the documentation
 
 Target "GenerateReferenceDocs" (fun _ ->
-    traceImportant "skipping GenerateReferenceDocs because it fails on PCLs. Hope to fix at some point..."
-//    if not <| executeFSIWithArgs "docs/tools" "generate.fsx" ["--define:RELEASE"; "--define:REFERENCE"] [] then
-//      failwith "generating reference documentation failed"
+  traceImportant "skipping GenerateReferenceDocs because it doesn't seem to work with PCLs... how do I fix this?"
+    //if not <| executeFSIWithArgs "docs/tools" "generate.fsx" ["--define:RELEASE"; "--define:REFERENCE"] [] then
+    //  failwith "generating reference documentation failed"
 )
 
 let generateHelp' fail debug =

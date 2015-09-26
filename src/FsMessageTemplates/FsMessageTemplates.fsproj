@@ -40,6 +40,7 @@
     <Compile Include="MessageTemplates.fsi" />
     <Compile Include="MessageTemplates.fs" />
     <None Include="Script.fsx" />
+    <None Include="paket.template" />
   </ItemGroup>
   <PropertyGroup>
     <MinimumVisualStudioVersion Condition="'$(MinimumVisualStudioVersion)' == ''">12</MinimumVisualStudioVersion>
