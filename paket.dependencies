@@ -1,5 +1,6 @@
 source https://nuget.org/api/v2
 
+nuget dotliquid
 nuget FSharp.Formatting
 nuget NUnit
 nuget NUnit.Runners

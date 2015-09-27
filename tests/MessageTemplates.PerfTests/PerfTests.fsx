@@ -132,6 +132,9 @@ module Features =
 #I "../../packages/log4net/lib/net40-full"
 #r "log4net"
 
+#I "../../packages/DotLiquid/lib/net45"
+#r "DotLiquid"
+
 open PerfUtil
 
 module Implementations =
@@ -149,8 +152,9 @@ module Implementations =
           /// Allows the testable implementation to convert the template into a format suitable
           /// for the implementation to use.
           initTemplate:         Features.ParseInputCreator<'ParseInput>
+          /// Given the common test template arguments, converts them to a format
+          /// suitable for use as the input to the tested implementation.
           initTemplateArgs:     Features.TemplateArgsCreator<'FormatArgs>
-
           /// Required. Takes the parsed template as input, the
           parseCaptureFormat:   Features.ParseCaptureFormat<'ParseInput, 'FormatArgs, 'OutputSink>
 
@@ -172,7 +176,7 @@ module Implementations =
                 | Prop (name,_,fmt) -> fmt.ToNamedFormatString (name)
             )
             |> String.concat ""
-
+    
     /// Creates a named format template string such as "Hello, {name}" from the common test templates.
     let private namedFormatStringNoFmtTemplateCreator : Features.ParseInputCreator<string> =
         fun tt ->
@@ -180,6 +184,15 @@ module Implementations =
             |> List.map (function
                 | Literal raw -> raw
                 | Prop (name,_,_) -> "{" + name + "}")
+            |> String.concat ""
+    
+    /// Creates a named format template string such as "Hello, {{name}}" from the common test templates.
+    let private doubeBraceNamedNoFmtTemplateCreator : Features.ParseInputCreator<string> =
+        fun tt ->
+            tt.TokenValues
+            |> List.map (function
+                | Literal raw -> raw
+                | Prop (name,_,_) -> "{{" + name + "}}")
             |> String.concat ""
 
     /// Creates a positional format template string such as "Hello, {0}" from the common test templates.
@@ -260,6 +273,27 @@ module Implementations =
         format              = Some <| fun tm withCaptured _ -> withCaptured.Information(tm.Text)
     }
 
+    let dotLiquid = {
+        Name                = "DotLiquid"
+        initOutput          = initUsingTextWriter
+        initTemplate        = doubeBraceNamedNoFmtTemplateCreator
+        initTemplateArgs    = fun tt -> tt.DictionaryOfNamesAndValues
+        parseCaptureFormat  = fun mt args tw ->
+                                let tmpl = DotLiquid.Template.Parse mt
+                                let context = DotLiquid.Context()
+                                context.Merge(DotLiquid.Hash.FromDictionary(args))
+                                tmpl.Render(tw, DotLiquid.RenderParameters.FromContext(context))
+        parse               = Some <| fun mt -> DotLiquid.Template.Parse mt
+        capture             = Some <| fun mt args ->
+                                let context = DotLiquid.Context()
+                                context.Merge(DotLiquid.Hash.FromDictionary(args))
+                                DotLiquid.RenderParameters.FromContext(context)
+        captureFormat       = Some <| fun tm args tw ->
+                                let context = DotLiquid.Context()
+                                context.Merge(DotLiquid.Hash.FromDictionary(args))
+                                tm.Render(tw, DotLiquid.RenderParameters.FromContext(context))
+        format              = Some <| fun tm rparams tw -> tm.Render(tw, rparams)
+    }
     open MessageTemplates.PerfTests.Logging
 
     let liblogSerilog = {
@@ -446,6 +480,7 @@ let createAllNamedOrPosComparer tt =
     let theOne = createCaptureFormatTest tt (newTw()) fsMessageTemplates
     let theOthers = [
         createCaptureFormatTest tt (newTw()) csMessageTemplates
+        createCaptureFormatTest tt (newTw()) dotLiquid
         createParseCaptureFormatTest tt (newTw()) serilog
         createParseCaptureFormatTest tt (newTw()) liblogSerilog
         createParseCaptureFormatTest tt (newTw()) liblogLog4net
@@ -478,11 +513,10 @@ comparers |> List.iter (fun (tt, c) -> c.Run(id="10k x " + tt.Title, repeat=1000
 
 #load "../../packages/FSharp.Charting/FSharp.Charting.fsx"
 open FSharp.Charting
-open PerfUtil
 
-let exportFolder =
-    System.IO.Path.Combine(
-        __SOURCE_DIRECTORY__, "..\\..\\docs\\files\\img\\perfcharts\\")
+/// Combine two paths together
+let inline (@@) p1 p2 = System.IO.Path.Combine(p1, p2)
+let exportFolder = __SOURCE_DIRECTORY__ @@ "..\\..\\docs\\files\\img\\perfcharts\\"
 System.IO.Directory.CreateDirectory(exportFolder)
 
 // simple plot function
@@ -495,20 +529,22 @@ let plot yaxis (metric : PerfResult -> float) (results : PerfResult list) =
     let name = results |> List.tryPick (fun r -> Some r.TestId)
     let ch = Chart.Bar(values, ?Name = name, ?Title = name, YTitle = yaxis)
              |> Chart.With3D()
-
+             |> Chart.WithXAxis(
+                    Log=false,
+                    MajorTickMark=ChartTypes.TickMark(Interval=1., LineWidth=2),
+                    LabelStyle=ChartTypes.LabelStyle(Interval=1.))
+    
     use f = ch.ShowChart()
 
     let nameFixedForExport = name.Value.ToString().Replace("[|\"","_").Replace("\"|]", "_") + ".png"
-    System.IO.Directory.CreateDirectory(exportFolder) |> ignore
-    let fileName = System.IO.Path.Combine(exportFolder, nameFixedForExport)
+    let fileName = exportFolder @@ nameFixedForExport
     System.Console.WriteLine("saving {0}", fileName)
     ch.SaveChartAs (fileName, ChartTypes.ChartImageFormat.Png)
-    f.Close()
-
+    
 // read performance tests from 'Tests' module and run them
 let allTestResults = comparers |> List.map (fun (tt, c) -> c.GetTestResults()) |> List.concat
 // save the results as an XML file
-TestSession.toFile (System.IO.Path.Combine(exportFolder, "perftests.xml")) allTestResults
+TestSession.toFile (exportFolder @@ "perftests.xml") allTestResults
 // graph them
 allTestResults
 |> TestSession.groupByTest
