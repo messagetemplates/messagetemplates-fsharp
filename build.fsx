@@ -89,6 +89,12 @@ Target "CleanDocs" (fun _ ->
 // --------------------------------------------------------------------------------------
 // Build library & test project
 
+Target "BuildNoRebuild" (fun _ ->
+    !! solutionFile
+    |> MSBuildRelease "" "build"
+    |> ignore
+)
+
 Target "Build" (fun _ ->
     !! solutionFile
     |> MSBuildRelease "" "Rebuild"
@@ -107,7 +113,9 @@ Target "RunTests" (fun _ ->
             TimeOut = TimeSpan.FromMinutes 5. })
 
     let extraFsiArgs = ["--crossoptimize+";"--tailcalls+";"--shadowcopyreferences-"]
-    let extraScriptArgs = ["exportCharts",""]
+    let extraScriptArgs = [ "exportCharts", "true"
+                            "saveResults", "false" ]
+
     if not <| executeFSIWithArgs "tests/MessageTemplates.PerfTests/" "PerfTests.fsx" extraFsiArgs extraScriptArgs then
       failwith "PerfTests/PerfTests.fsx documentation failed"
 
@@ -218,7 +226,7 @@ let createIndexFsx lang =
 // This block of code is omitted in the generated HTML documentation. Use
 // it to define helpers that you do not want to show in the documentation.
 #I "../../../bin"
-
+#r "System.IO"
 (**
 F# Project Scaffold ({0})
 =========================

@@ -91,15 +91,27 @@ and
         member Hint: DestrHint
         member Value: obj
         member Destructurer: Destructurer
+        member TryAgainWithValue: newValue:obj -> TemplatePropertyValue
 
 module Parser =
     /// Parses a message template string.
     val parse: template:string -> Template
 
 module Capturing =
+    /// Creates a customised default destructurer which optionally
+    /// specifies different scalar and object destructurers. If the
+    /// caller gave None for both, the destructurer returned would be
+    /// the same as the default built-in one. A scalar destructurer 
+    /// must return a TemplatePropertyValue.ScalarValue (or Empty),
+    /// whereas the object destructurer is free to return any kind
+    /// (or Empty).
     val createCustomDestructurer : tryScalars: Destructurer option
                                    -> tryObjects: Destructurer option
                                    -> Destructurer
+    
+    /// Provides better support for destructuring F# types like
+    /// Discriminated Unions, Tuples, and Lists.
+    val builtInFSharpTypesDestructurer : Destructurer
 
     /// Extracts the properties for a template from the array of objects.
     val captureProperties: template:Template -> args:obj[] -> PropertyNameAndValue seq

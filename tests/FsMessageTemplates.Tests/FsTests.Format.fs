@@ -194,7 +194,7 @@ let ``Rendered F# DU or Tuple fields on level3 are 'null' when depth is 2`` (lan
                  + "ChairItem { c: ChairRecord { Back: null, Legs: null }, Tag: 0, IsChairItem: True, IsReceiptItem: False }"
     
     MtAssert.RenderedAs(lang, template, values, expected, provider, maxDepth=2)
-
+    
 [<LangTheory; LangCsFsData>]
 let ``Destructred F# objects captured with a custom destructurer render with format provider`` (lang) =
     let provider = CultureInfo.GetCultureInfo "fr-FR"
@@ -213,4 +213,26 @@ and Trunk { Item1: 12,345, Item2: 20/05/2013 16:39:00 +09:30, Item3: [Leaf { Ite
 and Trunk { Item1: 1,1, Item2: 20/05/2013 16:39:00 +09:30, Item3: [Seq { nums: [1,1, 2,2, 3,3] }, Seq { nums: [4,4] }] }"
     let customFsharpDestr = CsToFs.toFsDestructurer (Destructurama.FSharpTypesDestructuringPolicy())
     let destr = FsMessageTemplates.Capturing.createCustomDestructurer None (Some customFsharpDestr)
+    MtAssert.RenderedAs(lang, template, values, expected, provider, additionalDestrs=[destr])
+
+open FsMessageTemplates.Capturing
+
+[<LangTheory; LangCsFsData>]
+let ``Destructred F# objects via the built-in F# types destructurer render with format provider`` (lang) =
+    let provider = CultureInfo.GetCultureInfo "fr-FR"
+    let template = "I like {@item1}
+and {@item2}
+and {@item3}
+and {@item4}"
+    let values : obj[] = [| Leaf 12.345
+                            Leaf 12.345
+                            Trunk (12.345, Four39PmOn20May2013, [Leaf 12.345; Leaf 12.345])
+                            Trunk (1.1, Four39PmOn20May2013, [Seq [1.1;2.2;3.3]; Seq [4.4]])
+                         |]
+    let expected = "I like Leaf { Item: 12,345 }
+and Leaf { Item: 12,345 }
+and Trunk { Item1: 12,345, Item2: 20/05/2013 16:39:00 +09:30, Item3: [Leaf { Item: 12,345 }, Leaf { Item: 12,345 }] }
+and Trunk { Item1: 1,1, Item2: 20/05/2013 16:39:00 +09:30, Item3: [Seq { nums: [1,1, 2,2, 3,3] }, Seq { nums: [4,4] }] }"
+
+    let destr = createCustomDestructurer None (Some builtInFSharpTypesDestructurer)
     MtAssert.RenderedAs(lang, template, values, expected, provider, additionalDestrs=[destr])

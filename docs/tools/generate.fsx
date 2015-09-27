@@ -115,7 +115,8 @@ let buildDocumentation () =
     ( content, docTemplate, output, replacements = ("root", root)::info,
       layoutRoots = layoutRootsAll.["en"],
       generateAnchors = true,
-      processRecursive = false)
+      processRecursive = false,
+      fsiEvaluator = FSharp.Literate.FsiEvaluator() )
 
   // And then process files which are placed in the sub directories
   // (some sub directories might be for specific language).

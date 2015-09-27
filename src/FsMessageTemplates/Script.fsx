@@ -1,3 +1,4 @@
+#r "System.IO"
 
 #I "bin/Debug/"
 #r "FsMessageTemplates"

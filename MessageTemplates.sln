@@ -1,6 +1,8 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2012
+# Visual Studio 14
+VisualStudioVersion = 14.0.23107.0
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".paket", ".paket", "{63297B98-5CED-492C-A5B7-A5B4F73CF142}"
 	ProjectSection(SolutionItems) = preProject
 		paket.dependencies = paket.dependencies
@@ -18,6 +20,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "content", "content", "{8E6D5255-776D-4B61-85F9-73C37AA1FB9A}"
 	ProjectSection(SolutionItems) = preProject
 		docs\content\index.fsx = docs\content\index.fsx
+		docs\content\performance.fsx = docs\content\performance.fsx
 		docs\content\tutorial.fsx = docs\content\tutorial.fsx
 	EndProjectSection
 EndProject
@@ -30,11 +33,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "project", "project", "{BF60
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{ED8079DD-2B06-4030-9F0F-DC548F98E1C4}"
 EndProject
-Project("{f2a71f9b-5d33-465a-a702-920d77279786}") = "FsMessageTemplates.Tests", "tests\FsMessageTemplates.Tests\FsMessageTemplates.Tests.fsproj", "{18EF9026-D9CC-4BE7-86E9-F7E1BF69845F}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FsMessageTemplates.Tests", "tests\FsMessageTemplates.Tests\FsMessageTemplates.Tests.fsproj", "{18EF9026-D9CC-4BE7-86E9-F7E1BF69845F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessageTemplates.PerfTests", "tests\MessageTemplates.PerfTests\MessageTemplates.PerfTests.csproj", "{F93409C0-8D85-41C2-9D4A-137CF75059B9}"
 EndProject
-Project("{f2a71f9b-5d33-465a-a702-920d77279786}") = "FsMessageTemplates", "src\FsMessageTemplates\FsMessageTemplates.fsproj", "{A3FFE923-B675-4E01-A085-6BB7C669CCFF}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FsMessageTemplates", "src\FsMessageTemplates\FsMessageTemplates.fsproj", "{A3FFE923-B675-4E01-A085-6BB7C669CCFF}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessageTemplates", "src\MessageTemplates\MessageTemplates.csproj", "{EA4E4A86-AE2F-4A35-A2B1-BA7894CE3F95}"
 EndProject
@@ -48,6 +51,10 @@ Global
 		{18EF9026-D9CC-4BE7-86E9-F7E1BF69845F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{18EF9026-D9CC-4BE7-86E9-F7E1BF69845F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{18EF9026-D9CC-4BE7-86E9-F7E1BF69845F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F93409C0-8D85-41C2-9D4A-137CF75059B9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F93409C0-8D85-41C2-9D4A-137CF75059B9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F93409C0-8D85-41C2-9D4A-137CF75059B9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F93409C0-8D85-41C2-9D4A-137CF75059B9}.Release|Any CPU.Build.0 = Release|Any CPU
 		{A3FFE923-B675-4E01-A085-6BB7C669CCFF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{A3FFE923-B675-4E01-A085-6BB7C669CCFF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A3FFE923-B675-4E01-A085-6BB7C669CCFF}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -56,18 +63,14 @@ Global
 		{EA4E4A86-AE2F-4A35-A2B1-BA7894CE3F95}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EA4E4A86-AE2F-4A35-A2B1-BA7894CE3F95}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{EA4E4A86-AE2F-4A35-A2B1-BA7894CE3F95}.Release|Any CPU.Build.0 = Release|Any CPU
-		{F93409C0-8D85-41C2-9D4A-137CF75059B9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{F93409C0-8D85-41C2-9D4A-137CF75059B9}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{F93409C0-8D85-41C2-9D4A-137CF75059B9}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{F93409C0-8D85-41C2-9D4A-137CF75059B9}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{83F16175-43B1-4C90-A1EE-8E351C33435D} = {A6A6AF7D-D6E3-442D-9B1E-58CC91879BE1}
 		{8E6D5255-776D-4B61-85F9-73C37AA1FB9A} = {A6A6AF7D-D6E3-442D-9B1E-58CC91879BE1}
 		{18EF9026-D9CC-4BE7-86E9-F7E1BF69845F} = {ED8079DD-2B06-4030-9F0F-DC548F98E1C4}
 		{F93409C0-8D85-41C2-9D4A-137CF75059B9} = {ED8079DD-2B06-4030-9F0F-DC548F98E1C4}
-	EndGlobalSection
-	GlobalSection(SolutionProperties) = preSolution
-		HideSolutionNode = FALSE
 	EndGlobalSection
 EndGlobal

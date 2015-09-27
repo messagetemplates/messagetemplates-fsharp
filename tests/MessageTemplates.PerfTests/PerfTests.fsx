@@ -1,6 +1,7 @@
 ﻿#r "System.IO"
 #r "System.Runtime"
 #r "System"
+
 #I "bin/Release/"
 #r "FsMessageTemplates"
 #r "MessageTemplates"
@@ -479,7 +480,9 @@ comparers |> List.iter (fun (tt, c) -> c.Run(id="10k x " + tt.Title, repeat=1000
 open FSharp.Charting
 open PerfUtil
 
-let exportFolder = System.IO.Path.Combine(__SOURCE_DIRECTORY__, "..\\..\\artifacts\\perfcharts\\")
+let exportFolder =
+    System.IO.Path.Combine(
+        __SOURCE_DIRECTORY__, "..\\..\\docs\\files\\img\\perfcharts\\")
 System.IO.Directory.CreateDirectory(exportFolder)
 
 // simple plot function
@@ -493,13 +496,14 @@ let plot yaxis (metric : PerfResult -> float) (results : PerfResult list) =
     let ch = Chart.Bar(values, ?Name = name, ?Title = name, YTitle = yaxis)
              |> Chart.With3D()
 
-    ch.ShowChart() |> ignore
+    use f = ch.ShowChart()
 
     let nameFixedForExport = name.Value.ToString().Replace("[|\"","_").Replace("\"|]", "_") + ".png"
     System.IO.Directory.CreateDirectory(exportFolder) |> ignore
     let fileName = System.IO.Path.Combine(exportFolder, nameFixedForExport)
     System.Console.WriteLine("saving {0}", fileName)
     ch.SaveChartAs (fileName, ChartTypes.ChartImageFormat.Png)
+    f.Close()
 
 // read performance tests from 'Tests' module and run them
 let allTestResults = comparers |> List.map (fun (tt, c) -> c.GetTestResults()) |> List.concat

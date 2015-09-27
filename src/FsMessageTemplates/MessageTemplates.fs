@@ -68,6 +68,7 @@ type Template(formatString:string, tokens: Token[], isNamed:bool, properties:Pro
     member internal this.Named = named
     member internal this.Positionals = positional
     member internal this.HasAnyProperties = properties.Length > 0
+    override this.ToString() = sprintf "T (tokens = %A)" tokens
 
 type ScalarKeyValuePair = TemplatePropertyValue * TemplatePropertyValue
 and PropertyNameAndValue = { Name:string; Value:TemplatePropertyValue }
@@ -102,7 +103,7 @@ and
         member internal x.Log = nullLogger
         /// During destructuring, this is called to 'recursively' destructure child properties
         /// or sequence elements.
-        member inline internal x.TryAgainWithValue (newValue:obj) =
+        member x.TryAgainWithValue (newValue:obj) =
             let nextDepth = x.CurrentDepth + 1
             if nextDepth > x.MaxDepth then Defaults.scalarNull
             else 
@@ -567,6 +568,32 @@ module Capturing =
         Destructure.tryAllWithCustom tryScalars tryCustomObjects
 
     let defaultDestructureNoCustoms : Destructurer = Destructure.tryAllWithCustom Destructure.alwaysKeepTrying Destructure.alwaysKeepTrying
+
+    open FSharp.Reflection
+    let builtInFSharpTypesDestructurer : Destructurer =
+        fun req ->
+            let value = req.Value
+            match req.Value.GetType() with
+            | t when FSharpType.IsTuple t ->
+                let tupleValues =
+                    value
+                    |> FSharpValue.GetTupleFields
+                    |> Seq.map req.TryAgainWithValue
+                    |> Seq.toList
+                SequenceValue tupleValues
+            | t when t.IsConstructedGenericType && t.GetGenericTypeDefinition() = typedefof<List<_>> ->
+                let objEnumerable = value :?> System.Collections.IEnumerable |> Seq.cast<obj>
+                SequenceValue(objEnumerable |> Seq.map req.TryAgainWithValue |> Seq.toList)
+            | t when FSharpType.IsUnion t ->
+                let case, fields = FSharp.Reflection.FSharpValue.GetUnionFields(value, t)
+                let properties =
+                    (case.GetFields(), fields)
+                    ||> Seq.map2 (fun propInfo value ->
+                        { Name = propInfo.Name
+                          Value = req.TryAgainWithValue value })
+                    |> Seq.toList
+                StructureValue(case.Name, properties)
+            | _ -> TemplatePropertyValue.Empty
 
     let capturePositionals (log:SelfLogger) (destr:Destructurer) (maxDepth:int)
                            (template:string) (props:PropertyToken[]) (args:obj[]) =

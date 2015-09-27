@@ -1,12 +1,21 @@
-﻿#r "System.IO"
+﻿#r "System.IO" // to be sure we get the PCL libraries
 
 type Arguments = {
     ExportCharts: bool
-    SaveOutput: bool }
+    SaveOutput: bool
+    RepeatCount: int
+    RepeatStr: string
+    ChartsFolder: string }
+
+let getArgValueOrDefault name def =
+    match System.Environment.GetEnvironmentVariable name with | null -> def | "" -> def | s -> s
 
 let args = {
-    ExportCharts = fsi.CommandLineArgs |> Array.contains ("--exportCharts")
-    SaveOutput = fsi.CommandLineArgs |> Array.contains ("--saveOutput")
+    ExportCharts = (getArgValueOrDefault "exportCharts" "true") = "true"
+    ChartsFolder = getArgValueOrDefault "chartsFolder" "..\\..\\docs\\files\\img\\perfcharts\\"
+    SaveOutput = (getArgValueOrDefault "saveOutput" "false") = "true"
+    RepeatCount = int (getArgValueOrDefault "repeatCount" "10000")
+    RepeatStr = getArgValueOrDefault "repeatStr" "10k x "
 }
 
 #I "../../packages/PerfUtil/lib/net40"
@@ -74,20 +83,20 @@ module StringFormatComptible =
                                     MtFs, [ MtCs; Serilog; ], warmup=true, verbose=true)
 
 StringFormatComptible.positional.Run(
-    id="10k x 3 posit. ints (AR5)", repeat=10000,
+    id=args.RepeatStr + "3 posit. ints (AR5)", repeat=args.RepeatCount,
     testF=(fun o -> o.ParseFormat ("big long x{0,5:0,00}x{1,5:0,00}x{2,5:0,00}x") [|0;1;2|]))
 
 StringFormatComptible.positional.Run(
-    id="10k x 3 posit. ints fmt", repeat=10000,
+    id=args.RepeatStr + "3 posit. ints fmt", repeat=args.RepeatCount,
     testF=(fun o -> o.ParseFormat ("big long x{0:0,00}x{1:0,00}x{2:0,00}x") [|0;1;2|]))
 
 StringFormatComptible.positional.Run(
-    id="10k x 5 posit. strings", repeat=10000,
+    id=args.RepeatStr + "5 posit. strings", repeat=args.RepeatCount,
     testF=(fun o -> o.ParseFormat ("big long {0}x{2}x{1}x{4}x{3}") [|"a";"b";"c";"d";"e"|]))
 
 System.GC.Collect()
 StringFormatComptible.namedAndDestruring.Run(
-    id="100k x 3 named destr", repeat=100000,
+    id=args.RepeatStr + "3 named destr", repeat=args.RepeatCount,
     testF=(fun o -> o.ParseFormat "big long {@one} {@two} {@three}"
                                   [| System.Version(1, 1)
                                      (222, 222)
@@ -95,7 +104,7 @@ StringFormatComptible.namedAndDestruring.Run(
 
 System.GC.Collect()
 StringFormatComptible.namedAndDestruring.Run(
-    id="100k x 3 named destr (AL10)", repeat=100000,
+    id=args.RepeatStr + "3 named destr (AL10)", repeat=args.RepeatCount,
     testF=(fun o -> o.ParseFormat "{@one,-10} {@two,-10} {@three,-10}"
                                   [| System.Version(1, 1)
                                      (222, 222)
@@ -146,7 +155,7 @@ module AnyFormat =
                                     warmup=true, verbose=true)
 
 AnyFormat.allBasicFormatters.Run(
-    id="Format [|\"adam\"|]", repeat=100000,
+    id="Format [|\"adam\"|]", repeat=args.RepeatCount,
     testF=fun t -> t.DoIt())
 
 let anyTemplateFormatTest name createTemplate run =
@@ -205,7 +214,7 @@ module FormatTemplate =
                                     warmup=true, verbose=true)
 
 FormatTemplate.all.Run(
-    id="100k x format cached template", repeat=100000,
+    id=args.RepeatStr + "format cached template", repeat=args.RepeatCount,
     testF=(fun t -> t.DoIt()))
 
 module FormatStringify =
@@ -237,7 +246,7 @@ module FormatStringify =
                                     warmup=true, verbose=true)
 
 FormatStringify.allBasicFormatters.Run(
-    id="Format stringify Version", repeat=100000,
+    id=args.RepeatStr + "Format stringify Version", repeat=args.RepeatCount,
     testF=fun t -> t.DoIt())
 
 #load "../../packages/FSharp.Charting/FSharp.Charting.fsx"
@@ -251,12 +260,13 @@ if args.ExportCharts then
         let name = results |> List.tryPick (fun r -> Some r.TestId)
         let ch = Chart.Bar(values, ?Name = name, ?Title = name, YTitle = yaxis)
         let nameFixedForExport = name.Value.ToString().Replace("[|\"","_").Replace("\"|]", "_") + ".png"
-        let exportFolder = System.IO.Path.Combine(__SOURCE_DIRECTORY__, "..\\..\\artifacts\\perfcharts\\")
+        let exportFolder = System.IO.Path.Combine(__SOURCE_DIRECTORY__, args.ChartsFolder)
         System.IO.Directory.CreateDirectory(exportFolder) |> ignore
         let fileName = System.IO.Path.Combine(exportFolder, nameFixedForExport)
         System.Console.WriteLine("saving {0}", fileName)
-        ch.ShowChart() |> ignore
+        use f = ch.ShowChart()
         ch.SaveChartAs (fileName, ChartTypes.ChartImageFormat.Png)
+        f.Close()
 
     // read performance tests from 'Tests' module and run them
     [
