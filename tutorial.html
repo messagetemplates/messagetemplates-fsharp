@@ -24,7 +24,6 @@
     <div class="container">
       <div class="masthead">
         <ul class="nav nav-pills pull-right">
-          <li><a href="http://fsharp.org">fsharp.org</a></li>
           <li><a href="http://github.com/adamchester/MessageTemplates">github page</a></li>
         </ul>
         <h3 class="muted"><a href="/MessageTemplates/index.html">MessageTemplates</a></h3>
@@ -35,24 +34,332 @@
           
 <h1><a name="Introducing-Message-Templates" class="anchor" href="#Introducing-Message-Templates">Introducing Message Templates</a></h1>
 
+<h2><a name="Using-FsMessageTemplates-from-F" class="anchor" href="#Using-FsMessageTemplates-from-F">Using FsMessageTemplates from F#</a></h2>
+
+<p>First, we delcare some types for demo purposes</p>
+
 <table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
 <span class="l">2: </span>
 <span class="l">3: </span>
 <span class="l">4: </span>
 </pre></td>
-<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="prep">#r</span> <span class="s">&quot;MessageTemplates&quot;</span>
-<span class="k">open</span> <span onmouseout="hideTip(event, 'fs1', 1)" onmouseover="showTip(event, 'fs1', 1)" class="i">MessageTemplates</span>
-
-<span onmouseout="hideTip(event, 'fs2', 2)" onmouseover="showTip(event, 'fs2', 2)" class="i">MessageTemplate</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs3', 3)" onmouseover="showTip(event, 'fs3', 3)" class="i">Format</span>(<span class="s">&quot;test {this}&quot;</span>, <span class="s">&quot;success&quot;</span>)
+<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">type</span> <span onmouseout="hideTip(event, 'fs8', 9)" onmouseover="showTip(event, 'fs8', 9)" class="t">User</span> <span class="o">=</span> { <span onmouseout="hideTip(event, 'fs9', 10)" onmouseover="showTip(event, 'fs9', 10)" class="i">Id</span><span class="o">:</span><span onmouseout="hideTip(event, 'fs10', 11)" onmouseover="showTip(event, 'fs10', 11)" class="t">int</span>; <span onmouseout="hideTip(event, 'fs11', 12)" onmouseover="showTip(event, 'fs11', 12)" class="i">Name</span><span class="o">:</span><span onmouseout="hideTip(event, 'fs12', 13)" onmouseover="showTip(event, 'fs12', 13)" class="t">string</span> }
+<span class="k">type</span> <span onmouseout="hideTip(event, 'fs13', 14)" onmouseover="showTip(event, 'fs13', 14)" class="t">Manager</span> <span class="o">=</span> { <span onmouseout="hideTip(event, 'fs14', 15)" onmouseover="showTip(event, 'fs14', 15)" class="i">Name</span><span class="o">:</span><span onmouseout="hideTip(event, 'fs12', 16)" onmouseover="showTip(event, 'fs12', 16)" class="t">string</span>; <span onmouseout="hideTip(event, 'fs15', 17)" onmouseover="showTip(event, 'fs15', 17)" class="i">Reports</span><span class="o">:</span><span onmouseout="hideTip(event, 'fs10', 18)" onmouseover="showTip(event, 'fs10', 18)" class="t">int</span> }
+<span class="k">type</span> <span onmouseout="hideTip(event, 'fs16', 19)" onmouseover="showTip(event, 'fs16', 19)" class="t">Person</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs17', 20)" onmouseover="showTip(event, 'fs17', 20)" class="p">User</span> <span class="k">of</span> <span onmouseout="hideTip(event, 'fs17', 21)" onmouseover="showTip(event, 'fs17', 21)" class="t">User</span> | <span onmouseout="hideTip(event, 'fs18', 22)" onmouseover="showTip(event, 'fs18', 22)" class="p">Manager</span> <span class="k">of</span> <span onmouseout="hideTip(event, 'fs18', 23)" onmouseover="showTip(event, 'fs18', 23)" class="t">Manager</span>
+    <span class="k">with</span> <span class="k">override</span> <span onmouseout="hideTip(event, 'fs19', 24)" onmouseover="showTip(event, 'fs19', 24)" class="i">this</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs20', 25)" onmouseover="showTip(event, 'fs20', 25)" class="f">ToString</span>() <span class="o">=</span> <span class="k">match</span> <span onmouseout="hideTip(event, 'fs19', 26)" onmouseover="showTip(event, 'fs19', 26)" class="i">this</span> <span class="k">with</span> <span onmouseout="hideTip(event, 'fs17', 27)" onmouseover="showTip(event, 'fs17', 27)" class="p">User</span> <span onmouseout="hideTip(event, 'fs21', 28)" onmouseover="showTip(event, 'fs21', 28)" class="i">u</span> <span class="k">-&gt;</span> <span onmouseout="hideTip(event, 'fs21', 29)" onmouseover="showTip(event, 'fs21', 29)" class="i">u</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs11', 30)" onmouseover="showTip(event, 'fs11', 30)" class="i">Name</span> | <span onmouseout="hideTip(event, 'fs18', 31)" onmouseover="showTip(event, 'fs18', 31)" class="p">Manager</span> <span onmouseout="hideTip(event, 'fs22', 32)" onmouseover="showTip(event, 'fs22', 32)" class="i">m</span> <span class="k">-&gt;</span> <span onmouseout="hideTip(event, 'fs22', 33)" onmouseover="showTip(event, 'fs22', 33)" class="i">m</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs14', 34)" onmouseover="showTip(event, 'fs14', 34)" class="i">Name</span>
 </code></pre></td>
 </tr>
 </table>
 
-<p>Some more info</p>
+<p>Create a message template</p>
 
-<div class="tip" id="fs1">namespace MessageTemplates</div>
-<div class="tip" id="fs2">Multiple items<br />type MessageTemplate =<br />&#160;&#160;new : tokens:IEnumerable&lt;MessageTemplateToken&gt; -&gt; MessageTemplate + 1 overload<br />&#160;&#160;member Format : formatProvider:IFormatProvider * params values:obj[] -&gt; string + 1 overload<br />&#160;&#160;member Render : properties:IReadOnlyDictionary&lt;string, TemplatePropertyValue&gt; * ?formatProvider:IFormatProvider -&gt; string + 1 overload<br />&#160;&#160;member Text : string<br />&#160;&#160;member ToString : unit -&gt; string<br />&#160;&#160;member Tokens : IEnumerable&lt;MessageTemplateToken&gt;<br />&#160;&#160;static member Capture : templateMessage:string * params values:obj[] -&gt; IEnumerable&lt;TemplateProperty&gt; + 1 overload<br />&#160;&#160;static member CaptureWith : maximumDepth:int * additionalScalarTypes:IEnumerable&lt;Type&gt; * additionalDestructuringPolicies:IEnumerable&lt;IDestructuringPolicy&gt; * template:MessageTemplate * params values:obj[] -&gt; IEnumerable&lt;TemplateProperty&gt;<br />&#160;&#160;static member Format : templateMessage:string * params values:obj[] -&gt; string + 2 overloads<br />&#160;&#160;static member Parse : templateMessage:string -&gt; MessageTemplate<br /><br />Full name: MessageTemplates.MessageTemplate<br /><br />--------------------</div>
-<div class="tip" id="fs3"></div>
+<table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
+<span class="l">2: </span>
+<span class="l">3: </span>
+</pre></td>
+<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">let</span> <span onmouseout="hideTip(event, 'fs23', 35)" onmouseover="showTip(event, 'fs23', 35)" class="i">template</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs24', 36)" onmouseover="showTip(event, 'fs24', 36)" class="t">Parser</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs25', 37)" onmouseover="showTip(event, 'fs25', 37)" class="f">parse</span> <span class="s">&quot;Hello, {@person}&quot;</span>
+<span class="c">// val template : Template =</span>
+<span class="c">//  T (tokens = [|Text (0,&quot;Hello, &quot;); Prop (7,{@person})|])</span>
+</code></pre></td>
+</tr>
+</table>
+
+<p>Format the template using an F# record argument:</p>
+
+<table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
+<span class="l">2: </span>
+</pre></td>
+<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">let</span> <span onmouseout="hideTip(event, 'fs26', 38)" onmouseover="showTip(event, 'fs26', 38)" class="i">helloMessage</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs27', 39)" onmouseover="showTip(event, 'fs27', 39)" class="t">Formatting</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs28', 40)" onmouseover="showTip(event, 'fs28', 40)" class="f">format</span> <span onmouseout="hideTip(event, 'fs23', 41)" onmouseover="showTip(event, 'fs23', 41)" class="i">template</span> [| {<span class="i">Id</span><span class="o">=</span><span class="n">1</span>; <span class="i">Name</span><span class="o">=</span><span class="s">&quot;Adam&quot;</span>} |]
+<span class="c">// val helloMessage : string = &quot;Hello, User { Id: 1, Name: &quot;Adam&quot; }&quot;</span>
+</code></pre></td>
+</tr>
+</table>
+
+<p>Format the template using an F# DU, with a record argument?
+ Notice the normally 'hidden' fields on the F# DU are still rendered
+ (i.e. Tag, IsUser, etc).</p>
+
+<table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
+<span class="l">2: </span>
+<span class="l">3: </span>
+</pre></td>
+<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span onmouseout="hideTip(event, 'fs27', 42)" onmouseover="showTip(event, 'fs27', 42)" class="t">Formatting</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs28', 43)" onmouseover="showTip(event, 'fs28', 43)" class="f">format</span> <span onmouseout="hideTip(event, 'fs23', 44)" onmouseover="showTip(event, 'fs23', 44)" class="i">template</span> [| <span onmouseout="hideTip(event, 'fs17', 45)" onmouseover="showTip(event, 'fs17', 45)" class="p">User</span>({<span class="i">Id</span><span class="o">=</span><span class="n">99</span>; <span class="i">Name</span><span class="o">=</span><span class="s">&quot;John&quot;</span>}) |]
+<span class="c">// &gt; val it : string =</span>
+<span class="c">//  &quot;Hello, User { Item: User { Id: 99, Name: &quot;John&quot; }, Tag: 0, IsUser: True, IsManager: False }&quot;</span>
+</code></pre></td>
+</tr>
+</table>
+
+<p>How can I capture and print F# Discriminated Unions better?
+<em>destructuring</em> is fully customisable. TODO: maybe this common use
+should be fixed in the API itself.</p>
+
+<table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
+<span class="l">2: </span>
+<span class="l">3: </span>
+</pre></td>
+<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">let</span> <span onmouseout="hideTip(event, 'fs29', 46)" onmouseover="showTip(event, 'fs29', 46)" class="i">myFsharpDestructurer</span> <span class="o">:</span> <span onmouseout="hideTip(event, 'fs30', 47)" onmouseover="showTip(event, 'fs30', 47)" class="i">Destructurer</span> <span class="o">=</span>
+    <span class="k">fun</span> <span onmouseout="hideTip(event, 'fs31', 48)" onmouseover="showTip(event, 'fs31', 48)" class="i">req</span> <span class="k">-&gt;</span> <span onmouseout="hideTip(event, 'fs32', 49)" onmouseover="showTip(event, 'fs32', 49)" class="i">TemplatePropertyValue</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs33', 50)" onmouseover="showTip(event, 'fs33', 50)" class="i">Empty</span>
+<span class="c">// Capturing.capturePropertiesCustom()</span>
+</code></pre></td>
+</tr>
+</table>
+
+<p>What if I have a better way to capture values?</p>
+
+<table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
+<span class="l">2: </span>
+<span class="l">3: </span>
+<span class="l">4: </span>
+<span class="l">5: </span>
+<span class="l">6: </span>
+</pre></td>
+<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">let</span> <span onmouseout="hideTip(event, 'fs34', 51)" onmouseover="showTip(event, 'fs34', 51)" class="i">tw</span> <span class="o">=</span> <span class="k">new</span> <span onmouseout="hideTip(event, 'fs2', 52)" onmouseover="showTip(event, 'fs2', 52)" class="i">System</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs35', 53)" onmouseover="showTip(event, 'fs35', 53)" class="i">IO</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs36', 54)" onmouseover="showTip(event, 'fs36', 54)" class="t">StringWriter</span>()
+<span onmouseout="hideTip(event, 'fs27', 55)" onmouseover="showTip(event, 'fs27', 55)" class="t">Formatting</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs37', 56)" onmouseover="showTip(event, 'fs37', 56)" class="f">formatCustom</span> <span onmouseout="hideTip(event, 'fs23', 57)" onmouseover="showTip(event, 'fs23', 57)" class="i">template</span> <span onmouseout="hideTip(event, 'fs34', 58)" onmouseover="showTip(event, 'fs34', 58)" class="i">tw</span> (<span class="k">function</span>
+                                    | <span class="s">&quot;person&quot;</span> <span class="k">-&gt;</span> <span onmouseout="hideTip(event, 'fs38', 59)" onmouseover="showTip(event, 'fs38', 59)" class="p">SequenceValue</span> [<span onmouseout="hideTip(event, 'fs39', 60)" onmouseover="showTip(event, 'fs39', 60)" class="p">ScalarValue</span> <span class="n">1</span>; <span onmouseout="hideTip(event, 'fs39', 61)" onmouseover="showTip(event, 'fs39', 61)" class="p">ScalarValue</span> <span class="n">2</span>]
+                                    | <span class="s">&quot;unused&quot;</span> <span class="k">-&gt;</span> <span onmouseout="hideTip(event, 'fs39', 62)" onmouseover="showTip(event, 'fs39', 62)" class="p">ScalarValue</span> (<span onmouseout="hideTip(event, 'fs40', 63)" onmouseover="showTip(event, 'fs40', 63)" class="f">box</span> <span class="n">213.456</span>)
+                                    | _ <span class="k">-&gt;</span> <span onmouseout="hideTip(event, 'fs32', 64)" onmouseover="showTip(event, 'fs32', 64)" class="i">TemplatePropertyValue</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs33', 65)" onmouseover="showTip(event, 'fs33', 65)" class="i">Empty</span>)
+<span class="c">// &gt; val tw : System.IO.StringWriter = Hello, [1, 2]</span>
+</code></pre></td>
+</tr>
+</table>
+
+<p>How can I get the property names and values associated with the template?</p>
+
+<table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
+<span class="l">2: </span>
+<span class="l">3: </span>
+<span class="l">4: </span>
+</pre></td>
+<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span onmouseout="hideTip(event, 'fs41', 66)" onmouseover="showTip(event, 'fs41', 66)" class="t">Capturing</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs42', 67)" onmouseover="showTip(event, 'fs42', 67)" class="f">captureMessageProperties</span> <span class="s">&quot;{@easy} {@as}&quot;</span> [| <span class="n">123</span>; <span class="s">&quot;abc&quot;</span> |] <span class="o">|&gt;</span> <span onmouseout="hideTip(event, 'fs43', 68)" onmouseover="showTip(event, 'fs43', 68)" class="t">Seq</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs44', 69)" onmouseover="showTip(event, 'fs44', 69)" class="f">toArray</span>
+<span class="c">// val it : PropertyNameAndValue [] =</span>
+<span class="c">//  [|{Name = &quot;easy&quot;; Value = ScalarValue 123;}</span>
+<span class="c">//    {Name = &quot;as&quot;; Value = ScalarValue &quot;abc&quot;;}|]</span>
+</code></pre></td>
+</tr>
+</table>
+
+<p>What happens when named property values aren't provied?</p>
+
+<table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
+<span class="l">2: </span>
+</pre></td>
+<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span onmouseout="hideTip(event, 'fs27', 70)" onmouseover="showTip(event, 'fs27', 70)" class="t">Formatting</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs28', 71)" onmouseover="showTip(event, 'fs28', 71)" class="f">format</span> (<span onmouseout="hideTip(event, 'fs24', 72)" onmouseover="showTip(event, 'fs24', 72)" class="t">Parser</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs25', 73)" onmouseover="showTip(event, 'fs25', 73)" class="f">parse</span> <span class="s">&quot;Hello, {$p1:l} and {$p2}&quot;</span>) [| <span onmouseout="hideTip(event, 'fs18', 74)" onmouseover="showTip(event, 'fs18', 74)" class="p">Manager</span>({<span class="i">Name</span><span class="o">=</span><span class="s">&quot;Lumberg&quot;</span>; <span class="i">Reports</span><span class="o">=</span><span class="n">10</span>}) |]
+<span class="c">// &gt; val it : string = &quot;Hello, Lumberg and {$p2}&quot;</span>
+</code></pre></td>
+</tr>
+</table>
+
+<p>What happens when <em>ALL</em> propertes are positional?</p>
+
+<table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
+<span class="l">2: </span>
+</pre></td>
+<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span onmouseout="hideTip(event, 'fs27', 75)" onmouseover="showTip(event, 'fs27', 75)" class="t">Formatting</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs28', 76)" onmouseover="showTip(event, 'fs28', 76)" class="f">format</span> (<span onmouseout="hideTip(event, 'fs24', 77)" onmouseover="showTip(event, 'fs24', 77)" class="t">Parser</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs25', 78)" onmouseover="showTip(event, 'fs25', 78)" class="f">parse</span> <span class="s">&quot;Hello, {1} and {0}&quot;</span>) [| <span class="s">&quot;b&quot;</span>; <span class="s">&quot;a&quot;</span> |]
+<span class="c">// &gt; val it : string = &quot;Hello, &quot;a&quot; and &quot;b&quot;&quot;</span>
+</code></pre></td>
+</tr>
+</table>
+
+<p>What happens when a positional parameter is missing?</p>
+
+<table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
+<span class="l">2: </span>
+</pre></td>
+<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span onmouseout="hideTip(event, 'fs27', 79)" onmouseover="showTip(event, 'fs27', 79)" class="t">Formatting</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs28', 80)" onmouseover="showTip(event, 'fs28', 80)" class="f">format</span> (<span onmouseout="hideTip(event, 'fs24', 81)" onmouseover="showTip(event, 'fs24', 81)" class="t">Parser</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs25', 82)" onmouseover="showTip(event, 'fs25', 82)" class="f">parse</span> <span class="s">&quot;Hello, {1} and {2}&quot;</span>) [| <span class="s">&quot;a&quot;</span>; <span class="s">&quot;b&quot;</span> |]
+<span class="c">// &gt; val it : string = &quot;Hello, &quot;b&quot; and {2}&quot;</span>
+</code></pre></td>
+</tr>
+</table>
+
+<p>What happens when <em>NOT</em> ALL propertes are positional (but some are)?</p>
+
+<table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
+<span class="l">2: </span>
+<span class="l">3: </span>
+</pre></td>
+<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span onmouseout="hideTip(event, 'fs27', 83)" onmouseover="showTip(event, 'fs27', 83)" class="t">Formatting</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs28', 84)" onmouseover="showTip(event, 'fs28', 84)" class="f">format</span> (<span onmouseout="hideTip(event, 'fs24', 85)" onmouseover="showTip(event, 'fs24', 85)" class="t">Parser</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs25', 86)" onmouseover="showTip(event, 'fs25', 86)" class="f">parse</span> <span class="s">&quot;Hello, {1} and {0} and {oops}&quot;</span>) [| <span class="s">&quot;b&quot;</span>; <span class="s">&quot;a&quot;</span>; <span class="s">&quot;c&quot;</span> |]
+<span class="c">// Notice that all parameters were matched left-to-right, positional numbers ignored.</span>
+<span class="c">// &gt; val it : string = &quot;Hello, &quot;b&quot; and &quot;a&quot; and &quot;c&quot;&quot;</span>
+</code></pre></td>
+</tr>
+</table>
+
+<p>How does the parser work?</p>
+
+<table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l"> 1: </span>
+<span class="l"> 2: </span>
+<span class="l"> 3: </span>
+<span class="l"> 4: </span>
+<span class="l"> 5: </span>
+<span class="l"> 6: </span>
+<span class="l"> 7: </span>
+<span class="l"> 8: </span>
+<span class="l"> 9: </span>
+<span class="l">10: </span>
+<span class="l">11: </span>
+<span class="l">12: </span>
+<span class="l">13: </span>
+<span class="l">14: </span>
+<span class="l">15: </span>
+<span class="l">16: </span>
+<span class="l">17: </span>
+<span class="l">18: </span>
+<span class="l">19: </span>
+<span class="l">20: </span>
+<span class="l">21: </span>
+<span class="l">22: </span>
+<span class="l">23: </span>
+<span class="l">24: </span>
+<span class="l">25: </span>
+<span class="l">26: </span>
+<span class="l">27: </span>
+<span class="l">28: </span>
+<span class="l">29: </span>
+<span class="l">30: </span>
+<span class="l">31: </span>
+<span class="l">32: </span>
+<span class="l">33: </span>
+<span class="l">34: </span>
+<span class="l">35: </span>
+<span class="l">36: </span>
+<span class="l">37: </span>
+<span class="l">38: </span>
+<span class="l">39: </span>
+<span class="l">40: </span>
+<span class="l">41: </span>
+<span class="l">42: </span>
+<span class="l">43: </span>
+<span class="l">44: </span>
+<span class="l">45: </span>
+<span class="l">46: </span>
+<span class="l">47: </span>
+<span class="l">48: </span>
+<span class="l">49: </span>
+<span class="l">50: </span>
+</pre></td>
+<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">type</span> <span onmouseout="hideTip(event, 'fs45', 87)" onmouseover="showTip(event, 'fs45', 87)" class="t">TestItem</span> <span class="o">=</span> { <span onmouseout="hideTip(event, 'fs46', 88)" onmouseover="showTip(event, 'fs46', 88)" class="i">Template</span><span class="o">:</span> <span onmouseout="hideTip(event, 'fs12', 89)" onmouseover="showTip(event, 'fs12', 89)" class="t">string</span>
+                  <span onmouseout="hideTip(event, 'fs47', 90)" onmouseover="showTip(event, 'fs47', 90)" class="i">Values</span><span class="o">:</span> <span onmouseout="hideTip(event, 'fs2', 91)" onmouseover="showTip(event, 'fs2', 91)" class="i">System</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs48', 92)" onmouseover="showTip(event, 'fs48', 92)" class="i">Collections</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs49', 93)" onmouseover="showTip(event, 'fs49', 93)" class="t">IEnumerable</span> <span class="c">// eeew</span>
+                  <span onmouseout="hideTip(event, 'fs50', 94)" onmouseover="showTip(event, 'fs50', 94)" class="i">Expected</span><span class="o">:</span> <span onmouseout="hideTip(event, 'fs51', 95)" onmouseover="showTip(event, 'fs51', 95)" class="t">Token</span> <span onmouseout="hideTip(event, 'fs52', 96)" onmouseover="showTip(event, 'fs52', 96)" class="t">list</span>
+                  <span onmouseout="hideTip(event, 'fs53', 97)" onmouseover="showTip(event, 'fs53', 97)" class="i">ExpectedString</span><span class="o">:</span> <span onmouseout="hideTip(event, 'fs12', 98)" onmouseover="showTip(event, 'fs12', 98)" class="t">string</span> }
+
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs54', 99)" onmouseover="showTip(event, 'fs54', 99)" class="i">testData</span> <span class="o">=</span> [
+    { <span onmouseout="hideTip(event, 'fs55', 100)" onmouseover="showTip(event, 'fs55', 100)" class="i">Template</span> <span class="o">=</span>        <span class="s">&quot;test {test}&quot;</span>;          <span class="i">Values</span> <span class="o">=</span> [<span class="n">123</span>]
+      <span class="i">ExpectedString</span> <span class="o">=</span>  <span class="s">&quot;test 123&quot;</span>
+      <span class="i">Expected</span> <span class="o">=</span>        [ <span onmouseout="hideTip(event, 'fs56', 101)" onmouseover="showTip(event, 'fs56', 101)" class="t">Tk</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs57', 102)" onmouseover="showTip(event, 'fs57', 102)" class="f">text</span> <span class="n">0</span> <span class="s">&quot;test &quot;</span>
+                          <span onmouseout="hideTip(event, 'fs56', 103)" onmouseover="showTip(event, 'fs56', 103)" class="t">Tk</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs58', 104)" onmouseover="showTip(event, 'fs58', 104)" class="f">prop</span> <span class="n">5</span> <span class="s">&quot;{test}&quot;</span> <span class="s">&quot;test&quot;</span> ] }
+
+    { <span onmouseout="hideTip(event, 'fs55', 105)" onmouseover="showTip(event, 'fs55', 105)" class="i">Template</span> <span class="o">=</span>        <span class="s">&quot;test {test}{test}.&quot;</span>;   <span class="i">Values</span> <span class="o">=</span> [<span class="n">123</span>;<span class="n">456</span>]
+      <span class="i">ExpectedString</span> <span class="o">=</span>  <span class="s">&quot;test 123456.&quot;</span>
+      <span class="i">Expected</span> <span class="o">=</span>        [ <span onmouseout="hideTip(event, 'fs56', 106)" onmouseover="showTip(event, 'fs56', 106)" class="t">Tk</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs57', 107)" onmouseover="showTip(event, 'fs57', 107)" class="f">text</span> <span class="n">0</span> <span class="s">&quot;test &quot;</span>
+                          <span onmouseout="hideTip(event, 'fs56', 108)" onmouseover="showTip(event, 'fs56', 108)" class="t">Tk</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs58', 109)" onmouseover="showTip(event, 'fs58', 109)" class="f">prop</span> <span class="n">5</span> <span class="s">&quot;{test}&quot;</span> <span class="s">&quot;test&quot;</span>
+                          <span onmouseout="hideTip(event, 'fs56', 110)" onmouseover="showTip(event, 'fs56', 110)" class="t">Tk</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs58', 111)" onmouseover="showTip(event, 'fs58', 111)" class="f">prop</span> <span class="n">11</span> <span class="s">&quot;{test}&quot;</span> <span class="s">&quot;test&quot;</span>
+                          <span onmouseout="hideTip(event, 'fs56', 112)" onmouseover="showTip(event, 'fs56', 112)" class="t">Tk</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs57', 113)" onmouseover="showTip(event, 'fs57', 113)" class="f">text</span> <span class="n">17</span> <span class="s">&quot;.&quot;</span> ] }
+
+    { <span onmouseout="hideTip(event, 'fs55', 114)" onmouseover="showTip(event, 'fs55', 114)" class="i">Template</span> <span class="o">=</span>        <span class="s">&quot;test {@test};{$test};test&quot;</span>;   <span class="i">Values</span> <span class="o">=</span> [<span class="n">543</span>;<span class="n">567</span>]
+      <span class="i">ExpectedString</span> <span class="o">=</span>  <span class="s">&quot;test 543;567;test&quot;</span>
+      <span class="i">Expected</span> <span class="o">=</span>        [ <span onmouseout="hideTip(event, 'fs56', 115)" onmouseover="showTip(event, 'fs56', 115)" class="t">Tk</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs57', 116)" onmouseover="showTip(event, 'fs57', 116)" class="f">text</span> <span class="n">0</span> <span class="s">&quot;test &quot;</span>
+                          <span onmouseout="hideTip(event, 'fs56', 117)" onmouseover="showTip(event, 'fs56', 117)" class="t">Tk</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs59', 118)" onmouseover="showTip(event, 'fs59', 118)" class="f">propd</span> <span class="n">5</span> <span class="s">&quot;{@test}&quot;</span> <span class="s">&quot;test&quot;</span>
+                          <span onmouseout="hideTip(event, 'fs56', 119)" onmouseover="showTip(event, 'fs56', 119)" class="t">Tk</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs57', 120)" onmouseover="showTip(event, 'fs57', 120)" class="f">text</span> <span class="n">12</span> <span class="s">&quot;;&quot;</span>
+                          <span onmouseout="hideTip(event, 'fs56', 121)" onmouseover="showTip(event, 'fs56', 121)" class="t">Tk</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs60', 122)" onmouseover="showTip(event, 'fs60', 122)" class="f">propds</span> <span class="n">13</span> <span class="s">&quot;{$test}&quot;</span> <span class="s">&quot;test&quot;</span>
+                          <span onmouseout="hideTip(event, 'fs56', 123)" onmouseover="showTip(event, 'fs56', 123)" class="t">Tk</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs57', 124)" onmouseover="showTip(event, 'fs57', 124)" class="f">text</span> <span class="n">20</span> <span class="s">&quot;;test&quot;</span>] }
+
+    { <span onmouseout="hideTip(event, 'fs55', 125)" onmouseover="showTip(event, 'fs55', 125)" class="i">Template</span> <span class="o">=</span>        <span class="s">&quot;test {0};{1};{2}&quot;</span>;   <span class="i">Values</span> <span class="o">=</span> [<span onmouseout="hideTip(event, 'fs40', 126)" onmouseover="showTip(event, 'fs40', 126)" class="f">box</span> <span class="s">&quot;a&quot;</span>; <span onmouseout="hideTip(event, 'fs40', 127)" onmouseover="showTip(event, 'fs40', 127)" class="f">box</span> <span class="n">1</span>; <span onmouseout="hideTip(event, 'fs40', 128)" onmouseover="showTip(event, 'fs40', 128)" class="f">box</span> <span class="s">&quot;z&quot;</span>]
+      <span class="i">ExpectedString</span> <span class="o">=</span>  <span class="s">&quot;test a;1;z&quot;</span>
+      <span class="i">Expected</span> <span class="o">=</span>        [ <span onmouseout="hideTip(event, 'fs56', 129)" onmouseover="showTip(event, 'fs56', 129)" class="t">Tk</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs57', 130)" onmouseover="showTip(event, 'fs57', 130)" class="f">text</span> <span class="n">0</span> <span class="s">&quot;test &quot;</span>
+                          <span onmouseout="hideTip(event, 'fs56', 131)" onmouseover="showTip(event, 'fs56', 131)" class="t">Tk</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs61', 132)" onmouseover="showTip(event, 'fs61', 132)" class="f">propp</span> <span class="n">5</span> <span class="n">0</span>
+                          <span onmouseout="hideTip(event, 'fs56', 133)" onmouseover="showTip(event, 'fs56', 133)" class="t">Tk</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs57', 134)" onmouseover="showTip(event, 'fs57', 134)" class="f">text</span> <span class="n">8</span> <span class="s">&quot;;&quot;</span>
+                          <span onmouseout="hideTip(event, 'fs56', 135)" onmouseover="showTip(event, 'fs56', 135)" class="t">Tk</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs61', 136)" onmouseover="showTip(event, 'fs61', 136)" class="f">propp</span> <span class="n">9</span> <span class="n">1</span>
+                          <span onmouseout="hideTip(event, 'fs56', 137)" onmouseover="showTip(event, 'fs56', 137)" class="t">Tk</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs57', 138)" onmouseover="showTip(event, 'fs57', 138)" class="f">text</span> <span class="n">12</span> <span class="s">&quot;;&quot;</span>
+                          <span onmouseout="hideTip(event, 'fs56', 139)" onmouseover="showTip(event, 'fs56', 139)" class="t">Tk</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs61', 140)" onmouseover="showTip(event, 'fs61', 140)" class="f">propp</span> <span class="n">13</span> <span class="n">2</span> ] }
+]
+
+<span onmouseout="hideTip(event, 'fs54', 141)" onmouseover="showTip(event, 'fs54', 141)" class="i">testData</span>
+<span class="o">|&gt;</span> <span onmouseout="hideTip(event, 'fs43', 142)" onmouseover="showTip(event, 'fs43', 142)" class="t">Seq</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs62', 143)" onmouseover="showTip(event, 'fs62', 143)" class="f">map</span> (<span class="k">fun</span> <span onmouseout="hideTip(event, 'fs63', 144)" onmouseover="showTip(event, 'fs63', 144)" class="i">test</span> <span class="k">-&gt;</span> <span onmouseout="hideTip(event, 'fs63', 145)" onmouseover="showTip(event, 'fs63', 145)" class="i">test</span>, <span onmouseout="hideTip(event, 'fs24', 146)" onmouseover="showTip(event, 'fs24', 146)" class="t">Parser</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs25', 147)" onmouseover="showTip(event, 'fs25', 147)" class="f">parse</span> <span onmouseout="hideTip(event, 'fs63', 148)" onmouseover="showTip(event, 'fs63', 148)" class="i">test</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs64', 149)" onmouseover="showTip(event, 'fs64', 149)" class="i">Template</span>)
+<span class="o">|&gt;</span> <span onmouseout="hideTip(event, 'fs43', 150)" onmouseover="showTip(event, 'fs43', 150)" class="t">Seq</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs62', 151)" onmouseover="showTip(event, 'fs62', 151)" class="f">map</span> (<span class="k">fun</span> (<span onmouseout="hideTip(event, 'fs63', 152)" onmouseover="showTip(event, 'fs63', 152)" class="i">test</span>, <span onmouseout="hideTip(event, 'fs65', 153)" onmouseover="showTip(event, 'fs65', 153)" class="i">templ</span>) <span class="k">-&gt;</span> <span onmouseout="hideTip(event, 'fs41', 154)" onmouseover="showTip(event, 'fs41', 154)" class="t">Capturing</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs66', 155)" onmouseover="showTip(event, 'fs66', 155)" class="f">captureProperties</span> <span onmouseout="hideTip(event, 'fs65', 156)" onmouseover="showTip(event, 'fs65', 156)" class="i">templ</span> (<span onmouseout="hideTip(event, 'fs63', 157)" onmouseover="showTip(event, 'fs63', 157)" class="i">test</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs47', 158)" onmouseover="showTip(event, 'fs47', 158)" class="i">Values</span> <span class="o">|&gt;</span> <span onmouseout="hideTip(event, 'fs43', 159)" onmouseover="showTip(event, 'fs43', 159)" class="t">Seq</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs67', 160)" onmouseover="showTip(event, 'fs67', 160)" class="f">cast</span><span class="o">&lt;</span><span onmouseout="hideTip(event, 'fs68', 161)" onmouseover="showTip(event, 'fs68', 161)" class="t">obj</span><span class="o">&gt;</span> <span class="o">|&gt;</span> <span onmouseout="hideTip(event, 'fs43', 162)" onmouseover="showTip(event, 'fs43', 162)" class="t">Seq</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs44', 163)" onmouseover="showTip(event, 'fs44', 163)" class="f">toArray</span>))
+<span class="o">|&gt;</span> <span onmouseout="hideTip(event, 'fs43', 164)" onmouseover="showTip(event, 'fs43', 164)" class="t">Seq</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs44', 165)" onmouseover="showTip(event, 'fs44', 165)" class="f">toArray</span>
+<span class="c">// val it : seq&lt;PropertyNameAndValue&gt; [] =</span>
+<span class="c">//  [|[|{Name = &quot;test&quot;; Value = ScalarValue 123;}|];</span>
+<span class="c">//    [|{Name = &quot;test&quot;; Value = ScalarValue 123;}</span>
+<span class="c">//      {Name = &quot;test&quot;; Value = ScalarValue 456;}|];</span>
+<span class="c">//    [|{Name = &quot;test&quot;; Value = ScalarValue 543;}</span>
+<span class="c">//      {Name = &quot;test&quot;; Value = ScalarValue &quot;567&quot;;}|];</span>
+<span class="c">//    [|{Name = &quot;0&quot;; Value = ScalarValue &quot;a&quot;;}</span>
+<span class="c">//      {Name = &quot;1&quot;; Value = ScalarValue 1;};</span>
+<span class="c">//      {Name = &quot;2&quot;; Value = ScalarValue &quot;z&quot;;}|]</span>
+<span class="c">// |]</span>
+</code></pre></td>
+</tr>
+</table>
+
+<div class="tip" id="fs1">val invariantCulture : System.IFormatProvider<br /><br />Full name: Tutorial.invariantCulture</div>
+<div class="tip" id="fs2">namespace System</div>
+<div class="tip" id="fs3">namespace System.Globalization</div>
+<div class="tip" id="fs4">Multiple items<br />type CultureInfo =<br />&#160;&#160;new : name:string -&gt; CultureInfo + 3 overloads<br />&#160;&#160;member Calendar : Calendar<br />&#160;&#160;member ClearCachedData : unit -&gt; unit<br />&#160;&#160;member Clone : unit -&gt; obj<br />&#160;&#160;member CompareInfo : CompareInfo<br />&#160;&#160;member CultureTypes : CultureTypes<br />&#160;&#160;member DateTimeFormat : DateTimeFormatInfo with get, set<br />&#160;&#160;member DisplayName : string<br />&#160;&#160;member EnglishName : string<br />&#160;&#160;member Equals : value:obj -&gt; bool<br />&#160;&#160;...<br /><br />Full name: System.Globalization.CultureInfo<br /><br />--------------------<br />System.Globalization.CultureInfo(name: string) : unit<br />System.Globalization.CultureInfo(culture: int) : unit<br />System.Globalization.CultureInfo(name: string, useUserOverride: bool) : unit<br />System.Globalization.CultureInfo(culture: int, useUserOverride: bool) : unit</div>
+<div class="tip" id="fs5">property System.Globalization.CultureInfo.InvariantCulture: System.Globalization.CultureInfo</div>
+<div class="tip" id="fs6">type IFormatProvider =<br />&#160;&#160;member GetFormat : formatType:Type -&gt; obj<br /><br />Full name: System.IFormatProvider</div>
+<div class="tip" id="fs7">namespace FsMessageTemplates</div>
+<div class="tip" id="fs8">type User =<br />&#160;&#160;{Id: int;<br />&#160;&#160;&#160;Name: string;}<br /><br />Full name: Tutorial.User</div>
+<div class="tip" id="fs9">User.Id: int</div>
+<div class="tip" id="fs10">Multiple items<br />val int : value:&#39;T -&gt; int (requires member op_Explicit)<br /><br />Full name: Microsoft.FSharp.Core.Operators.int<br /><br />--------------------<br />type int = int32<br /><br />Full name: Microsoft.FSharp.Core.int<br /><br />--------------------<br />type int&lt;&#39;Measure&gt; = int<br /><br />Full name: Microsoft.FSharp.Core.int&lt;_&gt;</div>
+<div class="tip" id="fs11">User.Name: string</div>
+<div class="tip" id="fs12">Multiple items<br />val string : value:&#39;T -&gt; string<br /><br />Full name: Microsoft.FSharp.Core.Operators.string<br /><br />--------------------<br />type string = System.String<br /><br />Full name: Microsoft.FSharp.Core.string</div>
+<div class="tip" id="fs13">type Manager =<br />&#160;&#160;{Name: string;<br />&#160;&#160;&#160;Reports: int;}<br /><br />Full name: Tutorial.Manager</div>
+<div class="tip" id="fs14">Manager.Name: string</div>
+<div class="tip" id="fs15">Manager.Reports: int</div>
+<div class="tip" id="fs16">type Person =<br />&#160;&#160;| User of User<br />&#160;&#160;| Manager of Manager<br />&#160;&#160;override ToString : unit -&gt; string<br /><br />Full name: Tutorial.Person</div>
+<div class="tip" id="fs17">Multiple items<br />union case Person.User: User -&gt; Person<br /><br />--------------------<br />type User =<br />&#160;&#160;{Id: int;<br />&#160;&#160;&#160;Name: string;}<br /><br />Full name: Tutorial.User</div>
+<div class="tip" id="fs18">Multiple items<br />union case Person.Manager: Manager -&gt; Person<br /><br />--------------------<br />type Manager =<br />&#160;&#160;{Name: string;<br />&#160;&#160;&#160;Reports: int;}<br /><br />Full name: Tutorial.Manager</div>
+<div class="tip" id="fs19">val this : Person</div>
+<div class="tip" id="fs20">override Person.ToString : unit -&gt; string<br /><br />Full name: Tutorial.Person.ToString</div>
+<div class="tip" id="fs21">val u : User</div>
+<div class="tip" id="fs22">val m : Manager</div>
+<div class="tip" id="fs23">val template : Template<br /><br />Full name: Tutorial.template</div>
+<div class="tip" id="fs24">module Parser<br /><br />from FsMessageTemplates</div>
+<div class="tip" id="fs25">val parse : template:string -&gt; Template<br /><br />Full name: FsMessageTemplates.Parser.parse</div>
+<div class="tip" id="fs26">val helloMessage : string<br /><br />Full name: Tutorial.helloMessage</div>
+<div class="tip" id="fs27">module Formatting<br /><br />from FsMessageTemplates</div>
+<div class="tip" id="fs28">val format : template:Template -&gt; values:obj [] -&gt; string<br /><br />Full name: FsMessageTemplates.Formatting.format</div>
+<div class="tip" id="fs29">val myFsharpDestructurer : req:DestructureRequest -&gt; TemplatePropertyValue<br /><br />Full name: Tutorial.myFsharpDestructurer</div>
+<div class="tip" id="fs30">type Destructurer = DestructureRequest -&gt; TemplatePropertyValue<br /><br />Full name: FsMessageTemplates.Destructurer</div>
+<div class="tip" id="fs31">val req : DestructureRequest</div>
+<div class="tip" id="fs32">type TemplatePropertyValue =<br />&#160;&#160;| ScalarValue of obj<br />&#160;&#160;| SequenceValue of TemplatePropertyValue list<br />&#160;&#160;| StructureValue of typeTag: string * values: PropertyNameAndValue list<br />&#160;&#160;| DictionaryValue of data: ScalarKeyValuePair list<br />&#160;&#160;static member Empty : TemplatePropertyValue<br /><br />Full name: FsMessageTemplates.TemplatePropertyValue</div>
+<div class="tip" id="fs33"></div>
+<div class="tip" id="fs34">val tw : System.IO.StringWriter<br /><br />Full name: Tutorial.tw</div>
+<div class="tip" id="fs35">namespace System.IO</div>
+<div class="tip" id="fs36">Multiple items<br />type StringWriter =<br />&#160;&#160;inherit TextWriter<br />&#160;&#160;new : unit -&gt; StringWriter + 3 overloads<br />&#160;&#160;member Close : unit -&gt; unit<br />&#160;&#160;member Encoding : Encoding<br />&#160;&#160;member GetStringBuilder : unit -&gt; StringBuilder<br />&#160;&#160;member ToString : unit -&gt; string<br />&#160;&#160;member Write : value:char -&gt; unit + 2 overloads<br /><br />Full name: System.IO.StringWriter<br /><br />--------------------<br />System.IO.StringWriter() : unit<br />System.IO.StringWriter(formatProvider: System.IFormatProvider) : unit<br />System.IO.StringWriter(sb: System.Text.StringBuilder) : unit<br />System.IO.StringWriter(sb: System.Text.StringBuilder, formatProvider: System.IFormatProvider) : unit</div>
+<div class="tip" id="fs37">val formatCustom : template:Template -&gt; tw:System.IO.TextWriter -&gt; getValueByName:(string -&gt; TemplatePropertyValue) -&gt; unit<br /><br />Full name: FsMessageTemplates.Formatting.formatCustom</div>
+<div class="tip" id="fs38">union case TemplatePropertyValue.SequenceValue: TemplatePropertyValue list -&gt; TemplatePropertyValue</div>
+<div class="tip" id="fs39">union case TemplatePropertyValue.ScalarValue: obj -&gt; TemplatePropertyValue</div>
+<div class="tip" id="fs40">val box : value:&#39;T -&gt; obj<br /><br />Full name: Microsoft.FSharp.Core.Operators.box</div>
+<div class="tip" id="fs41">module Capturing<br /><br />from FsMessageTemplates</div>
+<div class="tip" id="fs42">val captureMessageProperties : template:string -&gt; args:obj [] -&gt; seq&lt;PropertyNameAndValue&gt;<br /><br />Full name: FsMessageTemplates.Capturing.captureMessageProperties</div>
+<div class="tip" id="fs43">module Seq<br /><br />from Microsoft.FSharp.Collections</div>
+<div class="tip" id="fs44">val toArray : source:seq&lt;&#39;T&gt; -&gt; &#39;T []<br /><br />Full name: Microsoft.FSharp.Collections.Seq.toArray</div>
+<div class="tip" id="fs45">type TestItem =<br />&#160;&#160;{Template: string;<br />&#160;&#160;&#160;Values: IEnumerable;<br />&#160;&#160;&#160;Expected: Token list;<br />&#160;&#160;&#160;ExpectedString: string;}<br /><br />Full name: Tutorial.TestItem</div>
+<div class="tip" id="fs46">Multiple items<br />TestItem.Template: string<br /><br />--------------------<br />type Template =<br />&#160;&#160;member FormatString : string<br />&#160;&#160;member private Named : PropertyToken []<br />&#160;&#160;member private Positionals : PropertyToken []<br />&#160;&#160;member Properties : seq&lt;PropertyToken&gt;<br />&#160;&#160;member Tokens : seq&lt;Token&gt;<br /><br />Full name: FsMessageTemplates.Template</div>
+<div class="tip" id="fs47">TestItem.Values: System.Collections.IEnumerable</div>
+<div class="tip" id="fs48">namespace System.Collections</div>
+<div class="tip" id="fs49">type IEnumerable =<br />&#160;&#160;member GetEnumerator : unit -&gt; IEnumerator<br /><br />Full name: System.Collections.IEnumerable</div>
+<div class="tip" id="fs50">TestItem.Expected: Token list</div>
+<div class="tip" id="fs51">type Token =<br />&#160;&#160;| Text of startIndex: int * text: string<br />&#160;&#160;| Prop of startIndex: int * PropertyToken<br /><br />Full name: FsMessageTemplates.Token</div>
+<div class="tip" id="fs52">type &#39;T list = List&lt;&#39;T&gt;<br /><br />Full name: Microsoft.FSharp.Collections.list&lt;_&gt;</div>
+<div class="tip" id="fs53">TestItem.ExpectedString: string</div>
+<div class="tip" id="fs54">val testData : TestItem list<br /><br />Full name: Tutorial.testData</div>
+<div class="tip" id="fs55">type Template =<br />&#160;&#160;member FormatString : string<br />&#160;&#160;member private Named : PropertyToken []<br />&#160;&#160;member private Positionals : PropertyToken []<br />&#160;&#160;member Properties : seq&lt;PropertyToken&gt;<br />&#160;&#160;member Tokens : seq&lt;Token&gt;<br /><br />Full name: FsMessageTemplates.Template</div>
+<div class="tip" id="fs56">module Tk</div>
+<div class="tip" id="fs57">val text : tindex:int -&gt; raw:string -&gt; Token<br /><br />Full name: Tk.text</div>
+<div class="tip" id="fs58">val prop : tindex:int -&gt; string -&gt; name:&#39;a -&gt; Token<br /><br />Full name: Tk.prop</div>
+<div class="tip" id="fs59">val propd : tindex:int -&gt; string -&gt; name:&#39;a -&gt; Token<br /><br />Full name: Tk.propd</div>
+<div class="tip" id="fs60">val propds : tindex:int -&gt; string -&gt; name:&#39;a -&gt; Token<br /><br />Full name: Tk.propds</div>
+<div class="tip" id="fs61">val propp : tindex:int -&gt; num:&#39;a -&gt; Token<br /><br />Full name: Tk.propp</div>
+<div class="tip" id="fs62">val map : mapping:(&#39;T -&gt; &#39;U) -&gt; source:seq&lt;&#39;T&gt; -&gt; seq&lt;&#39;U&gt;<br /><br />Full name: Microsoft.FSharp.Collections.Seq.map</div>
+<div class="tip" id="fs63">val test : TestItem</div>
+<div class="tip" id="fs64">TestItem.Template: string</div>
+<div class="tip" id="fs65">val templ : Template</div>
+<div class="tip" id="fs66">val captureProperties : template:Template -&gt; args:obj [] -&gt; seq&lt;PropertyNameAndValue&gt;<br /><br />Full name: FsMessageTemplates.Capturing.captureProperties</div>
+<div class="tip" id="fs67">val cast : source:System.Collections.IEnumerable -&gt; seq&lt;&#39;T&gt;<br /><br />Full name: Microsoft.FSharp.Collections.Seq.cast</div>
+<div class="tip" id="fs68">type obj = System.Object<br /><br />Full name: Microsoft.FSharp.Core.obj</div>
 
         </div>
         <div class="span3">

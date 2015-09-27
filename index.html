@@ -24,7 +24,6 @@
     <div class="container">
       <div class="masthead">
         <ul class="nav nav-pills pull-right">
-          <li><a href="http://fsharp.org">fsharp.org</a></li>
           <li><a href="http://github.com/adamchester/MessageTemplates">github page</a></li>
         </ul>
         <h3 class="muted"><a href="/MessageTemplates/index.html">MessageTemplates</a></h3>
@@ -43,10 +42,33 @@
     <div class="well well-small" id="nuget">
       The MessageTemplates library can be <a href="https://nuget.org/packages/MessageTemplates">installed from NuGet</a>:
       <pre>PM> Install-Package MessageTemplates</pre>
+      OR
+      <pre>PM> Install-Package FsMessageTemplates</pre>
     </div>
   </div>
   <div class="span1"></div>
 </div>
+
+<h1><a name="MessageTemplates-1" class="anchor" href="#MessageTemplates-1">MessageTemplates</a></h1>
+
+<p>An implementation of named string replacements, which allows formatting, parsing, and capturing properties. MessageTemplates is compatible with the <a href="http://serilog.net/">Serilog</a> <a href="https://github.com/serilog/serilog/wiki/Structured-Data">template format</a>.</p>
+
+<p>The C# implementation was extracted from Serilog itself.</p>
+
+<p>The F# implementation was designed to be copied (or <a href="http://fsprojects.github.io/Paket/github-dependencies.html">paket github referenced</a>) into existing libraries or applications directly, however there may also be a Nuget package in the future.</p>
+
+<h3><a name="Message-Template-Syntax" class="anchor" href="#Message-Template-Syntax">Message Template Syntax</a></h3>
+
+<p>Message templates are a superset of standard .NET format strings, so any format string acceptable to <code>string.Format()</code> will also be correctly processed by <code>MessageTemplates</code>.</p>
+
+<ul>
+<li>Property names are written between <code>{</code> and <code>}</code> brackets</li>
+<li>Brackets can be escaped by doubling them, e.g. <code>{{</code> will be rendered as <code>{</code></li>
+<li>Formats that use numeric property names, like <code>{0}</code> and <code>{1}</code> exclusively, will be matched with the <code>Format</code> method's parameters by treating the property names as indexes; this is identical to <code>string.Format()</code>'s behaviour</li>
+<li>If any of the property names are non-numeric, then all property names will be matched from left-to-right with the <code>Format</code> method's parameters</li>
+<li>Property names may be prefixed with an optional operator, <code>@</code> or <code>$</code>, to control how the property is serialised</li>
+<li>Property names may be suffixed with an optional format, e.g. <code>:000</code>, to control how the property is rendered; these format strings behave exactly as their counterparts within the <code>string.Format()</code> syntax</li>
+</ul>
 
 <h2><a name="Example" class="anchor" href="#Example">Example</a></h2>
 
@@ -101,7 +123,7 @@ the project and submit pull requests. If you're adding a new public API, please 
 consider adding <a href="https://github.com/adamchester/MessageTemplates/tree/master/docs/content">samples</a> that can be turned into a documentation. You might
 also want to read the <a href="https://github.com/adamchester/MessageTemplates/blob/master/README.md">library design notes</a> to understand how it works.</p>
 
-<p>The library is available under Public Domain license, which allows modification and 
+<p>The library is available under Apache 2.0 license, which allows modification and 
 redistribution for both commercial and non-commercial purposes. For more information see the 
 <a href="https://github.com/adamchester/MessageTemplates/blob/master/LICENSE.txt">License file</a> in the GitHub repository.</p>
 
