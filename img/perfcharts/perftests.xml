@@ -1,9 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <testSuite suiteName="">
-  <testRun id="F# MessageTemplates" hostname="adam-mbp-pc" date="2015-09-27T15:56:12.5876472+10:00">
-    <testResult testId="10k x named 1x string" testDate="2015-09-27T15:56:12.8227527+10:00">
-      <elapsedTime>61373</elapsedTime>
-      <cpuTime>0</cpuTime>
+  <testRun id="F# MessageTemplates" hostname="adam-mbp-pc" date="2015-09-27T20:18:08.2286178+10:00">
+    <testResult testId="10k x named 1x string" testDate="2015-09-27T20:18:08.4847485+10:00">
+      <elapsedTime>57085</elapsedTime>
+      <cpuTime>156250</cpuTime>
       <repeat>10000</repeat>
       <gcDelta>
         <gen0>0</gen0>
@@ -12,9 +12,9 @@
       </gcDelta>
     </testResult>
   </testRun>
-  <testRun id="C# MessageTemplates" hostname="adam-mbp-pc" date="2015-09-27T15:56:12.5876472+10:00">
-    <testResult testId="10k x named 1x string" testDate="2015-09-27T15:56:13.016744+10:00">
-      <elapsedTime>250361</elapsedTime>
+  <testRun id="C# MessageTemplates" hostname="adam-mbp-pc" date="2015-09-27T20:18:08.2286178+10:00">
+    <testResult testId="10k x named 1x string" testDate="2015-09-27T20:18:08.6757466+10:00">
+      <elapsedTime>230775</elapsedTime>
       <cpuTime>312500</cpuTime>
       <repeat>10000</repeat>
       <gcDelta>
@@ -24,21 +24,33 @@
       </gcDelta>
     </testResult>
   </testRun>
-  <testRun id="Serilog" hostname="adam-mbp-pc" date="2015-09-27T15:56:12.5876472+10:00">
-    <testResult testId="10k x named 1x string" testDate="2015-09-27T15:56:13.2805187+10:00">
-      <elapsedTime>124703</elapsedTime>
-      <cpuTime>156250</cpuTime>
+  <testRun id="DotLiquid" hostname="adam-mbp-pc" date="2015-09-27T20:18:08.2286178+10:00">
+    <testResult testId="10k x named 1x string" testDate="2015-09-27T20:18:08.9345325+10:00">
+      <elapsedTime>1424051</elapsedTime>
+      <cpuTime>1406250</cpuTime>
       <repeat>10000</repeat>
       <gcDelta>
-        <gen0>1</gen0>
+        <gen0>13</gen0>
         <gen1>0</gen1>
         <gen2>0</gen2>
       </gcDelta>
     </testResult>
   </testRun>
-  <testRun id="LibLog-&gt;Serilog" hostname="adam-mbp-pc" date="2015-09-27T15:56:12.5876472+10:00">
-    <testResult testId="10k x named 1x string" testDate="2015-09-27T15:56:13.4677464+10:00">
-      <elapsedTime>949084</elapsedTime>
+  <testRun id="Serilog" hostname="adam-mbp-pc" date="2015-09-27T20:18:08.2286178+10:00">
+    <testResult testId="10k x named 1x string" testDate="2015-09-27T20:18:09.2577121+10:00">
+      <elapsedTime>141139</elapsedTime>
+      <cpuTime>156250</cpuTime>
+      <repeat>10000</repeat>
+      <gcDelta>
+        <gen0>1</gen0>
+        <gen1>1</gen1>
+        <gen2>0</gen2>
+      </gcDelta>
+    </testResult>
+  </testRun>
+  <testRun id="LibLog-&gt;Serilog" hostname="adam-mbp-pc" date="2015-09-27T20:18:08.2286178+10:00">
+    <testResult testId="10k x named 1x string" testDate="2015-09-27T20:18:09.4517477+10:00">
+      <elapsedTime>905550</elapsedTime>
       <cpuTime>937500</cpuTime>
       <repeat>10000</repeat>
       <gcDelta>
@@ -48,10 +60,10 @@
       </gcDelta>
     </testResult>
   </testRun>
-  <testRun id="LibLog-&gt;Log4Net" hostname="adam-mbp-pc" date="2015-09-27T15:56:12.5876472+10:00">
-    <testResult testId="10k x named 1x string" testDate="2015-09-27T15:56:13.7827491+10:00">
-      <elapsedTime>975538</elapsedTime>
-      <cpuTime>1093750</cpuTime>
+  <testRun id="LibLog-&gt;Log4Net" hostname="adam-mbp-pc" date="2015-09-27T20:18:08.2286178+10:00">
+    <testResult testId="10k x named 1x string" testDate="2015-09-27T20:18:09.7617504+10:00">
+      <elapsedTime>964243</elapsedTime>
+      <cpuTime>937500</cpuTime>
       <repeat>10000</repeat>
       <gcDelta>
         <gen0>5</gen0>
@@ -60,9 +72,9 @@
       </gcDelta>
     </testResult>
   </testRun>
-  <testRun id="StringBuilder" hostname="adam-mbp-pc" date="2015-09-27T15:56:12.5876472+10:00">
-    <testResult testId="10k x named 1x string" testDate="2015-09-27T15:56:14.0587208+10:00">
-      <elapsedTime>21031</elapsedTime>
+  <testRun id="StringBuilder" hostname="adam-mbp-pc" date="2015-09-27T20:18:08.2286178+10:00">
+    <testResult testId="10k x named 1x string" testDate="2015-09-27T20:18:10.0397733+10:00">
+      <elapsedTime>25310</elapsedTime>
       <cpuTime>0</cpuTime>
       <repeat>10000</repeat>
       <gcDelta>
@@ -72,9 +84,9 @@
       </gcDelta>
     </testResult>
   </testRun>
-  <testRun id="TextWriter" hostname="adam-mbp-pc" date="2015-09-27T15:56:12.5876472+10:00">
-    <testResult testId="10k x named 1x string" testDate="2015-09-27T15:56:14.2387143+10:00">
-      <elapsedTime>30202</elapsedTime>
+  <testRun id="TextWriter" hostname="adam-mbp-pc" date="2015-09-27T20:18:08.2286178+10:00">
+    <testResult testId="10k x named 1x string" testDate="2015-09-27T20:18:10.2285337+10:00">
+      <elapsedTime>24914</elapsedTime>
       <cpuTime>0</cpuTime>
       <repeat>10000</repeat>
       <gcDelta>
@@ -84,33 +96,9 @@
       </gcDelta>
     </testResult>
   </testRun>
-  <testRun id="StringInject" hostname="adam-mbp-pc" date="2015-09-27T15:56:12.5876472+10:00">
-    <testResult testId="10k x named 1x string" testDate="2015-09-27T15:56:14.4557606+10:00">
-      <elapsedTime>544748</elapsedTime>
-      <cpuTime>625000</cpuTime>
-      <repeat>10000</repeat>
-      <gcDelta>
-        <gen0>11</gen0>
-        <gen1>0</gen1>
-        <gen2>0</gen2>
-      </gcDelta>
-    </testResult>
-  </testRun>
-  <testRun id="HaackFormat" hostname="adam-mbp-pc" date="2015-09-27T15:56:12.5876472+10:00">
-    <testResult testId="10k x named 1x string" testDate="2015-09-27T15:56:14.6907127+10:00">
-      <elapsedTime>215340</elapsedTime>
-      <cpuTime>312500</cpuTime>
-      <repeat>10000</repeat>
-      <gcDelta>
-        <gen0>0</gen0>
-        <gen1>0</gen1>
-        <gen2>0</gen2>
-      </gcDelta>
-    </testResult>
-  </testRun>
-  <testRun id="HanselmanFormat" hostname="adam-mbp-pc" date="2015-09-27T15:56:12.5876472+10:00">
-    <testResult testId="10k x named 1x string" testDate="2015-09-27T15:56:14.930713+10:00">
-      <elapsedTime>692414</elapsedTime>
+  <testRun id="StringInject" hostname="adam-mbp-pc" date="2015-09-27T20:18:08.2286178+10:00">
+    <testResult testId="10k x named 1x string" testDate="2015-09-27T20:18:10.4507488+10:00">
+      <elapsedTime>562420</elapsedTime>
       <cpuTime>625000</cpuTime>
       <repeat>10000</repeat>
       <gcDelta>
@@ -120,10 +108,10 @@
       </gcDelta>
     </testResult>
   </testRun>
-  <testRun id="HenriFormat" hostname="adam-mbp-pc" date="2015-09-27T15:56:12.5876472+10:00">
-    <testResult testId="10k x named 1x string" testDate="2015-09-27T15:56:15.1787488+10:00">
-      <elapsedTime>131346</elapsedTime>
-      <cpuTime>0</cpuTime>
+  <testRun id="HaackFormat" hostname="adam-mbp-pc" date="2015-09-27T20:18:08.2286178+10:00">
+    <testResult testId="10k x named 1x string" testDate="2015-09-27T20:18:10.7267457+10:00">
+      <elapsedTime>206794</elapsedTime>
+      <cpuTime>156250</cpuTime>
       <repeat>10000</repeat>
       <gcDelta>
         <gen0>0</gen0>
@@ -132,10 +120,34 @@
       </gcDelta>
     </testResult>
   </testRun>
-  <testRun id="JamesFormat" hostname="adam-mbp-pc" date="2015-09-27T15:56:12.5876472+10:00">
-    <testResult testId="10k x named 1x string" testDate="2015-09-27T15:56:15.4057415+10:00">
-      <elapsedTime>346030</elapsedTime>
-      <cpuTime>312500</cpuTime>
+  <testRun id="HanselmanFormat" hostname="adam-mbp-pc" date="2015-09-27T20:18:08.2286178+10:00">
+    <testResult testId="10k x named 1x string" testDate="2015-09-27T20:18:10.9656926+10:00">
+      <elapsedTime>705647</elapsedTime>
+      <cpuTime>781250</cpuTime>
+      <repeat>10000</repeat>
+      <gcDelta>
+        <gen0>11</gen0>
+        <gen1>11</gen1>
+        <gen2>0</gen2>
+      </gcDelta>
+    </testResult>
+  </testRun>
+  <testRun id="HenriFormat" hostname="adam-mbp-pc" date="2015-09-27T20:18:08.2286178+10:00">
+    <testResult testId="10k x named 1x string" testDate="2015-09-27T20:18:11.2147054+10:00">
+      <elapsedTime>135871</elapsedTime>
+      <cpuTime>156250</cpuTime>
+      <repeat>10000</repeat>
+      <gcDelta>
+        <gen0>0</gen0>
+        <gen1>0</gen1>
+        <gen2>0</gen2>
+      </gcDelta>
+    </testResult>
+  </testRun>
+  <testRun id="JamesFormat" hostname="adam-mbp-pc" date="2015-09-27T20:18:08.2286178+10:00">
+    <testResult testId="10k x named 1x string" testDate="2015-09-27T20:18:11.4547481+10:00">
+      <elapsedTime>378880</elapsedTime>
+      <cpuTime>468750</cpuTime>
       <repeat>10000</repeat>
       <gcDelta>
         <gen0>2</gen0>
@@ -144,9 +156,9 @@
       </gcDelta>
     </testResult>
   </testRun>
-  <testRun id="OskarFormat" hostname="adam-mbp-pc" date="2015-09-27T15:56:12.5876472+10:00">
-    <testResult testId="10k x named 1x string" testDate="2015-09-27T15:56:15.6186327+10:00">
-      <elapsedTime>903715</elapsedTime>
+  <testRun id="OskarFormat" hostname="adam-mbp-pc" date="2015-09-27T20:18:08.2286178+10:00">
+    <testResult testId="10k x named 1x string" testDate="2015-09-27T20:18:11.7127112+10:00">
+      <elapsedTime>922117</elapsedTime>
       <cpuTime>937500</cpuTime>
       <repeat>10000</repeat>
       <gcDelta>
@@ -156,10 +168,10 @@
       </gcDelta>
     </testResult>
   </testRun>
-  <testRun id="F# MessageTemplates" hostname="adam-mbp-pc" date="2015-09-27T15:56:12.6125326+10:00">
-    <testResult testId="10k x named 2x string" testDate="2015-09-27T15:56:15.9287556+10:00">
-      <elapsedTime>93481</elapsedTime>
-      <cpuTime>0</cpuTime>
+  <testRun id="F# MessageTemplates" hostname="adam-mbp-pc" date="2015-09-27T20:18:08.2685297+10:00">
+    <testResult testId="10k x named 2x string" testDate="2015-09-27T20:18:11.9867469+10:00">
+      <elapsedTime>79398</elapsedTime>
+      <cpuTime>156250</cpuTime>
       <repeat>10000</repeat>
       <gcDelta>
         <gen0>0</gen0>
@@ -168,10 +180,10 @@
       </gcDelta>
     </testResult>
   </testRun>
-  <testRun id="C# MessageTemplates" hostname="adam-mbp-pc" date="2015-09-27T15:56:12.6125326+10:00">
-    <testResult testId="10k x named 2x string" testDate="2015-09-27T15:56:16.1597477+10:00">
-      <elapsedTime>235535</elapsedTime>
-      <cpuTime>312500</cpuTime>
+  <testRun id="C# MessageTemplates" hostname="adam-mbp-pc" date="2015-09-27T20:18:08.2685297+10:00">
+    <testResult testId="10k x named 2x string" testDate="2015-09-27T20:18:12.2137139+10:00">
+      <elapsedTime>240269</elapsedTime>
+      <cpuTime>156250</cpuTime>
       <repeat>10000</repeat>
       <gcDelta>
         <gen0>3</gen0>
@@ -180,81 +192,21 @@
       </gcDelta>
     </testResult>
   </testRun>
-  <testRun id="Serilog" hostname="adam-mbp-pc" date="2015-09-27T15:56:12.6125326+10:00">
-    <testResult testId="10k x named 2x string" testDate="2015-09-27T15:56:16.4015825+10:00">
-      <elapsedTime>159801</elapsedTime>
-      <cpuTime>156250</cpuTime>
+  <testRun id="DotLiquid" hostname="adam-mbp-pc" date="2015-09-27T20:18:08.2685297+10:00">
+    <testResult testId="10k x named 2x string" testDate="2015-09-27T20:18:12.457516+10:00">
+      <elapsedTime>2553517</elapsedTime>
+      <cpuTime>2500000</cpuTime>
       <repeat>10000</repeat>
       <gcDelta>
-        <gen0>1</gen0>
-        <gen1>1</gen1>
+        <gen0>25</gen0>
+        <gen1>20</gen1>
         <gen2>0</gen2>
       </gcDelta>
     </testResult>
   </testRun>
-  <testRun id="LibLog-&gt;Serilog" hostname="adam-mbp-pc" date="2015-09-27T15:56:12.6125326+10:00">
-    <testResult testId="10k x named 2x string" testDate="2015-09-27T15:56:16.6287454+10:00">
-      <elapsedTime>940034</elapsedTime>
-      <cpuTime>937500</cpuTime>
-      <repeat>10000</repeat>
-      <gcDelta>
-        <gen0>6</gen0>
-        <gen1>6</gen1>
-        <gen2>0</gen2>
-      </gcDelta>
-    </testResult>
-  </testRun>
-  <testRun id="LibLog-&gt;Log4Net" hostname="adam-mbp-pc" date="2015-09-27T15:56:12.6125326+10:00">
-    <testResult testId="10k x named 2x string" testDate="2015-09-27T15:56:16.9386072+10:00">
-      <elapsedTime>1187506</elapsedTime>
-      <cpuTime>1250000</cpuTime>
-      <repeat>10000</repeat>
-      <gcDelta>
-        <gen0>6</gen0>
-        <gen1>3</gen1>
-        <gen2>0</gen2>
-      </gcDelta>
-    </testResult>
-  </testRun>
-  <testRun id="StringBuilder" hostname="adam-mbp-pc" date="2015-09-27T15:56:12.6125326+10:00">
-    <testResult testId="10k x named 2x string" testDate="2015-09-27T15:56:17.2396898+10:00">
-      <elapsedTime>34832</elapsedTime>
-      <cpuTime>0</cpuTime>
-      <repeat>10000</repeat>
-      <gcDelta>
-        <gen0>0</gen0>
-        <gen1>0</gen1>
-        <gen2>0</gen2>
-      </gcDelta>
-    </testResult>
-  </testRun>
-  <testRun id="TextWriter" hostname="adam-mbp-pc" date="2015-09-27T15:56:12.6125326+10:00">
-    <testResult testId="10k x named 2x string" testDate="2015-09-27T15:56:17.465718+10:00">
-      <elapsedTime>45638</elapsedTime>
-      <cpuTime>0</cpuTime>
-      <repeat>10000</repeat>
-      <gcDelta>
-        <gen0>0</gen0>
-        <gen1>0</gen1>
-        <gen2>0</gen2>
-      </gcDelta>
-    </testResult>
-  </testRun>
-  <testRun id="StringInject" hostname="adam-mbp-pc" date="2015-09-27T15:56:12.6125326+10:00">
-    <testResult testId="10k x named 2x string" testDate="2015-09-27T15:56:17.6536404+10:00">
-      <elapsedTime>1183303</elapsedTime>
-      <cpuTime>1250000</cpuTime>
-      <repeat>10000</repeat>
-      <gcDelta>
-        <gen0>24</gen0>
-        <gen1>24</gen1>
-        <gen2>0</gen2>
-      </gcDelta>
-    </testResult>
-  </testRun>
-  <testRun id="HaackFormat" hostname="adam-mbp-pc" date="2015-09-27T15:56:12.6125326+10:00">
-    <testResult testId="10k x named 2x string" testDate="2015-09-27T15:56:17.9507426+10:00">
-      <elapsedTime>365918</elapsedTime>
+  <testRun id="Serilog" hostname="adam-mbp-pc" date="2015-09-27T20:18:08.2685297+10:00">
+    <testResult testId="10k x named 2x string" testDate="2015-09-27T20:18:12.8947097+10:00">
+      <elapsedTime>168091</elapsedTime>
       <cpuTime>312500</cpuTime>
       <repeat>10000</repeat>
       <gcDelta>
@@ -264,46 +216,58 @@
       </gcDelta>
     </testResult>
   </testRun>
-  <testRun id="HanselmanFormat" hostname="adam-mbp-pc" date="2015-09-27T15:56:12.6125326+10:00">
-    <testResult testId="10k x named 2x string" testDate="2015-09-27T15:56:18.2095805+10:00">
-      <elapsedTime>975528</elapsedTime>
+  <testRun id="LibLog-&gt;Serilog" hostname="adam-mbp-pc" date="2015-09-27T20:18:08.2685297+10:00">
+    <testResult testId="10k x named 2x string" testDate="2015-09-27T20:18:13.1317723+10:00">
+      <elapsedTime>941053</elapsedTime>
       <cpuTime>937500</cpuTime>
       <repeat>10000</repeat>
       <gcDelta>
-        <gen0>12</gen0>
+        <gen0>6</gen0>
         <gen1>0</gen1>
         <gen2>0</gen2>
       </gcDelta>
     </testResult>
   </testRun>
-  <testRun id="HenriFormat" hostname="adam-mbp-pc" date="2015-09-27T15:56:12.6125326+10:00">
-    <testResult testId="10k x named 2x string" testDate="2015-09-27T15:56:18.4886502+10:00">
-      <elapsedTime>250663</elapsedTime>
-      <cpuTime>156250</cpuTime>
+  <testRun id="LibLog-&gt;Log4Net" hostname="adam-mbp-pc" date="2015-09-27T20:18:08.2685297+10:00">
+    <testResult testId="10k x named 2x string" testDate="2015-09-27T20:18:13.4077114+10:00">
+      <elapsedTime>1108382</elapsedTime>
+      <cpuTime>1093750</cpuTime>
       <repeat>10000</repeat>
       <gcDelta>
-        <gen0>1</gen0>
-        <gen1>1</gen1>
+        <gen0>6</gen0>
+        <gen1>6</gen1>
         <gen2>0</gen2>
       </gcDelta>
     </testResult>
   </testRun>
-  <testRun id="JamesFormat" hostname="adam-mbp-pc" date="2015-09-27T15:56:12.6125326+10:00">
-    <testResult testId="10k x named 2x string" testDate="2015-09-27T15:56:18.6947034+10:00">
-      <elapsedTime>624902</elapsedTime>
-      <cpuTime>625000</cpuTime>
+  <testRun id="StringBuilder" hostname="adam-mbp-pc" date="2015-09-27T20:18:08.2685297+10:00">
+    <testResult testId="10k x named 2x string" testDate="2015-09-27T20:18:13.7415311+10:00">
+      <elapsedTime>32176</elapsedTime>
+      <cpuTime>0</cpuTime>
       <repeat>10000</repeat>
       <gcDelta>
-        <gen0>4</gen0>
-        <gen1>4</gen1>
+        <gen0>0</gen0>
+        <gen1>0</gen1>
         <gen2>0</gen2>
       </gcDelta>
     </testResult>
   </testRun>
-  <testRun id="OskarFormat" hostname="adam-mbp-pc" date="2015-09-27T15:56:12.6125326+10:00">
-    <testResult testId="10k x named 2x string" testDate="2015-09-27T15:56:18.9396497+10:00">
-      <elapsedTime>1632988</elapsedTime>
-      <cpuTime>1718750</cpuTime>
+  <testRun id="TextWriter" hostname="adam-mbp-pc" date="2015-09-27T20:18:08.2685297+10:00">
+    <testResult testId="10k x named 2x string" testDate="2015-09-27T20:18:13.9267114+10:00">
+      <elapsedTime>39724</elapsedTime>
+      <cpuTime>0</cpuTime>
+      <repeat>10000</repeat>
+      <gcDelta>
+        <gen0>0</gen0>
+        <gen1>0</gen1>
+        <gen2>0</gen2>
+      </gcDelta>
+    </testResult>
+  </testRun>
+  <testRun id="StringInject" hostname="adam-mbp-pc" date="2015-09-27T20:18:08.2685297+10:00">
+    <testResult testId="10k x named 2x string" testDate="2015-09-27T20:18:14.1147485+10:00">
+      <elapsedTime>1154703</elapsedTime>
+      <cpuTime>1093750</cpuTime>
       <repeat>10000</repeat>
       <gcDelta>
         <gen0>24</gen0>
@@ -312,10 +276,10 @@
       </gcDelta>
     </testResult>
   </testRun>
-  <testRun id="F# MessageTemplates" hostname="adam-mbp-pc" date="2015-09-27T15:56:12.6395301+10:00">
-    <testResult testId="10k x same pos 7 destr" testDate="2015-09-27T15:56:19.3286013+10:00">
-      <elapsedTime>499725</elapsedTime>
-      <cpuTime>468750</cpuTime>
+  <testRun id="HaackFormat" hostname="adam-mbp-pc" date="2015-09-27T20:18:08.2685297+10:00">
+    <testResult testId="10k x named 2x string" testDate="2015-09-27T20:18:14.4497522+10:00">
+      <elapsedTime>372579</elapsedTime>
+      <cpuTime>312500</cpuTime>
       <repeat>10000</repeat>
       <gcDelta>
         <gen0>1</gen0>
@@ -324,10 +288,70 @@
       </gcDelta>
     </testResult>
   </testRun>
-  <testRun id="C# MessageTemplates" hostname="adam-mbp-pc" date="2015-09-27T15:56:12.6395301+10:00">
-    <testResult testId="10k x same pos 7 destr" testDate="2015-09-27T15:56:19.5986547+10:00">
-      <elapsedTime>1391574</elapsedTime>
-      <cpuTime>1250000</cpuTime>
+  <testRun id="HanselmanFormat" hostname="adam-mbp-pc" date="2015-09-27T20:18:08.2685297+10:00">
+    <testResult testId="10k x named 2x string" testDate="2015-09-27T20:18:14.6677163+10:00">
+      <elapsedTime>905088</elapsedTime>
+      <cpuTime>937500</cpuTime>
+      <repeat>10000</repeat>
+      <gcDelta>
+        <gen0>12</gen0>
+        <gen1>12</gen1>
+        <gen2>0</gen2>
+      </gcDelta>
+    </testResult>
+  </testRun>
+  <testRun id="HenriFormat" hostname="adam-mbp-pc" date="2015-09-27T20:18:08.2685297+10:00">
+    <testResult testId="10k x named 2x string" testDate="2015-09-27T20:18:14.9407449+10:00">
+      <elapsedTime>255059</elapsedTime>
+      <cpuTime>312500</cpuTime>
+      <repeat>10000</repeat>
+      <gcDelta>
+        <gen0>1</gen0>
+        <gen1>1</gen1>
+        <gen2>0</gen2>
+      </gcDelta>
+    </testResult>
+  </testRun>
+  <testRun id="JamesFormat" hostname="adam-mbp-pc" date="2015-09-27T20:18:08.2685297+10:00">
+    <testResult testId="10k x named 2x string" testDate="2015-09-27T20:18:15.1877111+10:00">
+      <elapsedTime>686839</elapsedTime>
+      <cpuTime>781250</cpuTime>
+      <repeat>10000</repeat>
+      <gcDelta>
+        <gen0>4</gen0>
+        <gen1>0</gen1>
+        <gen2>0</gen2>
+      </gcDelta>
+    </testResult>
+  </testRun>
+  <testRun id="OskarFormat" hostname="adam-mbp-pc" date="2015-09-27T20:18:08.2685297+10:00">
+    <testResult testId="10k x named 2x string" testDate="2015-09-27T20:18:15.4387511+10:00">
+      <elapsedTime>1552930</elapsedTime>
+      <cpuTime>1562500</cpuTime>
+      <repeat>10000</repeat>
+      <gcDelta>
+        <gen0>24</gen0>
+        <gen1>24</gen1>
+        <gen2>0</gen2>
+      </gcDelta>
+    </testResult>
+  </testRun>
+  <testRun id="F# MessageTemplates" hostname="adam-mbp-pc" date="2015-09-27T20:18:08.296518+10:00">
+    <testResult testId="10k x same pos 7 destr" testDate="2015-09-27T20:18:15.774743+10:00">
+      <elapsedTime>472481</elapsedTime>
+      <cpuTime>468750</cpuTime>
+      <repeat>10000</repeat>
+      <gcDelta>
+        <gen0>1</gen0>
+        <gen1>1</gen1>
+        <gen2>0</gen2>
+      </gcDelta>
+    </testResult>
+  </testRun>
+  <testRun id="C# MessageTemplates" hostname="adam-mbp-pc" date="2015-09-27T20:18:08.296518+10:00">
+    <testResult testId="10k x same pos 7 destr" testDate="2015-09-27T20:18:16.0447101+10:00">
+      <elapsedTime>1378952</elapsedTime>
+      <cpuTime>1406250</cpuTime>
       <repeat>10000</repeat>
       <gcDelta>
         <gen0>9</gen0>
@@ -336,10 +360,10 @@
       </gcDelta>
     </testResult>
   </testRun>
-  <testRun id="Serilog" hostname="adam-mbp-pc" date="2015-09-27T15:56:12.6395301+10:00">
-    <testResult testId="10k x same pos 7 destr" testDate="2015-09-27T15:56:19.9217103+10:00">
-      <elapsedTime>1334798</elapsedTime>
-      <cpuTime>1406250</cpuTime>
+  <testRun id="Serilog" hostname="adam-mbp-pc" date="2015-09-27T20:18:08.296518+10:00">
+    <testResult testId="10k x same pos 7 destr" testDate="2015-09-27T20:18:16.3667057+10:00">
+      <elapsedTime>1311965</elapsedTime>
+      <cpuTime>1250000</cpuTime>
       <repeat>10000</repeat>
       <gcDelta>
         <gen0>8</gen0>
@@ -348,10 +372,10 @@
       </gcDelta>
     </testResult>
   </testRun>
-  <testRun id="LibLog-&gt;Serilog" hostname="adam-mbp-pc" date="2015-09-27T15:56:12.6395301+10:00">
-    <testResult testId="10k x same pos 7 destr" testDate="2015-09-27T15:56:20.2826584+10:00">
-      <elapsedTime>2266622</elapsedTime>
-      <cpuTime>2343750</cpuTime>
+  <testRun id="LibLog-&gt;Serilog" hostname="adam-mbp-pc" date="2015-09-27T20:18:08.296518+10:00">
+    <testResult testId="10k x same pos 7 destr" testDate="2015-09-27T20:18:16.7247512+10:00">
+      <elapsedTime>2178974</elapsedTime>
+      <cpuTime>2187500</cpuTime>
       <repeat>10000</repeat>
       <gcDelta>
         <gen0>11</gen0>
