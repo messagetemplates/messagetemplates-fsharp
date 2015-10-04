@@ -569,7 +569,7 @@ module Capturing =
 
     let defaultDestructureNoCustoms : Destructurer = Destructure.tryAllWithCustom Destructure.alwaysKeepTrying Destructure.alwaysKeepTrying
 
-    open FSharp.Reflection
+    open Microsoft.FSharp.Reflection
     let builtInFSharpTypesDestructurer : Destructurer =
         fun req ->
             let value = req.Value
@@ -585,7 +585,7 @@ module Capturing =
                 let objEnumerable = value :?> System.Collections.IEnumerable |> Seq.cast<obj>
                 SequenceValue(objEnumerable |> Seq.map req.TryAgainWithValue |> Seq.toList)
             | t when FSharpType.IsUnion t ->
-                let case, fields = FSharp.Reflection.FSharpValue.GetUnionFields(value, t)
+                let case, fields = FSharpValue.GetUnionFields(value, t)
                 let properties =
                     (case.GetFields(), fields)
                     ||> Seq.map2 (fun propInfo value ->
