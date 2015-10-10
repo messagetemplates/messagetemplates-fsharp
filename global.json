@@ -1,5 +1,5 @@
 {
-    "projects": [ "MessageTemplates", "MessageTemplates.Tests" ],
+    "projects": [ "src", "tests" ],
     "sdk": {
         "version": "default"
     }
