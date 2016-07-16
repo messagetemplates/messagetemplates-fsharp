@@ -173,27 +173,23 @@ module St =
     
 [<LangTheory; LangCsFsData>]
 let ``Default destructuring an F# union works`` (lang) =
+    // Both cases have no properties/attributes
     MtAssert.DestructuredAs(lang, "I like {@first} and {@second}", [| Case1; Case2 |],
         expected=[
             pnv("first",  strv ("MyDu", [ scal("Tag", 0); scal("IsCase1", true);  scal("IsCase2", false) ]))
             pnv("second", strv ("MyDu", [ scal("Tag", 1); scal("IsCase1", false); scal("IsCase2", true) ]))
         ])
 
-    // Some changed between C# and F#
-    // It seems FSharp.Core.Reflection.FSharpType.IsUnion
-    let expected : PropertyNameAndValue list =
-      match lang with
-      | "F#" -> 
-        [ pnv ("first", strv ("Case1AB", [ scal("a", 1); scal("b", "2"); scal("Tag", 0)
-                                           scal("IsCase1AB", true); scal("IsCase2AB", false) ]))
-          pnv ("second", strv (null, [ scal("Tag", 1); scal("IsCase1AB", false); scal("IsCase2AB", true) ]))
-        ]
-      | "C#" ->
-        [ pnv ("first", strv ("Case1AB", [ scal("a", 1); scal("b", "2"); scal("Tag", 0)
-                                           scal("IsCase1AB", true); scal("IsCase2AB", false) ]))
-          pnv ("second", strv ("_Case2AB", [ scal("Tag", 1); scal("IsCase1AB", false); scal("IsCase2AB", true) ]))
-        ]
-      | _ -> failwith "unexpected language"
+    // One DU case (Case1AB: a:int * b:string) has properties/attributes
+    let expected : PropertyNameAndValue list = [
+        pnv ("first", strv ("Case1AB", [ scal("a", 1)
+                                         scal("b", "2")
+                                         scal("Tag", 0)
+                                         scal("IsCase1AB", true)
+                                         scal("IsCase2AB", false) ]))
+        pnv ("second", strv (null, [ scal("Tag", 1)
+                                     scal("IsCase1AB", false)
+                                     scal("IsCase2AB", true) ])) ]
 
     MtAssert.DestructuredAs(lang, "I like {@first} and {@second}",
                             [| Case1AB(1,"2"); Case2AB |], expected)
