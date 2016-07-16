@@ -1,9 +1,8 @@
 {
-    "version": "1.0.0-beta-*",
     "testRunner": "xunit",
     "dependencies": {
         "FsMessageTemplates": { "target": "project" },
-        "MessageTemplates": "1.0.0-beta-242",
+        "MessageTemplates": "1.0.0-*",
         "xunit": "2.2.0-*",
         "dotnet-test-xunit": "2.2.0-preview2-*"
     },
@@ -25,16 +24,11 @@
     },
     "tools": {
         "dotnet-compile-fsc": {
-            "version": "1.0.0-preview2-*",
-            "imports": [
-                "dnxcore50",
-                "portable-net45+win81",
-                "netstandard1.3"
-            ]
+            "version": "1.0.0-preview2-*"
         }
     },
     "frameworks": {
-        "net46": {
+        "net451": {
             "assemblies": {
                 "FSharp.Core": "4.0.0.1"
             }
@@ -53,11 +47,7 @@
                     "version": "1.0.0-alpha-*",
                     "type": "build"
                 }
-            },
-            "imports": [
-                "dnxcore50",
-                "portable-net45+win8"
-            ]
+            }
         }
     }
 }

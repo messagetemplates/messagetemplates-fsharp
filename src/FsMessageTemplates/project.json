@@ -1,5 +1,5 @@
 {
-    "version": "1.0.0-beta-*",
+    "version": "1.0.0-rc-*",
     "description": "F# Message Templates - the ability to format {named} string values, and capture the properties",
     "authors": [ "Adam Chester" ],
     "packOptions": {
