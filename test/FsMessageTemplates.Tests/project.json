@@ -1,0 +1,63 @@
+{
+    "version": "1.0.0-beta-*",
+    "testRunner": "xunit",
+    "dependencies": {
+        "FsMessageTemplates": { "target": "project" },
+        "MessageTemplates": "1.0.0-beta-242",
+        "xunit": "2.2.0-*",
+        "dotnet-test-xunit": "2.2.0-preview2-*"
+    },
+    "buildOptions": {
+        "xmlDoc": true,
+        "compilerName": "fsc",
+        "compile": {
+            "includeFiles": [
+                "FSharpTypesDestructuringPolicy.fs",
+                "Tk.fs",
+                "CsToFs.fs",
+                "XunitSupport.fs",
+                "MtAssert.fs",
+                "FsTests.Parser.fs",
+                "FsTests.Capture.fs",
+                "FsTests.Format.fs"
+            ]
+        }
+    },
+    "tools": {
+        "dotnet-compile-fsc": {
+            "version": "1.0.0-preview2-*",
+            "imports": [
+                "dnxcore50",
+                "portable-net45+win81",
+                "netstandard1.3"
+            ]
+        }
+    },
+    "frameworks": {
+        "net46": {
+            "assemblies": {
+                "FSharp.Core": "4.0.0.1"
+            }
+        },
+        "netcoreapp1.0": {
+            "define": [ ],
+            "dependencies": {
+                "Microsoft.NETCore.App": {
+                    "type": "platform",
+                    "version": "1.0.0"
+                },
+                "System.Reflection.TypeExtensions": "4.1.0",
+                "System.Globalization": "4.0.11",
+                "Microsoft.FSharp.Core.netcore": {
+                    "include": "all",
+                    "version": "1.0.0-alpha-*",
+                    "type": "build"
+                }
+            },
+            "imports": [
+                "dnxcore50",
+                "portable-net45+win8"
+            ]
+        }
+    }
+}

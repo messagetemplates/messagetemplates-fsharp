@@ -1,34 +1,22 @@
-version: 1.0.0-beta.{build}
-
-# Fix line endings in Windows. (runs before repo cloning)
-init:
-  - git config --global core.autocrlf input
-
-# this turns of AppVeyor automatic searching for test-assemblies, not the actual testing
-test_script:
-  - dnx MessageTemplates.Tests test
-  - packages\xunit.runner.console\tools\xunit.console.x86.exe FsMessageTemplates.Tests\bin\Release\FsMessageTemplates.Tests.dll
-  - vstest.console /Logger:AppVeyor MessageTemplates.PerfTests\bin\Release\MessageTemplates.PerfTests.exe
-  - fsi -O --tailcalls+ --crossoptimize+ --exec MessageTemplates.PerfTests\Script.fsx --exportCharts
-  - fsi -O --tailcalls+ --crossoptimize+ --exec MessageTemplates.PerfTests\PerfTests.fsx --exportCharts
-
+version: '{build}'
+image: Visual Studio 2015
 configuration: Release
-os: Visual Studio 2015
-platform: Any CPU
 install:
-  - set PATH=%PROGRAMFILES(x86)%\MSBuild\14.0\Bin;%PROGRAMFILES(x86)%\Microsoft SDKs\F#\4.0\Framework\v4.0\;%PATH%
-  - dnvm install 1.0.0-beta6 -persistent -alias default
-  - .paket\paket.exe restore
-  - dnu restore MessageTemplates --lock
-  - dnu restore MessageTemplates.Tests --lock
-  - set DNX_BUILD_VERSION=%APPVEYOR_BUILD_NUMBER%
-build:
-  verbosity: minimal
-  publish_nuget: true
-  publish_nuget_symbols: true
-  parallel: true
-
+  - ps: mkdir -Force ".\build\" | Out-Null
+  - ps: Invoke-WebRequest "https://raw.githubusercontent.com/dotnet/cli/rel/1.0.0/scripts/obtain/dotnet-install.ps1" -OutFile ".\build\installcli.ps1"
+  - ps: $env:DOTNET_INSTALL_DIR = "$pwd\.dotnetcli"
+  - ps: '& .\build\installcli.ps1 -InstallDir "$env:DOTNET_INSTALL_DIR" -NoPath -Version 1.0.0-preview3-003161'
+  - ps: $env:Path = "$env:DOTNET_INSTALL_DIR;$env:Path"
+build_script:
+- ps: ./Build.ps1
+test: off
 artifacts:
-- path: artifacts\bin\MessageTemplates\$(configuration)\*.nupkg
-- path: FsMessageTemplates\bin\Release\FsMessageTemplates.*
-- path: artifacts\perfcharts\*
+- path: artifacts/FsMessageTemplates.*.nupkg
+deploy:
+- provider: NuGet
+  api_key:
+    secure: ZdlULX6DI2b/fKecXcFFuKZmMP+q2lz+us4pAeGqFl7mK0Be2/hG7LDSfZgIgAKI
+  skip_symbols: true
+  on:
+    branch: /^(dev|master)$/
+
