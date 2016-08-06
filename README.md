@@ -8,6 +8,7 @@ An implementation of {named} string replacements, which allows formatting, parsi
 The F# implementation was designed to be paket-github referenced, or installed as a nuget package.
 
 [![Build status](https://ci.appveyor.com/api/projects/status/e2y2xpegw081p0tl?svg=true)](https://ci.appveyor.com/project/adamchester/messagetemplates-fsharp)
+[![NuGet](https://img.shields.io/nuget/v/FsMessageTemplates.svg?maxAge=2592000)](https://www.nuget.org/packages/FsMessageTemplates)
 
 ### Samples
 
