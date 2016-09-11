@@ -1,32 +1,41 @@
+echo "build: Build started"
+
 Push-Location $PSScriptRoot
 
-if(Test-Path .\artifacts) { Remove-Item .\artifacts -Force -Recurse }
+if(Test-Path .\artifacts) {
+        echo "build: Cleaning .\artifacts"
+        Remove-Item .\artifacts -Force -Recurse
+}
 
 & dotnet restore --no-cache
 
 $branch = @{ $true = $env:APPVEYOR_REPO_BRANCH; $false = $(git symbolic-ref --short -q HEAD) }[$env:APPVEYOR_REPO_BRANCH -ne $NULL];
-$revision = @{ $true = "{0:00000}" -f [convert]::ToInt32("0" + $env:APPVEYOR_BUILD_NUMBER, 10); $false = "local" }[$env:APPVEYOR_BUILD_NUMBER -ne $NULL];
-$suffix = @{ $true = ""; $false = "$($branch.Substring(0, [math]::Min(10,$branch.Length)))-$revision"}[$branch -eq "master" -and $revision -ne "local"]
+$branch = $branch.Substring(0, [math]::Min(5, $branch.Length))
+$revision = @{ $true = "{0:00000}" -f [convert]::ToInt32("0" + $env:APPVEYOR_BUILD_NUMBER, 10); $false = "l" }[$env:APPVEYOR_BUILD_NUMBER -ne $NULL];
+$suffix = @{ $true = ""; $false = "$($branch.Substring(0, [math]::Min(10,$branch.Length)))-$revision"}[$branch -eq "master" -and $revision -ne "l"]
 
 echo "build: Version suffix is $suffix"
 
-Push-Location src\FsMessageTemplates
+foreach ($src in ls src/*) {
+    Push-Location $src
 
-& dotnet pack -c Release -o ..\..\.\artifacts --version-suffix=$revision
-if($LASTEXITCODE -ne 0) { exit 1 }
+        echo "build: Packaging project in $src"
 
-Pop-Location
+    & dotnet pack -c Release -o ..\..\artifacts --version-suffix=$suffix
+    if($LASTEXITCODE -ne 0) { exit 1 }
 
-Push-Location src\FsMtParser
+    Pop-Location
+}
 
-& dotnet pack -c Release -o ..\..\.\artifacts --version-suffix=$revision
-if($LASTEXITCODE -ne 0) { exit 1 }
+foreach ($test in ls test/*.Tests) {
+    Push-Location $test
 
-Pop-Location
+        echo "build: Testing project in $test"
 
-Push-Location test\FsMessageTemplates.Tests
+    & dotnet test -c Release
+    if($LASTEXITCODE -ne 0) { exit 3 }
 
-& dotnet test -c Release
-if($LASTEXITCODE -ne 0) { exit 2 }
+    Pop-Location
+}
 
 Pop-Location

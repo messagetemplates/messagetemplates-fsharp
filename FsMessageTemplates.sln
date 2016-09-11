@@ -8,7 +8,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "assets", "assets", "{E38800
 		appveyor.yml = appveyor.yml
 		build.cmd = build.cmd
 		Build.ps1 = Build.ps1
+		build.sh = build.sh
 		global.json = global.json
+		Install.ps1 = Install.ps1
 		LICENSE = LICENSE
 		README.md = README.md
 	EndProjectSection
