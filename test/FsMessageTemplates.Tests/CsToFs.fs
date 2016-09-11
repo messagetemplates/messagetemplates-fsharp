@@ -23,7 +23,7 @@ type CsDictionaryValue = MessageTemplates.Structure.DictionaryValue
 let (|Null|Value|) (x: _ System.Nullable) = if x.HasValue then Value x.Value else Null
 
 /// Converts a C# TextToken to an F# Token.Text
-let textToToken (tt: CsTextToken) = Token.Text(tt.StartIndex, tt.Text)
+let textToToken (tt: CsTextToken) = TextToken(tt.StartIndex, tt.Text)
 
 /// Converts a C# PropertyToken to an F# Token.Prop
 let propToToken (pr: CsPropertyToken) =
@@ -40,7 +40,7 @@ let propToToken (pr: CsPropertyToken) =
     let align = match pr.Alignment with
                 | Value v -> AlignInfo(getDirection v.Direction, v.Width)
                 | Null _ -> AlignInfo.Empty
-    Token.Prop(pr.StartIndex, PropertyToken(pr.PropertyName, pos, destr, align, pr.Format))
+    PropToken(pr.StartIndex, Property(pr.PropertyName, pos, destr, align, pr.Format))
 
 /// Converts a C# MessageTemplateToken to an F# Token
 let mttToToken (mtt: CsMessageTemplateToken) : Token =

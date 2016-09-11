@@ -6,7 +6,41 @@ open System.Collections.Generic
 
 let invariantProvider = (System.Globalization.CultureInfo.InvariantCulture :> System.IFormatProvider)
 
+type FsToken = FsMessageTemplates.Token
+
+let parsedAs lang message (expectedTokens: FsToken seq) =
+    let parsed =
+        match lang with
+        | "C#" -> MessageTemplates.MessageTemplate.Parse(message).Tokens |> Seq.map CsToFs.mttToToken |> List.ofSeq
+        | "F#" -> (FsMessageTemplates.Parser.parse message).Tokens |> List.ofSeq
+        | other -> failwithf "unexpected lang '%s'" other
+
+    let expected = expectedTokens |> Seq.cast<FsToken> |> Seq.toList
+    Xunit.Assert.Equal<FsToken list> (expected, parsed)
+
+let capture lang (messageTemplate:string) (args: obj list) =
+    let argsArray = (args |> Seq.cast<obj> |> Seq.toArray) // force 'args' to be IEnumerable
+    match lang with
+    | "F#" -> FsMessageTemplates.Capturing.captureMessageProperties messageTemplate argsArray |> List.ofSeq
+    | "C#" -> MessageTemplates.MessageTemplate.Capture(messageTemplate, argsArray) |> Seq.map CsToFs.templateProperty |> List.ofSeq
+    | other -> failwithf "unexpected lang '%s'" other
+
+let renderp lang (provider:IFormatProvider) messageTemplate args =
+    let argsArray = (args |> Seq.cast<obj> |> Seq.toArray) // force 'args' to be IEnumerable
+    match lang with
+    | "C#" -> MessageTemplates.MessageTemplate.Format(provider, messageTemplate, argsArray)
+    | "F#" -> FsMessageTemplates.Formatting.sprintsm provider messageTemplate argsArray
+    | other -> failwithf "unexpected lang '%s'" other
+
+let render lang template args =
+    renderp lang System.Globalization.CultureInfo.InvariantCulture template args
+
 type MtAssert() =
+
+    /// Asserts the 
+    static member ParsedAs (lang, message,  expectedTokens: FsToken seq) =
+        parsedAs lang message expectedTokens
+
     /// Captures properties from the C# or F# version in compatible ways.
     static member internal Capture(lang, template, values, ?maxDepth, ?additionalScalars, ?additionalDestrs) =
         let maxDepth = defaultArg maxDepth 10

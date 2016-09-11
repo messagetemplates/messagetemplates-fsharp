@@ -22,14 +22,14 @@ type AlignInfo =
 
 /// Represents the details about property parsed from within a message template.
 [<Struct>]
-type PropertyToken =
+type Property =
     /// Constructs a new instance of a template property.
     new: name:string
             * pos:int
             * destr:DestrHint
             * align: AlignInfo
             * format: string
-            -> PropertyToken
+            -> Property
     /// The name of the property.
     member Name:string
     /// If the property was positional (i.e. {0} or {1}, instead of {name}), this
@@ -51,18 +51,19 @@ type PropertyToken =
 /// A token parsed from a message template.
 type Token =
 /// A piece of text within a message template.
-| Text of startIndex:int * text:string
+| TextToken of startIndex: int * text: string
 /// A property within a message template.
-| Prop of startIndex:int * PropertyToken
+| PropToken of startIndex: int * prop: Property
 
 /// A template, including the message and parsed properties.
 [<Class>]
 type Template =
+    new: formatString:string * tokens: Token[] * isNamed:bool * properties:Property[] -> Template
     member Tokens : Token seq
     member FormatString : string
-    member Properties : PropertyToken seq
-    member internal Named : PropertyToken []
-    member internal Positionals : PropertyToken []
+    member Properties : Property seq
+    member internal Named : Property []
+    member internal Positionals : Property []
 
 /// A key and value pair, used as part of <see cref="TemplatePropertyValue.DictionaryValue" />.
 type ScalarKeyValuePair = TemplatePropertyValue * TemplatePropertyValue

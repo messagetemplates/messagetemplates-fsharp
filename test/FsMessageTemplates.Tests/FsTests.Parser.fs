@@ -9,6 +9,24 @@ open FsMessageTemplates
     These tests run against both the C# and F# version. This helps to maintain the same
     behaviour in both implementations.
 *)
+let assertParsedAs lang (message: string) expectedTokens =
+//    let sb = System.Text.StringBuilder()
+//    sb.Append(message) |> ignore
+//    sb.Append(": [") |> ignore
+//    expectedTokens
+//    |> Seq.iter (function
+//        | Text (idx, t) -> sb.AppendFormat("\"text\": \"{0}\", ", t) |> ignore
+//        | Prop (idx, pi) -> sb.AppendFormat("\"property\": \"\", ", pi.Name) |> ignore
+//    )
+//    sb.Append("]") |> ignore
+//    System.Console.WriteLine(sb.ToString())
+    FsTests.Asserts.MtAssert.ParsedAs(lang, message, expectedTokens)
+
+[<Fact>]
+let ``FsMtParser does something without crashing`` () =
+  let foundText t = ()
+  let foundProp p = ()
+  FsMtParser.parseParts "Hello {adam:#0.000}, how are {you? you crazy invalid prop}" foundText foundProp
 
 [<Fact>]
 let ``align info defaults are correct`` () =
@@ -180,4 +198,8 @@ let ``destructuring with empty property name is parsed as text`` (lang) =
 [<LangTheory; LangCsFsData>]
 let ``underscores are valid in property names`` (lang) =
     assertParsedAs lang  "{_123_Hello}" [Tk.prop 0 "{_123_Hello}" "_123_Hello"]
+
+//[<LangTheory; LangCsFsData>]
+//let ``property names starting with zero are positional`` (lang) =
+//    assertParsedAs lang  "{0001}" [Tk.propp 0 1]
 

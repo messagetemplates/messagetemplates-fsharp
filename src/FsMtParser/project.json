@@ -1,6 +1,6 @@
 {
     "version": "1.0.0-rc-*",
-    "description": "F# Message Templates - the ability to format {named} string values, and capture the properties",
+    "description": "F# Message Templates parser - the ability to parse {named} string values",
     "authors": [ "Adam Chester" ],
     "packOptions": {
         "tags": [ "message", "template", "serilog", "F#", "fsharp", "logging", "semantic", "structured" ],
@@ -13,8 +13,7 @@
         "compilerName": "fsc",
         "compile": {
           "includeFiles": [
-            "MessageTemplates.fsi",
-            "MessageTemplates.fs"
+            "FsMtParser.fs"
           ]
         }
     },
@@ -30,17 +29,11 @@
     },
     "frameworks": {
         "net45": {
-            "buildOptions": {
-                "define": [ "REFLECTION_API_EVOLVED" ]
-            },
             "dependencies": {
                 "FSharp.Core": "4.0.0.1"
             }
         },
         "netstandard1.6": {
-            "buildOptions": {
-                "define": [ "REFLECTION_API_EVOLVED" ]
-            },
             "dependencies": {
                 "NETStandard.Library": "1.6.0",
                 "Microsoft.FSharp.Core.netcore": "1.0.0-*"

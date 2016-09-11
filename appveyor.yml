@@ -12,6 +12,7 @@ build_script:
 test: off
 artifacts:
 - path: artifacts/FsMessageTemplates.*.nupkg
+- path: artifacts/FsMtParser.*.nupkg
 deploy:
 - provider: NuGet
   api_key:
