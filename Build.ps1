@@ -17,6 +17,13 @@ if($LASTEXITCODE -ne 0) { exit 1 }
 
 Pop-Location
 
+Push-Location src\FsMtParser
+
+& dotnet pack -c Release -o ..\..\.\artifacts --version-suffix=$revision
+if($LASTEXITCODE -ne 0) { exit 1 }
+
+Pop-Location
+
 Push-Location test\FsMessageTemplates.Tests
 
 & dotnet test -c Release
