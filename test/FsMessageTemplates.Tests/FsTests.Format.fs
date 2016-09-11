@@ -236,3 +236,28 @@ and Trunk { Item1: 1,1, Item2: 20/05/2013 16:39:00 +09:30, Item3: [Seq { nums: [
 
     let destr = createCustomDestructurer None (Some builtInFSharpTypesDestructurer)
     MtAssert.RenderedAs(lang, template, values, expected, provider, additionalDestrs=[destr])
+
+type Size = Large = 1
+type SizeFormatter(innerFormatProvider : IFormatProvider) =
+  interface IFormatProvider with
+    member this.GetFormat ty =
+      match ty with
+      | t when t = typeof<ICustomFormatter> -> this :> obj
+      | _ -> innerFormatProvider.GetFormat ty
+  interface ICustomFormatter with
+    member this.Format (format : string, arg : obj, provider : IFormatProvider) =
+      match arg with
+      | :? Size as s ->
+        match s with Size.Large -> "HUUGE" | _ -> s.ToString()
+      | :? IFormattable as f ->
+        f.ToString(format, innerFormatProvider)
+      | _ ->
+        arg.ToString()
+
+[<LangTheory; LangCsFsData>]
+let ``Applies custom formatter to enums`` (lang) =
+    let provider = (SizeFormatter CultureInfo.InvariantCulture) :> IFormatProvider
+    let template = "Size {size}"
+    let values : obj[] = [| Size.Large |]
+    let expected = "Size HUUGE"
+    MtAssert.RenderedAs(lang, template, values, expected, provider)

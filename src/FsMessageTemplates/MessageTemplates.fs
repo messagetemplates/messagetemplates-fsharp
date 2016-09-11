@@ -661,8 +661,9 @@ module Capturing =
 module Formatting =
     /// Recursively writes the string representation of the template property
     /// value to the provided TextWriter. The provided format string is only
-    /// used for a ScalarValue v when v implements System.IFormattable.
-    /// TODO: ICustomFormattable?
+    /// used for a ScalarValue v when v implements System.IFormattable or the
+    /// ScalarValue v when the TextWriter.FormatProvider has a format of type
+    /// ICustomFormatter.
     let rec writePropValue (w: TextWriter) (tpv: TemplatePropertyValue) (format: string) =
         match tpv with
         | ScalarValue sv ->
@@ -674,9 +675,16 @@ module Formatting =
                     w.Write "\""
                     w.Write (s.Replace("\"", "\\\""))
                     w.Write "\""
-            | :? System.IFormattable as f ->
-                w.Write (f.ToString(format, w.FormatProvider))
-            | _ -> w.Write(sv.ToString())
+            | _ ->
+              let customFormatter = w.FormatProvider.GetFormat(typeof<System.ICustomFormatter>) :?> System.ICustomFormatter
+              match customFormatter with
+              | cf when not (isNull cf) ->
+                w.Write (cf.Format(format, sv, w.FormatProvider))
+              | _ ->
+                match sv with
+                | :? System.IFormattable as f -> w.Write (f.ToString(format, w.FormatProvider))
+                | _ -> w.Write(sv.ToString())
+                
         | SequenceValue svs ->
             w.Write '['
             let lastIndex = svs.Length - 1
