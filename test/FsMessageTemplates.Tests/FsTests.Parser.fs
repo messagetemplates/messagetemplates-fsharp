@@ -10,16 +10,6 @@ open FsMessageTemplates
     behaviour in both implementations.
 *)
 let assertParsedAs lang (message: string) expectedTokens =
-//    let sb = System.Text.StringBuilder()
-//    sb.Append(message) |> ignore
-//    sb.Append(": [") |> ignore
-//    expectedTokens
-//    |> Seq.iter (function
-//        | Text (idx, t) -> sb.AppendFormat("\"text\": \"{0}\", ", t) |> ignore
-//        | Prop (idx, pi) -> sb.AppendFormat("\"property\": \"\", ", pi.Name) |> ignore
-//    )
-//    sb.Append("]") |> ignore
-//    System.Console.WriteLine(sb.ToString())
     FsTests.Asserts.MtAssert.ParsedAs(lang, message, expectedTokens)
 
 [<Fact>]
@@ -38,30 +28,30 @@ let ``align info defaults are correct`` () =
 let ``an empty message is a single text token`` (lang) = 
     assertParsedAs lang  "" [Tk.text 0 ""]
 
-[<LangTheory; LangCsFsData>]
+[<LangTheory; LangCsFsAndFsMtParserData>]
 let ``a message without properties is a single text token`` (lang) =
     assertParsedAs lang  "Hello, world!"
                    [Tk.text 0 "Hello, world!"]
 
-[<LangTheory; LangCsFsData>]
+[<LangTheory; LangCsFsAndFsMtParserData>]
 let ``a message with property only is a single property token`` (lang) =
     let template = "{Hello}"
     assertParsedAs lang template
                    [Tk.prop 0 template "Hello"]
 
-[<LangTheory; LangCsFsData>]
+[<LangTheory; LangCsFsAndFsMtParserData>]
 let ``doubled left brackets are parsed as a single bracket`` (lang) =
     let template = "{{ Hi! }"
     assertParsedAs lang template
                    [Tk.text 0 "{ Hi! }"]
 
-[<LangTheory; LangCsFsData>]
+[<LangTheory; LangCsFsAndFsMtParserData>]
 let ``doubled left brackets are parsed as a single bracket inside text`` (lang) =
     let template = "Well, {{ Hi!"
     assertParsedAs lang template
                    [Tk.text 0 "Well, { Hi!"]
 
-[<LangTheory; LangCsFsData>]
+[<LangTheory; LangCsFsAndFsMtParserData>]
 let ``doubled left and right brackets inside a property are parsed as text`` (lang) =
     let template = "Hello, {nam{{adam}}}, how's it going?"
     assertParsedAs lang template
@@ -71,13 +61,13 @@ let ``doubled left and right brackets inside a property are parsed as text`` (la
                     Tk.text 7 "{nam{{adam}" // <- the double-braces are "wrong", does anyone care?
                     Tk.text 18 "}, how's it going?"]
 
-[<LangTheory; LangCsFsData>]
+[<LangTheory; LangCsFsAndFsMtParserData>]
 let ``doubled right brackets are parsed as a single bracket`` (lang) =
     let template = "Nice }}-: mo"
     assertParsedAs lang template
                    [Tk.text 0 "Nice }-: mo"]
 
-[<LangTheory; LangCsFsData>]
+[<LangTheory; LangCsFsAndFsMtParserData>]
 let ``a malformed property tag is parsed as text`` (lang) =
     let template = "{0 space}"
     assertParsedAs lang template
@@ -93,13 +83,13 @@ let ``an integer property name is parsed as positional property`` (lang) =
                     Tk.text 12 " other text "
                     Tk.propp 24 2]
 
-[<LangTheory; LangCsFsData>]
+[<LangTheory; LangCsFsAndFsMtParserData>]
 let ``formats can contain colons`` (lang) =
     let template = "{Time:hh:mm}"
     assertParsedAs lang template
                    [Tk.propf 0 template "Time" "hh:mm" ]
 
-[<LangTheory; LangCsFsData>]
+[<LangTheory; LangCsFsAndFsMtParserData>]
 let ``formats can contain commas`` (lang) = 
     let template = ",{CustomerId:0,0},"
     assertParsedAs lang template
@@ -133,7 +123,7 @@ let ``formats with align left can contain commas`` (lang) =
 
 
 
-[<LangTheory; LangCsFsData>]
+[<LangTheory; LangCsFsAndFsMtParserData>]
 let ``zero values alignment is parsed as text`` (lang) =
     let template1 = "{Hello,-0}"
     assertParsedAs lang template1
@@ -144,7 +134,7 @@ let ``zero values alignment is parsed as text`` (lang) =
                    [Tk.text 0 template2]
  
  
-[<LangTheory; LangCsFsData>]
+[<LangTheory; LangCsFsAndFsMtParserData>]
 let ``non-number alignment is parsed as text`` (lang) =
     let t1 = "{Hello,-aa}"
     assertParsedAs lang t1 [Tk.text 0 t1]
@@ -158,7 +148,7 @@ let ``non-number alignment is parsed as text`` (lang) =
     let t4 = "{Hello,10-1}"
     assertParsedAs lang t4 [Tk.text 0 t4]
 
-[<LangTheory; LangCsFsData>]
+[<LangTheory; LangCsFsAndFsMtParserData>]
 let ``empty alignment is parsed as text`` (lang) =
     let t1 = "{Hello,}"
     assertParsedAs lang t1 [Tk.text 0 t1]
@@ -175,7 +165,7 @@ let ``multiple tokens have the correct indexes`` (lang) =
                     Tk.prop 12 "{Name}" "Name"
                     Tk.text 18 "!" ]
 
-[<LangTheory; LangCsFsData>]
+[<LangTheory; LangCsFsAndFsMtParserData>]
 let ``missing right bracket is parsed as text`` (lang) =
     let template = "{Hello"
     assertParsedAs lang template [Tk.text 0 template]
@@ -195,7 +185,7 @@ let ``destructuring with empty property name is parsed as text`` (lang) =
     let template = "{@}"
     assertParsedAs lang template [Tk.text 0 template]
     
-[<LangTheory; LangCsFsData>]
+[<LangTheory; LangCsFsAndFsMtParserData>]
 let ``underscores are valid in property names`` (lang) =
     assertParsedAs lang  "{_123_Hello}" [Tk.prop 0 "{_123_Hello}" "_123_Hello"]
 

@@ -127,39 +127,70 @@ module Empty =
 
 module Parser =
 
-    /// Appends text characters from the template string started at a specified character index
-    /// and returns when the end of the template string is reached, or the start of a property
-    /// is encountered. Returns the next character index.
-    let inline appendTextUntilNextProp (startAt:int) (template:string) (append: char->unit) : int =
-        let chars = template
-        let tlen = chars.Length
-        let rec go i =
-            if i >= tlen then tlen
-            else
-                let c = chars.[i]
-                match c with
-                | '{' -> if (i+1) < tlen && chars.[i+1] = '{' then
-                            append c; go (i+2)
-                         else i // bail out at the start of a property
-                | '}' when (i+1) < tlen && chars.[i+1] = '}' -> append c; go (i+2)
-                | _ -> append c; go (i+1)
-        go startAt
+    [<Struct>]
+    type Range(startIndex:int, endIndex:int) =
+        member this.Start = startIndex
+        member this.End = endIndex
+        member this.Length = (endIndex - startIndex) + 1
+        member this.GetSubString (s:string) = s.Substring(startIndex, this.Length)
+        member this.IncreaseBy startNum endNum = Range(startIndex+startNum, endIndex+endNum)
+        member this.Right (startFromIndex:int) =
+            if startFromIndex < startIndex then invalidArg "startFromIndex" "startFromIndex must be >= Start"
+            Range(startIndex, this.End)
+        override __.ToString() = (string startIndex) + ", " + (string endIndex)
+        member this.IsEmpty = startIndex = -1 && endIndex = -1
+        static member Empty = Range(-1, -1)
+
+    let inline findNextNonPropText (startAt : int) (template : string) (foundText : string->unit) : int =
+      // Finds the next text token (starting from the 'startAt' index) and returns the next character
+      // index within the template string. If the end of the template string is reached, or the start
+      // of a property token is found (i.e. a single { character), then the 'consumed' text is passed
+      // to the 'foundText' method, and index of the next character is returned.
+      let mutable escapedBuilder = Unchecked.defaultof<StringBuilder> // don't create one until it's needed
+      let inline append (ch : char) = if not (isNull escapedBuilder) then escapedBuilder.Append(ch) |> ignore
+      let inline createStringBuilderAndPopulate i =
+        if isNull escapedBuilder then
+          escapedBuilder <- StringBuilder() // found escaped open-brace, take the slow path
+          for chIndex = startAt to i-1 do append template.[chIndex] // append all existing chars
+      let rec go i =
+        if i >= template.Length then
+          template.Length // bail out at the end of the string
+        else
+          let ch = template.[i]
+          match ch with
+          | '{' ->
+            if (i+1) < template.Length && template.[i+1] = '{' then
+              createStringBuilderAndPopulate i
+              append ch; go (i+2)
+            else i // found an open brace (potentially a property), so bail out
+          | '}' when (i+1) < template.Length && template.[i+1] = '}' ->
+            createStringBuilderAndPopulate i
+            append ch; go (i+2)
+          | _ ->
+            append ch; go (i+1)
+
+      let nextIndex = go startAt
+      if (nextIndex > startAt) then // if we 'consumed' any characters, signal that we 'foundText'
+        if isNull escapedBuilder then
+          foundText (Range(startAt, nextIndex - 1).GetSubString(template))
+        else
+          foundText (escapedBuilder.ToString())
+      nextIndex
 
     /// Parses a text token inside the template string, starting at a specified character number within the
-    /// template string, and returning the 'next' character index + the parsed text token. The StringBuilder
-    /// is used as a temporary buffer for collecting the text token characters, and is cleared before returning.
+    /// template string, and returning the 'next' character index + the parsed text token. 
     /// The text token is 'finished' when an open brace is encountered (or the end of the template string is
-    /// reached (whichever comes first).
-    let inline parseTextToken (sb:StringBuilder) (startAt:int) (template:string) : int*Token =
-        let nextIndex = appendTextUntilNextProp startAt template (fun (ch:char) -> sb.Append(ch) |> ignore)
-        if nextIndex <> startAt then nextIndex, Token.TextToken(startAt, sb.ToStringAndClear())
+    /// reached, whichever comes first).
+    let inline parseTextToken (startAt:int) (template:string) : int*Token =
+        let mutable textFound : string = ""
+        let nextIndex = findNextNonPropText startAt template (fun t -> textFound <- t)
+        if nextIndex <> startAt then nextIndex, Token.TextToken(startAt, textFound)
         else startAt, Empty.textToken
 
-    let inline isLetterOrDigit c = System.Char.IsLetterOrDigit c
     let inline isValidInPropName c = c = '_' || System.Char.IsLetterOrDigit c
     let inline isValidInDestrHint c = c = '@' || c = '$'
     let inline isValidInAlignment c = c = '-' || System.Char.IsDigit c
-    let inline isValidInFormat c = c <> '}' && (c = ' ' || isLetterOrDigit c || System.Char.IsPunctuation c)
+    let inline isValidInFormat c = c <> '}' && (c = ' ' || System.Char.IsLetterOrDigit c || System.Char.IsPunctuation c)
     let inline isValidCharInPropTag c = c = ':' || isValidInPropName c || isValidInFormat c || isValidInDestrHint c
     let inline tryGetFirstChar predicate (s:string) first =
         let len = s.Length
@@ -167,20 +198,6 @@ module Parser =
             if i >= len then -1
             else if not (predicate s.[i]) then go (i+1) else i
         go first
-
-    [<Struct>]
-    type Range(startIndex:int, endIndex:int) =
-        member inline this.Start = startIndex
-        member inline this.End = endIndex
-        member inline this.Length = (endIndex - startIndex) + 1
-        member inline this.GetSubString (s:string) = s.Substring(startIndex, this.Length)
-        member inline this.IncreaseBy startNum endNum = Range(startIndex+startNum, endIndex+endNum)
-        member inline this.Right (startFromIndex:int) =
-            if startFromIndex < startIndex then invalidArg "startFromIndex" "startFromIndex must be >= Start"
-            Range(startIndex, this.End)
-        override __.ToString() = (string startIndex) + ", " + (string endIndex)
-        member inline this.IsEmpty = startIndex = -1 && endIndex = -1
-        static member Empty = Range(-1, -1)
 
     let inline tryGetFirstCharRng predicate (s:string) (rng:Range) =
         let rec go i =
@@ -283,41 +300,38 @@ module Parser =
     /// Parses the property token in the template string from the start character index, and
     /// calls the 'foundProp' method. If the property is malformed, the 'appendTextChar' method
     /// is called instead for each character consumed. Finally, the next character index is returned.
-    let findPropOrAppendText (start:int) (template:string) (appendTextChar: char->unit)
-                                                           (foundProp: Property->unit) : int =
-        let first = start
-        let inline appendAll first last = for i = first to last do appendTextChar template.[i]
-
+    let findPropOrAppendText (start:int) (template:string) (foundText: string -> unit)
+                                                           (foundProp: Property -> unit) : int =
         // skip over characters after the open-brace, until we reach a character that
         // is *NOT* a valid part of the property tag. this will be the close brace character
         // if the template is actually a well-formed property tag.
         let nextInvalidCharIndex =
-            match tryGetFirstChar (not << isValidCharInPropTag) template (first+1) with
+            match tryGetFirstChar (not << isValidCharInPropTag) template (start+1) with
             | -1 -> template.Length | idx -> idx
 
         // if we stopped at the end of the string or the last char wasn't a close brace
         // then we treat all the characters we found as a text token, and finish.
         if nextInvalidCharIndex = template.Length || template.[nextInvalidCharIndex] <> '}' then
-            appendAll first (nextInvalidCharIndex - 1)
+            foundText (Range(start, nextInvalidCharIndex - 1).GetSubString(template))
             nextInvalidCharIndex
         else
             // skip over the trailing "}" close prop tag
             let nextIndex = nextInvalidCharIndex + 1
-            let propInsidesRng = Range(first + 1, nextIndex - 2)
+            let propInsidesRng = Range(start + 1, nextIndex - 2)
             match tryGetPropInSubString template propInsidesRng with
-            | t when obj.ReferenceEquals(t, Empty.propToken) -> appendAll first (nextIndex - 1)
-            | PropToken (_,pt) -> foundProp pt
-            | _ -> appendAll first (nextIndex - 1)
+            | PropToken (_,pt) as p when not (obj.ReferenceEquals(p, Empty.propToken)) -> foundProp pt
+            | _ -> foundText (Range(start, nextIndex - 1).GetSubString(template))
 
             nextIndex
 
-    let parsePropertyToken (buffer:StringBuilder) (start:int) (mt:string) (rz: ResizeArray<Token>) : int =
-        let appendChar (ch:char) = buffer.Append(ch) |> ignore
-        let wasProperty = ref false
-        let foundProp (p:Property) = rz.Add(Token.PropToken(start, p)); wasProperty := true
-        let nextIndex = findPropOrAppendText start mt appendChar foundProp
-        if not !wasProperty then
-            rz.Add(Token.TextToken(start, buffer.ToStringAndClear()))
+    let parsePropertyToken (start: int) (mt: string) (rz: ResizeArray<Token>) : int =
+        let mutable wasProperty = false
+        let mutable text = ""
+        let foundProp (p:Property) = rz.Add (PropToken (start, p)); wasProperty <- true
+        let foundText t = text <- t
+        let nextIndex = findPropOrAppendText start mt foundText foundProp
+        if not wasProperty then
+            rz.Add (TextToken (start, text))
         nextIndex
 
     let parseTokens (mt:string) =
@@ -328,20 +342,20 @@ module Parser =
             let rz = ResizeArray<Token>()
             let rec go start =
                 if start >= tlen then rz.ToArray()
-                else match parseTextToken sb start mt with
+                else match parseTextToken start mt with
                      | next, tok when next <> start ->
                         rz.Add tok; go next
                      | _, _ ->
                         // no text token parsed, try a property. note that this will
                         // append a text token if the property turns out to be malformed.
-                        go (parsePropertyToken sb start mt rz)
+                        go (parsePropertyToken start mt rz)
             go 0
 
-    let parseParts (s:string) (foundText: char->unit) (foundProp: Property->unit) =
+    let parseParts (s:string) (foundText: string->unit) (foundProp: Property->unit) =
         let tlen = s.Length
         let rec go start =
             if start >= tlen then ()
-            else match appendTextUntilNextProp start s foundText with
+            else match findNextNonPropText start s foundText with
                  | next when next <> start -> go next
                  | _ -> go (findPropOrAppendText start s foundText foundProp)
         go 0
