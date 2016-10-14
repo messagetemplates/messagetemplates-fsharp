@@ -73,7 +73,15 @@ let ``a malformed property tag is parsed as text`` (lang) =
     assertParsedAs lang template
                    [Tk.text 0 template]
 
-[<LangTheory; LangCsFsData>]
+
+[<LangTheory; LangCsFsAndFsMtParserData>]
+let ``a format string can contain punctuation symbols`` (lang) =
+  let template = "Test {x:ABC#...........}"
+  assertParsedAs lang template
+                 [ Tk.text 0 "Test "
+                   Tk.propf 5 "{x:ABC#...........}" "x" "ABC#..........." ]
+
+[<LangTheory; LangCsFsAndFsMtParserData>]
 let ``an integer property name is parsed as positional property`` (lang) =
     let template = "{0} text {1} other text {2}"
     assertParsedAs lang template
@@ -97,7 +105,7 @@ let ``formats can contain commas`` (lang) =
                     Tk.propf 1 "{CustomerId:0,0}" "CustomerId" "0,0"
                     Tk.text 17 ","]
                     
-[<LangTheory; LangCsFsData>]
+[<LangTheory; LangCsFsAndFsMtParserData>]
 let ``formats with align right can contain commas`` (lang) = 
     let template = "big long x{0,5:0,00}x{1,5:0,00}x{2,5:0,00}x"
     assertParsedAs lang template
@@ -109,7 +117,7 @@ let ``formats with align right can contain commas`` (lang) =
                      Tk.propparf 32 2 5 "0,00"
                      Tk.text 42 "x"]
 
-[<LangTheory; LangCsFsData>]
+[<LangTheory; LangCsFsAndFsMtParserData>]
 let ``formats with align left can contain commas`` (lang) = 
     let template = "big long x{0,-5:0,00}x{1,-5:0,00}x{2,-5:0,00}x"
     assertParsedAs  lang template
@@ -156,7 +164,7 @@ let ``empty alignment is parsed as text`` (lang) =
     let t2 = "{Hello,:format}"
     assertParsedAs lang t2 [Tk.text 0 t2]
 
-[<LangTheory; LangCsFsData>]
+[<LangTheory; LangCsFsAndFsMtParserData>]
 let ``multiple tokens have the correct indexes`` (lang) =
     let template = "{Greeting}, {Name}!"
     assertParsedAs lang template
@@ -170,17 +178,17 @@ let ``missing right bracket is parsed as text`` (lang) =
     let template = "{Hello"
     assertParsedAs lang template [Tk.text 0 template]
 
-[<LangTheory; LangCsFsData>]
+[<LangTheory; LangCsFsAndFsMtParserData>]
 let ``destructure hint is parsed correctly`` (lang) =
     let template = "{@Hello}"
     assertParsedAs lang template [Tk.propd 0 template "Hello"]
 
-[<LangTheory; LangCsFsData>]
+[<LangTheory; LangCsFsAndFsMtParserData>]
 let ``stringify hint is parsed correctly`` (lang) =
     let template = "{$Hello}"
     assertParsedAs lang template [Tk.propds 0 template "Hello"]
 
-[<LangTheory; LangCsFsData>]
+[<LangTheory; LangCsFsAndFsMtParserData>]
 let ``destructuring with empty property name is parsed as text`` (lang) =
     let template = "{@}"
     assertParsedAs lang template [Tk.text 0 template]

@@ -100,14 +100,15 @@ module internal ParserBits =
 
   /// Will parse ",-10"   as AlignInfo(direction=Left, width=10).
   /// Will parse ",5"     as AlignInfo(direction=Right, width=5).
+  /// Will parse ",0"     as AlignInfo(isValid=false) because 0 is not a valid alignment.
+  /// Will parse ",-0"    as AlignInfo(isValid=false) because 0 is not a valid alignment.
   /// Will parse ",,5"    as AlignInfo(isValid=false) because ',5' is not an int.
   /// Will parse ",5-"    as AlignInfo(isValid=false) because '-' is in the wrong place.
   /// Will parse ",asdf"  as AlignInfo(isValid=false) because 'asdf' is not an int.
-  /// This uses AlignInfo.isValid because it's less allocatey than using Option of T.
   let inline tryParseAlignInfoRng (s:string) (rng:Range) =
     match s, rng with
     | s, rng when (rng.start > rng.``end``) || (hasAnyInRange (not << isValidInAlignment) s rng) ->
-      AlignInfo(isValid=false)
+      AlignInfo.invalid
 
     | s, rng ->
       let width =
@@ -115,7 +116,7 @@ module internal ParserBits =
         | System.Int32.MinValue -> 0 // not a valid align number (e.g. dash in wrong spot)
         | n -> n
 
-      if width = 0 then AlignInfo(isValid=false)
+      if width = 0 then AlignInfo.invalid
       else
         let isNegativeAlignWidth = width < 0
         let direction = if isNegativeAlignWidth then AlignDirection.Left else AlignDirection.Right
@@ -125,7 +126,7 @@ module internal ParserBits =
   /// insides contains any invalid characters, then the `Property.empty' instance is returned.
   let inline tryGetPropInRange (template : string) (within : Range) : Property =
     let nameRange, alignRange, formatRange =
-      match indexOfInRange template within ':', indexOfInRange template within ',' with
+      match indexOfInRange template within ',', indexOfInRange template within ':' with
       | -1, -1 ->
         // neither align nor format
         within, Range.empty, Range.empty

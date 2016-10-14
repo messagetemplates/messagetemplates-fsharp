@@ -1,47 +1,125 @@
 ﻿module FsTests.Asserts
 
 open System
-open FsMessageTemplates
 open System.Collections.Generic
 
 let invariantProvider = (System.Globalization.CultureInfo.InvariantCulture :> System.IFormatProvider)
 
-type FsToken = FsMessageTemplates.Token
-type FsDestr = FsMessageTemplates.DestrHint
-type FsAlign = FsMessageTemplates.AlignInfo
-type FsProp = FsMessageTemplates.Property
-type FsMtParserToken = TextToken of string | PropToken of FsMtParser.Property
+/// Attempts to make things less confusing by using aliases for
+/// the different implementations. Not sure this is working at all.
+module Impl =
+  module Cs =
+    let parse template = MessageTemplates.MessageTemplate.Parse template
+    type TemplatePropertyValueDictionary = MessageTemplates.Core.TemplatePropertyValueDictionary
+  module Fs =
+    let parse template = FsMessageTemplates.Parser.parse template
+    type Token = FsMessageTemplates.Token
+    type Destr = FsMessageTemplates.DestrHint
+    type Align = FsMessageTemplates.AlignInfo
+    type AlignDir = FsMessageTemplates.Direction
+    type Prop = FsMessageTemplates.Property
+    type DestrRequest = FsMessageTemplates.DestructureRequest
+    type Destructurer = FsMessageTemplates.Destructurer
+    type TemplatePropertyValue = FsMessageTemplates.TemplatePropertyValue
+    let ScalarValue v = FsMessageTemplates.ScalarValue v
+  module FsMt =
+    type Prop = FsMtParser.Property
+    type ParserToken = TextToken of string | PropToken of FsMtParser.Property
+    type Destr = FsMtParser.CaptureHint
+    type Align = FsMtParser.AlignInfo
+    type AlignDir = FsMtParser.AlignDirection
+
+/// Use this common model because it's easier to print and compare
+module TestModel =
+  type AlignDirection = Right | Left
+  type AlignInfo = { Direction: AlignDirection; Width: int }
+  type CaptureHint = Default | Stringify | Structure
+  type Property = {
+    Name: string
+    IsPositional: bool
+    CaptureHint: CaptureHint
+    Format: string option
+    Align: AlignInfo option
+  } with
+    override x.ToString() = sprintf "%+A" x
+
+  type Token =
+    | TextToken of startIndex:int * text:string
+    | PropToken of startIndex:int * prop:Property
+    with override x.ToString() = sprintf "%+A" x
+
+  let fromFsHint = function
+    | Impl.Fs.Destr.Default -> CaptureHint.Default
+    | Impl.Fs.Destr.Stringify -> CaptureHint.Stringify
+    | Impl.Fs.Destr.Destructure -> CaptureHint.Structure
+    | destr -> failwithf "unexpected %A" destr
+
+  let fromFsAlign (align : Impl.Fs.Align) =
+    if align.IsEmpty then None
+    else
+      Some { Direction=if align.Direction = Impl.Fs.AlignDir.Left then Left else Right
+             Width=align.Width }
+
+  let ofFsMt (tokens : Impl.Fs.Token seq) =
+    tokens
+    |> Seq.map (function
+      | Impl.Fs.Token.TextToken (startIndex, text) -> Token.TextToken (startIndex, text)
+      | Impl.Fs.Token.PropToken (startIndex, fsProp) ->
+        let prop = { Name=fsProp.Name
+                     CaptureHint=fromFsHint fsProp.Destr
+                     Format=if isNull fsProp.Format then None else Some fsProp.Format
+                     Align=fromFsAlign fsProp.Align
+                     IsPositional=fsProp.IsPositional }
+        Token.PropToken (startIndex, prop)
+    )
+    |> Seq.toList
 
 /// Parses message templates from the different implementations in semi-compatible ways by 
 /// using FsMessageTemplates.Token as the target type.
-let parsedAs lang message (expectedTokens: FsToken seq) =
-    let mutable ignoreStartIndex = false
-    let parsed =
+let parsedAs lang message (expectedTokens: Impl.Fs.Token seq) =
+    let ignorePosAndStartIndex, parsed =
         match lang with
-        | "C#" -> MessageTemplates.MessageTemplate.Parse(message).Tokens |> Seq.map CsToFs.mttToToken |> List.ofSeq
-        | "F#" -> (FsMessageTemplates.Parser.parse message).Tokens |> List.ofSeq
+        | "C#" -> false, (Impl.Cs.parse message).Tokens |> Seq.map CsToFs.mttToToken |> List.ofSeq
+        | "F#" -> false, (Impl.Fs.parse message).Tokens |> List.ofSeq
         | "F#MtParser" ->
-          ignoreStartIndex <- true // FsMtParser doesn't support index yet
-          let tokens = ResizeArray<FsMtParserToken>()
-          let foundText s = tokens.Add(FsMtParserToken.TextToken(s))
-          let foundProp p = tokens.Add(FsMtParserToken.PropToken(p))
+          let tokens = ResizeArray<Impl.FsMt.ParserToken>()
+          let foundText s = tokens.Add (Impl.FsMt.ParserToken.TextToken s)
+          let foundProp p = tokens.Add (Impl.FsMt.ParserToken.PropToken p)
           FsMtParser.parseParts message foundText foundProp
-          tokens
-          |> Seq.map (function
-            | FsMtParserToken.TextToken s -> FsToken.TextToken(0, s)
-            | FsMtParserToken.PropToken p -> FsToken.PropToken(0, FsProp(p.name, -1, FsDestr.Default, FsAlign.Empty, p.format)) )
-          |> List.ofSeq
+          let fsTokens =
+            tokens
+            |> Seq.map (function
+              | Impl.FsMt.ParserToken.TextToken s -> Impl.Fs.Token.TextToken(0, s)
+              | Impl.FsMt.ParserToken.PropToken p ->
+                let destr = match p.captureHint with
+                            | Impl.FsMt.Destr.Structure -> Impl.Fs.Destr.Destructure
+                            | Impl.FsMt.Destr.Stringify -> Impl.Fs.Destr.Stringify
+                            | _ -> Impl.Fs.Destr.Default
+                let align = match p.align with
+                            | ai when ai.isEmpty -> Impl.Fs.Align.Empty
+                            | ai ->
+                              let dir =
+                                if ai.direction = Impl.FsMt.AlignDir.Left then Impl.Fs.AlignDir.Left
+                                else Impl.Fs.AlignDir.Right
+
+                              Impl.Fs.Align(dir, ai.width)
+
+                Impl.Fs.Token.PropToken(0, Impl.Fs.Prop(p.name, -1, destr, align, p.format)) )
+            |> List.ofSeq
+          true, fsTokens
         | other -> failwithf "unexpected lang '%s'" other
 
-    let setStartIndexZeroIfIgnored tokens =
-      match ignoreStartIndex with
-      | false -> tokens
-      | true -> tokens |> Seq.map (function
-                                    | FsToken.TextToken (i, t) -> FsToken.TextToken(0, t)
-                                    | FsToken.PropToken (i, p) -> FsToken.PropToken(0, p))
+    let setStartIndexZeroIfIgnored (tokens : #seq<Impl.Fs.Token>) =
+      if not ignorePosAndStartIndex then tokens
+      else
+        tokens |> Seq.map (function
+          | Impl.Fs.Token.TextToken (i, t) -> Impl.Fs.Token.TextToken(0, t)
+          | Impl.Fs.Token.PropToken (i, p) ->
+            Impl.Fs.Token.PropToken(0, Impl.Fs.Prop(p.Name, -1, p.Destr, p.Align, p.Format)))
 
-    let expected = expectedTokens |> Seq.cast<FsToken> |> setStartIndexZeroIfIgnored |> Seq.toList
-    Xunit.Assert.Equal<FsToken list> (expected, parsed)
+    let expected = expectedTokens |> setStartIndexZeroIfIgnored |> TestModel.ofFsMt
+    let parsed = parsed |> TestModel.ofFsMt
+    Xunit.Assert.Equal<TestModel.Token list> (expected, parsed)
 
 let capture lang (messageTemplate:string) (args: obj list) =
     let argsArray = (args |> Seq.cast<obj> |> Seq.toArray) // force 'args' to be IEnumerable
@@ -63,35 +141,35 @@ let render lang template args =
 type MtAssert() =
 
     /// Asserts the 
-    static member ParsedAs (lang, message,  expectedTokens: FsToken seq) =
+    static member ParsedAs (lang, message,  expectedTokens: Impl.Fs.Token seq) =
         parsedAs lang message expectedTokens
 
     /// Captures properties from the C# or F# version in compatible ways.
     static member internal Capture(lang, template, values, ?maxDepth, ?additionalScalars, ?additionalDestrs) =
         let maxDepth = defaultArg maxDepth 10
         let additionalScalars = defaultArg additionalScalars Seq.empty<Type>
-        let additionalDestrs = defaultArg additionalDestrs Seq.empty<FsMessageTemplates.Destructurer>
+        let additionalDestrs = defaultArg additionalDestrs Seq.empty<Impl.Fs.Destructurer>
         match lang with
         | "C#" ->
-            let mt = MessageTemplates.Parsing.MessageTemplateParser().Parse template
+            let mt = Impl.Cs.parse template
             let csDestrs = additionalDestrs |> Seq.map CsToFs.fsDestrToCsDestrPolicy
             let captured = CsToFs.CsMt.CaptureWith(maxDepth, additionalScalars, csDestrs, mt, values)
             captured |> Seq.map CsToFs.templateProperty |> Seq.toList
         | "F#" ->
-            let mt = FsMessageTemplates.Parser.parse template
-            let emptyKeepTrying = Unchecked.defaultof<TemplatePropertyValue>
-            let tryScalars : Destructurer = fun r ->
+            let mt = Impl.Fs.parse template
+            let emptyKeepTrying = Unchecked.defaultof<Impl.Fs.TemplatePropertyValue>
+            let tryScalars : Impl.Fs.Destructurer = fun r ->
                 let exists = additionalScalars |> Seq.exists ((=) (r.Value.GetType()))
-                if exists then ScalarValue(r.Value) else emptyKeepTrying
-            let destrNoneForNull (r: DestructureRequest) (d:Destructurer) =
-                match d (DestructureRequest (r.Destructurer, r.Value, 10, 1, hint=r.Hint)) with
-                | tpv when tpv = TemplatePropertyValue.Empty -> None
+                if exists then Impl.Fs.ScalarValue(r.Value) else emptyKeepTrying
+            let destrNoneForNull (r: Impl.Fs.DestrRequest) (d: Impl.Fs.Destructurer) =
+                match d (Impl.Fs.DestrRequest (r.Destructurer, r.Value, 10, 1, hint=r.Hint)) with
+                | tpv when tpv = Impl.Fs.TemplatePropertyValue.Empty -> None
                 | tpv -> Some tpv
-            let tryDestrs : Destructurer = fun r ->
+            let tryDestrs : Impl.Fs.Destructurer = fun r ->
                 match additionalDestrs |> Seq.tryPick (destrNoneForNull r) with
                 | None -> emptyKeepTrying
                 | Some tpv -> tpv
-            let destr = Capturing.createCustomDestructurer (Some tryScalars) (Some tryDestrs)
+            let destr = FsMessageTemplates.Capturing.createCustomDestructurer (Some tryScalars) (Some tryDestrs)
             FsMessageTemplates.Capturing.capturePropertiesCustom destr maxDepth mt values
             |> Seq.toList
         | other -> failwithf "unexpected lang %s" other
@@ -108,30 +186,30 @@ type MtAssert() =
             let csDestrs = additionalDestrs |> Seq.map CsToFs.fsDestrToCsDestrPolicy
             let captured = CsToFs.CsMt.CaptureWith(maxDepth, additionalScalars, csDestrs, mt, values)
             let propsByName = captured
-                              |> fun tpvl -> MessageTemplates.Core.TemplatePropertyValueDictionary(tpvl)
+                              |> fun tpvl -> Impl.Cs.TemplatePropertyValueDictionary(tpvl)
 
             mt.Render(properties=propsByName, formatProvider=provider)
         | "F#" ->
             let mt = FsMessageTemplates.Parser.parse template
-            let emptyKeepTrying = Unchecked.defaultof<TemplatePropertyValue>
-            let tryScalars : Destructurer = fun r ->
+            let emptyKeepTrying = Unchecked.defaultof<Impl.Fs.TemplatePropertyValue>
+            let tryScalars : Impl.Fs.Destructurer = fun r ->
                 let exists = additionalScalars |> Seq.exists ((=) (r.Value.GetType()))
-                if exists then ScalarValue(r.Value) else emptyKeepTrying
-            let destrNoneForNull (r: DestructureRequest) (d:Destructurer) =
-                match d (DestructureRequest (r.Destructurer, r.Value, 10, 1, hint=r.Hint)) with
-                | tpv when tpv = TemplatePropertyValue.Empty -> None
+                if exists then Impl.Fs.ScalarValue(r.Value) else emptyKeepTrying
+            let destrNoneForNull (r: Impl.Fs.DestrRequest) (d: Impl.Fs.Destructurer) =
+                match d (Impl.Fs.DestrRequest (r.Destructurer, r.Value, 10, 1, hint=r.Hint)) with
+                | tpv when tpv = Impl.Fs.TemplatePropertyValue.Empty -> None
                 | tpv -> Some tpv
-            let tryDestrs : Destructurer = fun r ->
+            let tryDestrs : Impl.Fs.Destructurer = fun r ->
                 match additionalDestrs |> Seq.tryPick (destrNoneForNull r) with
                 | None -> emptyKeepTrying
                 | Some tpv -> tpv
-            let destr = Capturing.createCustomDestructurer (Some tryScalars) (Some tryDestrs)
+            let destr = FsMessageTemplates.Capturing.createCustomDestructurer (Some tryScalars) (Some tryDestrs)
             let propsByName = FsMessageTemplates.Capturing.capturePropertiesCustom destr maxDepth mt values
                               |> Seq.map (fun tpv -> tpv.Name, tpv.Value)
                               |> dict
             let getValueByName name =
                 let exists, value = propsByName.TryGetValue(name)
-                if exists then value else TemplatePropertyValue.Empty
+                if exists then value else Impl.Fs.TemplatePropertyValue.Empty
             use tw = new System.IO.StringWriter(formatProvider=provider)
             FsMessageTemplates.Formatting.formatCustom mt tw getValueByName
             let formatCustomOutput = tw.ToString()
@@ -139,7 +217,7 @@ type MtAssert() =
             // if invariant and no custom scalars and types provided, verify 'format' gives the same result
             // if maxDepth is different, we also can't assert the other overloads produce the same output, as
             // only formatCustom allows this to change.
-            if maxDepth=10 && additionalScalars = Seq.empty<Type> && additionalDestrs = Seq.empty<Destructurer> then
+            if maxDepth=10 && additionalScalars = Seq.empty<Type> && additionalDestrs = Seq.empty<Impl.Fs.Destructurer> then
                 if provider = invariantProvider then
                     // format should be the same
                     let formatOutput = FsMessageTemplates.Formatting.format mt values

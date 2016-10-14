@@ -14,11 +14,11 @@ let foundProp prop =
 ;;
 
 tokens.Clear()
-FsMtParser.parseParts "Hello, {@Structure:-10,0,0} and {$stringify:#blah}" foundText foundProp
-FsMtParser.parseParts "Hello {@adam:#0.000}" foundText foundProp
+FsMtParser.parseParts "Hello, {@Structure:-10,0,0} and {$stringify:blah}" foundText foundProp
+FsMtParser.parseParts "Hello {@adam:##.#}" foundText foundProp
 tokens |> Seq.toList
 
-for i = 0 to 1000000 do
-    // tokens.Clear()
-    FsMtParser.parseParts "Hello {@adam:#0.000}, how are {you? you crazy invalid prop}" foundText foundProp
-    // printfn "%A" (tokens.ToArray())
+//for i = 0 to 1000000 do
+//    // tokens.Clear()
+//    FsMtParser.parseParts "Hello {@adam:#0.000}, how are {you? you crazy invalid prop}" foundText foundProp
+//    // printfn "%A" (tokens.ToArray())
