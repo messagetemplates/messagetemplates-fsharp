@@ -19,7 +19,7 @@
     },
     "tools": {
         "dotnet-compile-fsc": {
-            "version": "1.0.0-*",
+            "version": "1.0.0-preview2-*",
             "imports": [
                 "dnxcore50",
                 "portable-net45+win81",
@@ -36,7 +36,7 @@
         "netstandard1.6": {
             "dependencies": {
                 "NETStandard.Library": "1.6.0",
-                "Microsoft.FSharp.Core.netcore": "1.0.0-*"
+                "Microsoft.FSharp.Core.netcore": "1.0.0-alpha-*"
             }
         }
     }

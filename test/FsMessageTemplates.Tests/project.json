@@ -25,7 +25,7 @@
     },
     "tools": {
         "dotnet-compile-fsc": {
-            "version": "1.0.0-*"
+            "version": "1.0.0-preview2-*"
         }
     },
     "frameworks": {
@@ -41,7 +41,7 @@
                 "System.Diagnostics.StackTrace": "4.0.2",
                 "System.Reflection.TypeExtensions": "4.1.0",
                 "System.Globalization": "4.0.11",
-                "Microsoft.FSharp.Core.netcore": "1.0.0-*"
+                "Microsoft.FSharp.Core.netcore": "1.0.0-alpha-*"
             }
         }
     }
