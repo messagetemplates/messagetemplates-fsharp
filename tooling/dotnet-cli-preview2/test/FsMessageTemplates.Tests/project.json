@@ -1,0 +1,49 @@
+{
+    "testRunner": "xunit",
+    "dependencies": {
+        "FsMessageTemplates": { "target": "project" },
+        "FsMtParser":  { "target": "project" },
+        "MessageTemplates": "1.0.0-*",
+        "xunit": "2.2.0-*",
+        "dotnet-test-xunit": "2.2.0-preview2-*"
+    },
+    "buildOptions": {
+        "xmlDoc": true,
+        "compilerName": "fsc",
+        "compile": {
+            "includeFiles": [
+                "../../../../test/FsMessageTemplates.Tests/FSharpTypesDestructuringPolicy.fs",
+                "../../../../test/FsMessageTemplates.Tests/Tk.fs",
+                "../../../../test/FsMessageTemplates.Tests/CsToFs.fs",
+                "../../../../test/FsMessageTemplates.Tests/XunitSupport.fs",
+                "../../../../test/FsMessageTemplates.Tests/MtAssert.fs",
+                "../../../../test/FsMessageTemplates.Tests/FsTests.Parser.fs",
+                "../../../../test/FsMessageTemplates.Tests/FsTests.Capture.fs",
+                "../../../../test/FsMessageTemplates.Tests/FsTests.Format.fs"
+            ]
+        }
+    },
+    "tools": {
+        "dotnet-compile-fsc": {
+            "version": "1.0.0-preview2-*"
+        }
+    },
+    "frameworks": {
+      "net452": {
+        "assemblies": {
+          "FSharp.Core": "4.0.0.1"
+        }
+      }
+      //,
+        //"netcoreapp1.0": {
+        //    "define": [ ],
+        //    "dependencies": {
+        //        "Microsoft.NETCore.App": { "type": "platform", "version": "1.0.0" },
+        //        "System.Diagnostics.StackTrace": "4.0.2",
+        //        "System.Reflection.TypeExtensions": "4.1.0",
+        //        "System.Globalization": "4.0.11",
+        //        "Microsoft.FSharp.Core.netcore": "1.0.0-alpha-*"
+        //    }
+        //}
+    }
+}
