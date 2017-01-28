@@ -21,7 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="../../src/FsMessageTemplates/FsMessageTemplates.fsproj" />
     <ProjectReference Include="../../src/FsMtParser/FsMtParser.fsproj" />
-    <!--<EmbeddedResource Include="**\*.resx" />-->
+    <EmbeddedResource Include="**\*.resx" />
   </ItemGroup>
 
   <ItemGroup>
