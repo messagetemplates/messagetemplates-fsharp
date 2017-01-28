@@ -30,8 +30,7 @@
   <ItemGroup>
     <Compile Include="MessageTemplates.fsi" />
     <Compile Include="MessageTemplates.fs" />
-    <EmbeddedResource Include="**\*.resx" />
-  </ItemGroup>
+   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="FSharp.NET.Sdk" Version="1.0.0-beta-*" PrivateAssets="All" />

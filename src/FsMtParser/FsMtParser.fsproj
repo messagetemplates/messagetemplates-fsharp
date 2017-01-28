@@ -29,7 +29,6 @@
 
   <ItemGroup>
     <Compile Include="FsMtParser.fs" />
-    <EmbeddedResource Include="**\*.resx" />
   </ItemGroup>
 
   <ItemGroup>
