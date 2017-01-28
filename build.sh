@@ -1,11 +1,11 @@
 #!/bin/bash
 
 for path in src/*/*.fsproj; do
-    dirname="$(dirname "${path}")"
-    dotnet restore ${dirname}
-    dotnet build ${dirname} -c Release
+    dotnet restore ${path}
+    dotnet build -c Release ${path} 
 done
 
 for path in test/*/*.fsproj; do
-    dotnet test -f netcoreapp1.0 -c Release ${path}
+    dotnet restore ${path}
+    dotnet test -c Release ${path}
 done
