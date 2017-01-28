@@ -11,7 +11,7 @@
     <PackageReference Include="Microsoft.FSharp.Core.netcore" Version="1.0.0-alpha-161023" />
 
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.0.0-preview-20170106-08" />
-    <PackageReference Include="microsoft.testplatform.testhost" Version="15.0.0-preview-*" />
+
     <PackageReference Include="xunit" Version="2.2.0-beta5-build3474" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.2.0-beta5-build1225" />
 
@@ -21,6 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="../../src/FsMessageTemplates/FsMessageTemplates.fsproj" />
     <ProjectReference Include="../../src/FsMtParser/FsMtParser.fsproj" />
+    <!--<EmbeddedResource Include="**\*.resx" />-->
   </ItemGroup>
 
   <ItemGroup>
