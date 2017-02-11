@@ -11,6 +11,19 @@ type FsDestr = FsMessageTemplates.DestrHint
 type FsAlign = FsMessageTemplates.AlignInfo
 type FsProp = FsMessageTemplates.Property
 type FsMtParserToken = TextToken of string | PropToken of FsMtParser.Property
+type FsMtParserFullToken = TextToken of string | PropToken of FsMtParserFull.Property
+
+let captureHintToDestrHit = function
+                            | FsMtParserFull.CaptureHint.Default -> DestrHint.Default
+                            | FsMtParserFull.CaptureHint.Stringify -> DestrHint.Stringify
+                            | FsMtParserFull.CaptureHint.Structure -> DestrHint.Destructure
+                            | ch -> failwithf "unexpected CatureHint %A" ch
+
+let toAlignInfo (ai : FsMtParserFull.AlignInfo) =
+    if ai.isEmpty then AlignInfo.Empty
+    else
+        let direction = match ai.direction with FsMtParserFull.AlignDirection.Left -> Direction.Left | _ -> Direction.Right
+        AlignInfo(direction, ai.width)
 
 /// Parses message templates from the different implementations in semi-compatible ways by 
 /// using FsMessageTemplates.Token as the target type.
@@ -21,7 +34,7 @@ let parsedAs lang message (expectedTokens: FsToken seq) =
         | "C#" -> MessageTemplates.MessageTemplate.Parse(message).Tokens |> Seq.map CsToFs.mttToToken |> List.ofSeq
         | "F#" -> (FsMessageTemplates.Parser.parse message).Tokens |> List.ofSeq
         | "F#MtParser" ->
-          ignoreStartIndex <- true // FsMtParser doesn't support index yet
+          ignoreStartIndex <- true // FsMtParser doesn't support index
           let tokens = ResizeArray<FsMtParserToken>()
           let foundText s = tokens.Add(FsMtParserToken.TextToken(s))
           let foundProp p = tokens.Add(FsMtParserToken.PropToken(p))
@@ -30,6 +43,17 @@ let parsedAs lang message (expectedTokens: FsToken seq) =
           |> Seq.map (function
             | FsMtParserToken.TextToken s -> FsToken.TextToken(0, s)
             | FsMtParserToken.PropToken p -> FsToken.PropToken(0, FsProp(p.name, -1, FsDestr.Default, FsAlign.Empty, p.format)) )
+          |> List.ofSeq
+        | "F#MtParserFull" ->
+          ignoreStartIndex <- true // FsMtParser doesn't support index
+          let tokens = ResizeArray<FsMtParserFullToken>()
+          let foundText s = tokens.Add(FsMtParserFullToken.TextToken(s))
+          let foundProp p = tokens.Add(FsMtParserFullToken.PropToken(p))
+          FsMtParserFull.parseParts message foundText foundProp
+          tokens
+          |> Seq.map (function
+            | FsMtParserFullToken.TextToken s -> FsToken.TextToken(0, s)
+            | FsMtParserFullToken.PropToken p -> FsToken.PropToken(0, FsProp(p.name, -1, captureHintToDestrHit p.captureHint, toAlignInfo p.align, p.format)) )
           |> List.ofSeq
         | other -> failwithf "unexpected lang '%s'" other
 

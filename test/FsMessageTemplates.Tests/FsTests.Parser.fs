@@ -113,14 +113,13 @@ let ``formats with align right can contain commas`` (lang) =
 let ``formats with align left can contain commas`` (lang) = 
     let template = "big long x{0,-5:0,00}x{1,-5:0,00}x{2,-5:0,00}x"
     assertParsedAs  lang template
-                    [   Tk.text 0 "big long x"
-                        Tk.proppalf 10 0 5 "0,00"
-                        Tk.text 21 "x"
-                        Tk.proppalf 22 1 5 "0,00"
-                        Tk.text 33 "x"
-                        Tk.proppalf 34 2 5 "0,00"
-                        Tk.text 45 "x" ]
-
+                    [ Tk.text 0 "big long x"
+                      Tk.proppalf 10 0 5 "0,00"
+                      Tk.text 21 "x"
+                      Tk.proppalf 22 1 5 "0,00"
+                      Tk.text 33 "x"
+                      Tk.proppalf 34 2 5 "0,00"
+                      Tk.text 45 "x" ]
 
 
 [<LangTheory; AllImplementations>]
@@ -170,17 +169,17 @@ let ``missing right bracket is parsed as text`` (lang) =
     let template = "{Hello"
     assertParsedAs lang template [Tk.text 0 template]
 
-[<LangTheory; CSharpAndFSharp>]
+[<LangTheory; FullParserImplementations>]
 let ``destructure hint is parsed correctly`` (lang) =
     let template = "{@Hello}"
     assertParsedAs lang template [Tk.propd 0 template "Hello"]
 
-[<LangTheory; CSharpAndFSharp>]
+[<LangTheory; FullParserImplementations>]
 let ``stringify hint is parsed correctly`` (lang) =
     let template = "{$Hello}"
     assertParsedAs lang template [Tk.propds 0 template "Hello"]
 
-[<LangTheory; CSharpAndFSharp>]
+[<LangTheory; FullParserImplementations>]
 let ``destructuring with empty property name is parsed as text`` (lang) =
     let template = "{@}"
     assertParsedAs lang template [Tk.text 0 template]

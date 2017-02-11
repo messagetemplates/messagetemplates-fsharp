@@ -29,6 +29,7 @@
 
   <ItemGroup>
     <Compile Include="FsMtParser.fs" />
+    <Compile Include="FsMtParserFull.fs" />
   </ItemGroup>
 
   <ItemGroup>

@@ -50,12 +50,18 @@
   </Choose>
   <Import Project="$(FSharpTargetsPath)" />
   <ItemGroup>
-    <Compile Include="..\..\..\src\FsMtParser\FsMtParser.fs">
-      <Link>FsMtParser.fs</Link>
-    </Compile>
     <None Include="..\..\..\src\FsMtParser\FsMtParserTest.fsx">
       <Link>FsMtParserTest.fsx</Link>
     </None>
+    <Compile Include="..\..\..\src\FsMtParser\FsMtParser.fs">
+      <Link>FsMtParser.fs</Link>
+    </Compile>
+    <None Include="..\..\..\src\FsMtParser\FsMtParserFullTest.fsx">
+      <Link>FsMtParserFullTest.fsx</Link>
+    </None>
+    <Compile Include="..\..\..\src\FsMtParser\FsMtParserFull.fs">
+      <Link>FsMtParserFull.fs</Link>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Reference Include="mscorlib" />
