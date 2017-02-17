@@ -10,12 +10,12 @@
     <PackageReference Include="FSharp.NET.Sdk" Version="1.0.*" PrivateAssets="All" />
     <PackageReference Include="FSharp.Core" Version="4.1.*" />
 
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.0.0-preview-20170106-08" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.0.0-preview-20170123-02" />
 
     <PackageReference Include="xunit" Version="2.2.0-beta5-build3474" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.2.0-beta5-build1225" />
 
-    <PackageReference Include="MessageTemplates" Version="1.0.0-rc-00260" />
+    <PackageReference Include="MessageTemplates" Version="1.0.0-rc-*" />
   </ItemGroup>
 
   <ItemGroup>
