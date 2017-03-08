@@ -1,10 +1,9 @@
-<Project Sdk="FSharp.NET.Sdk;Microsoft.NET.Sdk" ToolsVersion="15.0">
+<Project Sdk="FSharp.NET.Sdk;Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard1.6</TargetFramework>
     <VersionPrefix>1.0.0</VersionPrefix>
     <VersionSuffix>alpha</VersionSuffix>
-    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -24,7 +23,6 @@
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/messagetemplates/messagetemplates-fsharp</RepositoryUrl>
-    <!-- regrettably, 'owners' does not translate to MSBuild. -->
   </PropertyGroup>
 
   <ItemGroup>

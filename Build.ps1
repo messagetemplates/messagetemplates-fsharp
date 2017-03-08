@@ -11,7 +11,7 @@ if(Test-Path .\artifacts) {
 & dotnet restore --no-cache
 
 $branch = @{ $true = $env:APPVEYOR_REPO_BRANCH; $false = $(git symbolic-ref --short -q HEAD) }[$env:APPVEYOR_REPO_BRANCH -ne $NULL];
-$branch = $branch.Substring(0, [math]::Min(5, $branch.Length))
+$branch = $branch.Substring(0, [math]::Min(8, $branch.Length))
 $revision = @{ $true = "{0:00000}" -f [convert]::ToInt32("0" + $env:APPVEYOR_BUILD_NUMBER, 10); $false = "l" }[$env:APPVEYOR_BUILD_NUMBER -ne $NULL];
 $suffix = @{ $true = ""; $false = "$($branch.Substring(0, [math]::Min(10,$branch.Length)))-$revision"}[$branch -eq "master" -and $revision -ne "l"]
 
@@ -22,7 +22,7 @@ foreach ($src in ls src/*) {
 
     echo "build: Packaging project in $src"
 
-    & dotnet pack -c Release -o ..\..\artifacts --version-suffix=$suffix
+    & dotnet pack --include-symbols -c Release -o ..\..\artifacts --version-suffix=$suffix
     if($LASTEXITCODE -ne 0) { exit 1 }
 
     Pop-Location
