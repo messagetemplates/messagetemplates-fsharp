@@ -21,10 +21,12 @@ os:
   - osx
   - linux
 
+dotnet:
+  - 1.0.1
+
 env:
   matrix:
-    - CLI_VERSION=1.0.0
-    - CLI_VERSION=latest
+    - CLI_VERSION=1.0.1
 
 before_install:
   - if test "$TRAVIS_OS_NAME" == "osx"; then ./tooling/configure-dotnet-cli-osx.sh; fi
