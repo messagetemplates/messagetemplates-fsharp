@@ -490,7 +490,7 @@ module Destructure =
             DictionaryValue skvps
         | e -> SequenceValue(e |> Seq.cast<obj> |> Seq.map r.TryAgainWithValue |> Seq.toList)
 
-    let inline scalarStringCatchAllDestr (r:DestructureRequest) = ScalarValue (r.Value.ToString())
+    let inline scalarOriginCatchAllDestr (r:DestructureRequest) = ScalarValue (r.Value)
 
     let inline isPublicInstanceReadProp (p:PropertyInfo) =
         p.CanRead && p.GetMethod.IsPublic && not (p.GetMethod.IsStatic) &&
@@ -534,7 +534,7 @@ module Destructure =
     let inline alwaysKeepTrying (_:DestructureRequest) = TemplatePropertyValue.Empty
 
     /// Attempts all built-in destructurers in the correct order, falling
-    /// back to 'scalarStringCatchAllDestr' (stringify) if no better option
+    /// back to 'scalarOriginCatchAllDestr' (origin) if no better option
     /// is found first. Also supports custom scalars and custom object
     /// destructuring at the appropriate points in the pipline. Note this is
     /// called recursively in a tight loop during the process of capturing
@@ -559,7 +559,7 @@ module Destructure =
                                 | tpv when isEmptyKeepTrying tpv ->
                                     match tryObjectStructureDestructuring request with
                                     | tpv when isEmptyKeepTrying tpv ->
-                                        match scalarStringCatchAllDestr request with
+                                        match scalarOriginCatchAllDestr request with
                                         | tpv when isEmptyKeepTrying tpv -> TemplatePropertyValue.Empty
                                         | tpv -> tpv
                                     | tpv -> tpv
