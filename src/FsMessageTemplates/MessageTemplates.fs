@@ -453,7 +453,7 @@ module Destructure =
         match r.Hint with | DestrHint.Stringify -> ScalarValue (r.Value.ToString()) | _ -> TemplatePropertyValue.Empty
 
     let inline tryDelegateString (r:DestructureRequest) =
-        if r.Hint <> DestrHint.Destructure then TemplatePropertyValue.Empty
+        if r.Hint = DestrHint.Destructure then TemplatePropertyValue.Empty
         else
             match tryCastAs<System.Delegate>(r.Value) with
             | e when (Object.ReferenceEquals(null, e)) -> TemplatePropertyValue.Empty
