@@ -1,19 +1,14 @@
-<Project Sdk="FSharp.NET.Sdk;Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp1.0</TargetFramework>
-    <OutputType>Library</OutputType>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="FSharp.NET.Sdk" Version="1.0.*" PrivateAssets="All" />
-    <PackageReference Include="FSharp.Core" Version="4.1.*" />
-
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.0.0" />
-
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.3.0-preview-20170628-02" />
     <PackageReference Include="xunit" Version="2.2.0" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.2.0" />
-
     <PackageReference Include="MessageTemplates" Version="1.0.0-rc-*" />
   </ItemGroup>
 
@@ -21,7 +16,7 @@
     <ProjectReference Include="../../src/FsMessageTemplates/FsMessageTemplates.fsproj" />
     <ProjectReference Include="../../src/FsMtParser/FsMtParser.fsproj" />
   </ItemGroup>
-  
+
   <ItemGroup>
     <Compile Include="FSharpTypesDestructuringPolicy.fs" />
     <Compile Include="Tk.fs" />

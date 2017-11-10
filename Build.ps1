@@ -8,7 +8,7 @@ if(Test-Path .\artifacts) {
 }
 
 & dotnet --version
-& dotnet restore --no-cache
+& dotnet restore
 
 $branch = @{ $true = $env:APPVEYOR_REPO_BRANCH; $false = $(git symbolic-ref --short -q HEAD) }[$env:APPVEYOR_REPO_BRANCH -ne $NULL];
 $branch = $branch.Substring(0, [math]::Min(8, $branch.Length))
