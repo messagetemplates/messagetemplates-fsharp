@@ -21,7 +21,7 @@ os:
   - osx
   - linux
 
-dotnet: 2.0.2
+dotnet: 2.0
 
 env:
   matrix:
