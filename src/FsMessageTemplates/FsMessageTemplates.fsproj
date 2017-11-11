@@ -28,6 +28,6 @@
   <ItemGroup>
     <Compile Include="MessageTemplates.fsi" />
     <Compile Include="MessageTemplates.fs" />
-   </ItemGroup>
+  </ItemGroup>
 
 </Project>
