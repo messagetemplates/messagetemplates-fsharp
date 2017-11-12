@@ -1,4 +1,10 @@
 language: csharp
+mono: none
+dotnet: 2.0.2
+
+env:
+  matrix:
+    - CLI_VERSION=2.0.2
 
 #dotnet cli require Ubuntu 14.04
 sudo: required
@@ -16,16 +22,14 @@ addons:
     - libssl-dev
     - libunwind8
     - zlib1g
+    sources:
+    - sourceline: 'deb [arch=amd64] https://packages.microsoft.com/repos/microsoft-ubuntu-trusty-prod trusty main'
+      key_url: 'https://packages.microsoft.com/keys/microsoft.asc'
 
 os:
   - osx
   - linux
 
-dotnet: 2.0
-
-env:
-  matrix:
-    - CLI_VERSION=2.0.2
 
 before_install:
   - if test "$TRAVIS_OS_NAME" == "osx"; then ./tooling/configure-dotnet-cli-osx.sh; fi
