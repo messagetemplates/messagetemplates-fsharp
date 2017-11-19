@@ -13,8 +13,8 @@
         "compilerName": "fsc",
         "compile": {
           "includeFiles": [
-            "MessageTemplates.fsi",
-            "MessageTemplates.fs"
+            "../../../../src/FsMessageTemplates/MessageTemplates.fsi",
+            "../../../../src/FsMessageTemplates/MessageTemplates.fs"
           ]
         }
     },

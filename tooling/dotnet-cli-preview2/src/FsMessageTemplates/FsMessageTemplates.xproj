@@ -6,7 +6,7 @@
   </PropertyGroup>
   <Import Project="$(VSToolsPath)\DotNet\Microsoft.DotNet.Props" Condition="'$(VSToolsPath)' != ''" />
   <PropertyGroup Label="Globals">
-    <ProjectGuid>23111a0f-a40c-4a72-a44e-da667f0b74e9</ProjectGuid>
+    <ProjectGuid>a46b8984-f9c0-4922-917d-ed36a653cdfb</ProjectGuid>
     <RootNamespace>FsMessageTemplates</RootNamespace>
     <BaseIntermediateOutputPath Condition="'$(BaseIntermediateOutputPath)'=='' ">.\obj</BaseIntermediateOutputPath>
     <OutputPath Condition="'$(OutputPath)'=='' ">.\bin\</OutputPath>

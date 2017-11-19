@@ -7,11 +7,16 @@ open System.Globalization
 
 type LangTheoryAttribute() =
     inherit Xunit.TheoryAttribute()
-type LangCsFsDataAttribute() =
+
+type CSharpAndFSharpAttribute() =
     inherit Xunit.Sdk.DataAttribute()
     override __.GetData _ = [[|box "C#"|]; [|box "F#"|]] |> Seq.ofList
 
-/// Just like LangCsFsDataAttribute, only includes a test for the FsMtParser.
-type LangCsFsAndFsMtParserDataAttribute() =
+type FullParserImplementationsAttribute() =
     inherit Xunit.Sdk.DataAttribute()
-    override __.GetData _ = [[|box "C#"|]; [|box "F#"|]; [|box "F#MtParser"|] ] |> Seq.ofList
+    override __.GetData _ = [[|box "C#"|]; [|box "F#"|]; [|box "F#MtParserFull"|]] |> Seq.ofList
+
+/// Indicates that all implementations must pass the test.
+type AllImplementationsAttribute() =
+    inherit Xunit.Sdk.DataAttribute()
+    override __.GetData _ = [[|box "C#"|]; [|box "F#"|]; [|box "F#MtParser"|]; [|box "F#MtParserFull"|]] |> Seq.ofList

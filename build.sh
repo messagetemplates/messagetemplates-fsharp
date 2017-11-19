@@ -1,13 +1,9 @@
 #!/bin/bash
-dotnet restore
 
-for path in src/*/project.json; do
-    dirname="$(dirname "${path}")"
-    dotnet build ${dirname} -c Release
+for path in src/*/*.fsproj; do
+    dotnet build -c Release ${path}
 done
 
-for path in test/*/project.json; do
-    dirname="$(dirname "${path}")"
-    dotnet build ${dirname} -f netcoreapp1.0 -c Release
-    dotnet test ${dirname} -f netcoreapp1.0  -c Release
+for path in test/*/*.fsproj; do
+    dotnet test -c Release ${path}
 done

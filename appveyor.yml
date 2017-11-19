@@ -1,5 +1,5 @@
 version: '{build}'
-image: Visual Studio 2015
+image: Visual Studio 2017
 configuration: Release
 install:
   - ps: ./Install.ps1

@@ -18,18 +18,18 @@ type Receipt() =
 // Delegate1 works with tuple arguments. 
 type MyDelegate = delegate of (int * int) -> int
 
-[<LangTheory; LangCsFsData>]
+[<LangTheory; CSharpAndFSharp>]
 let ``a delegate is rendered as a string`` (lang) =
     let myDel = MyDelegate(fun (i1,i2) -> i1+i2)
     MtAssert.RenderedAs(lang, "What even would a {del} print?", [| myDel |],
         "What even would a \"FsTests.Format+MyDelegate\" print?")
 
-[<LangTheory; LangCsFsData>]
+[<LangTheory; CSharpAndFSharp>]
 let ``a class instance is rendered in simple notation`` (lang) =
     MtAssert.RenderedAs(lang, "I sat at {@Chair}", [|Chair()|],
         "I sat at Chair { Back: \"straight\", Legs: [1, 2, 3, 4] }")
 
-[<LangTheory; LangCsFsData>]
+[<LangTheory; CSharpAndFSharp>]
 let ``a class instance is rendered in simple notation using format provider`` (lang) =
     MtAssert.RenderedAs(lang, "I received {@Receipt}", [|Receipt()|],
         "I received Receipt { Sum: 12,345, When: 20/05/2013 16:39:00 }",
@@ -37,71 +37,71 @@ let ``a class instance is rendered in simple notation using format provider`` (l
 
 type ChairRecord = { Back:string; Legs: int array }
 
-[<LangTheory; LangCsFsData>]
+[<LangTheory; CSharpAndFSharp>]
 let ``an F# record object is rendered in simple notation with type`` (lang) =
     MtAssert.RenderedAs(lang, "I sat at {@Chair}", [|{ Back="straight"; Legs=[|1;2;3;4|] }|],
         "I sat at ChairRecord { Back: \"straight\", Legs: [1, 2, 3, 4] }")
 
 type ReceiptRecord = { Sum: double; When: System.DateTime }
 
-[<LangTheory; LangCsFsData>]
+[<LangTheory; CSharpAndFSharp>]
 let ``an F# record object is rendered in simple notation with type using format provider`` (lang) =
     MtAssert.RenderedAs(lang, "I received {@Receipt}",
         [| { Sum=12.345; When=DateTime(2013, 5, 20, 16, 39, 0) } |],
         "I received ReceiptRecord { Sum: 12,345, When: 20/05/2013 16:39:00 }",
         provider=(CultureInfo("fr-FR")))
 
-[<LangTheory; LangCsFsData>]
+[<LangTheory; CSharpAndFSharp>]
 let ``an object with default destructuring is rendered as a string literal`` (lang) =
     MtAssert.RenderedAs(lang, "I sat at {Chair}", [|Chair()|], "I sat at \"a chair\"")
 
-[<LangTheory; LangCsFsData>]
+[<LangTheory; CSharpAndFSharp>]
 let ``an object with stringify destructuring is rendered as a string`` (lang) =
     MtAssert.RenderedAs(lang, "I sat at {$Chair}", [|Chair()|], "I sat at \"a chair\"")
 
-[<LangTheory; LangCsFsData>]
+[<LangTheory; CSharpAndFSharp>]
 let ``multiple properties are rendered in order`` (lang) =
     MtAssert.RenderedAs(lang, "Just biting {Fruit} number {Count}", [| "Apple"; 12 |],
         "Just biting \"Apple\" number 12")
     
-[<LangTheory; LangCsFsData>]
+[<LangTheory; CSharpAndFSharp>]
 let ``a template with only positional properties is analyzed and rendered positionally`` (lang) =
     MtAssert.RenderedAs(lang, "{1}, {0}", [|"world"; "Hello"|], "\"Hello\", \"world\"")
 
-[<LangTheory; LangCsFsData>]
+[<LangTheory; CSharpAndFSharp>]
 let ``a template with only positional properties uses format provider`` (lang) =
     MtAssert.RenderedAs(lang, "{1}, {0}", [| 12.345; "Hello" |], "\"Hello\", 12,345",
         provider=(CultureInfo("fr-FR")))
 
 // Debatable what the behavior should be, here.
-[<LangTheory; LangCsFsData>]
+[<LangTheory; CSharpAndFSharp>]
 let ``a template with names and positionals uses names for all values`` (lang) =
     MtAssert.RenderedAs(lang, "{1}, {Place}, {5}" , [|"world"; "Hello"; "yikes"|],
         "\"world\", \"Hello\", \"yikes\"")
 
-[<LangTheory; LangCsFsData>]
+[<LangTheory; CSharpAndFSharp>]
 let ``missing positional parameters render as text like standard formats`` (lang) =
     MtAssert.RenderedAs(lang, "{1}, {0}", [|"world"|], "{1}, \"world\"")
 
-[<LangTheory; LangCsFsData>]
+[<LangTheory; CSharpAndFSharp>]
 let ``extra positional parameters are ignored`` (lang) =
     MtAssert.RenderedAs(lang, "{1}, {0}", [|"world"; "world"; "world"|], "\"world\", \"world\"")
     
-[<LangTheory; LangCsFsData>]
+[<LangTheory; CSharpAndFSharp>]
 let ``the same positional parameter repeated many times with literal format is reused`` (lang) =
     MtAssert.RenderedAs(lang, "{1:l}{1:l}{1:l}{0}{1:l}{1:l}{1:l}", [|"a";"b"|], "bbb\"a\"bbb")
     
-[<LangTheory; LangCsFsData>]
+[<LangTheory; CSharpAndFSharp>]
 let ``the same missing positional parameters render literally`` (lang) =
     MtAssert.RenderedAs(lang, "{1}{2}{3}{4}{5}{6}{7}{8}{9}", [|"a"|], "{1}{2}{3}{4}{5}{6}{7}{8}{9}")
     MtAssert.RenderedAs(lang, "{1}{2}{3}{4}{5}{0}{6}{7}{8}{9}", [|"a"|], "{1}{2}{3}{4}{5}\"a\"{6}{7}{8}{9}")
     
-[<LangTheory; LangCsFsData>]
+[<LangTheory; CSharpAndFSharp>]
 let ``multiple properties use format provider`` (lang) =
     MtAssert.RenderedAs(lang, "Income was {Income} at {Date:d}", [| 1234.567; DateTime(2013, 5, 20) |],
         "Income was 1234,567 at 20/05/2013", provider=(CultureInfo("fr-FR")))
 
-[<LangTheory; LangCsFsData>]
+[<LangTheory; CSharpAndFSharp>]
 let ``format strings are propagated`` (lang) =
     MtAssert.RenderedAs(lang, "Welcome, customer {CustomerId:0000}", [|12|],
         "Welcome, customer 0012")
@@ -141,17 +141,16 @@ let ``get alignment structure values`` () : obj[] seq = seq {
 let ``alignment strings are propagated`` (lang:string) (values:obj[]) (template:string) (expected:string) =
     MtAssert.RenderedAs(lang, template, values, expected)
 
-[<LangTheory; LangCsFsData>]
+[<LangTheory; CSharpAndFSharp>]
 let ``format provider is used`` (lang) =
     MtAssert.RenderedAs(lang,
         "Please pay {Sum}", [|12.345|], "Please pay 12,345",
         provider=(CultureInfo("fr-FR")))
 
 type Tree = Seq of nums: double list | Leaf of double | Trunk of double * DateTimeOffset * (Tree list)
-let Four39PmOn20May2013 = DateTimeOffset(2013, 5, 20, 16, 39, 00, TimeSpan.FromHours 9.5)
 type ItemsUnion = ChairItem of c:ChairRecord | ReceiptItem of r:ReceiptRecord
 
-[<LangTheory; LangCsFsData>]
+[<LangTheory; CSharpAndFSharp>]
 let ``an F# discriminated union object is formatted with provider correctly`` (lang) =
     let provider = CultureInfo("fr-FR")
     let template = "I like {@item1} and {@item2}"
@@ -163,13 +162,13 @@ let ``an F# discriminated union object is formatted with provider correctly`` (l
                  + "ReceiptItem { r: ReceiptRecord { Sum: 12,345, When: 20/05/2013 16:39:00 }, Tag: 1, IsChairItem: False, IsReceiptItem: True }"
     MtAssert.RenderedAs(lang, template, values, expected, provider)
 
-[<Theory; LangCsFsData>]
+[<Theory; CSharpAndFSharp>]
 let ``Rendered F# DU or Tuple fields are 'null' when depth is 1`` (lang) =
     let provider = (CultureInfo("fr-FR"))
     let template = "I like {@item1} and {@item2} and {@item3}"
     let values : obj[] = [| Leaf 12.345
                             Leaf 12.345
-                            Trunk (12.345, Four39PmOn20May2013, [Leaf 12.345; Leaf 12.345]) |]
+                            Trunk (12.345, DateTimeOffset(2013, 5, 20, 16, 39, 00, TimeSpan.FromHours 9.5), [Leaf 12.345; Leaf 12.345]) |]
     // all fields should be rendered
     let expected = "I like Leaf { Item: null, Tag: null, IsSeq: null, IsLeaf: null, IsTrunk: null } and "
                  + "Leaf { Item: null, Tag: null, IsSeq: null, IsLeaf: null, IsTrunk: null } and "
@@ -177,13 +176,13 @@ let ``Rendered F# DU or Tuple fields are 'null' when depth is 1`` (lang) =
     
     MtAssert.RenderedAs(lang, template, values, expected, provider, maxDepth=1)
 
-[<Theory; LangCsFsData>]
+[<Theory; CSharpAndFSharp>]
 let ``Rendered F# DU or Tuple fields on level3 are 'null' when depth is 2`` (lang) =
     let provider = (CultureInfo("fr-FR"))
     let template = "I like {@item1} and {@item2} and {@item3} and {@item4}"
     let values : obj[] = [| Leaf 12.345
                             Leaf 12.345
-                            Trunk (12.345, Four39PmOn20May2013, [Leaf 12.345; Leaf 12.345])
+                            Trunk (12.345, DateTimeOffset(2013, 5, 20, 16, 39, 00, TimeSpan.FromHours 9.5), [Leaf 12.345; Leaf 12.345])
                             ChairItem { Back="slanted"; Legs=[|1;2;3;4;5|] } |]
 
     // Render fields deeper than level 2 with 'null' values
@@ -195,7 +194,7 @@ let ``Rendered F# DU or Tuple fields on level3 are 'null' when depth is 2`` (lan
     
     MtAssert.RenderedAs(lang, template, values, expected, provider, maxDepth=2)
     
-[<LangTheory; LangCsFsData>]
+[<LangTheory; CSharpAndFSharp>]
 let ``Destructred F# objects captured with a custom destructurer render with format provider`` (lang) =
     let provider = CultureInfo("fr-FR")
     let template = "I like {@item1}
@@ -204,8 +203,8 @@ and {@item3}
 and {@item4}"
     let values : obj[] = [| Leaf 12.345
                             Leaf 12.345
-                            Trunk (12.345, Four39PmOn20May2013, [Leaf 12.345; Leaf 12.345])
-                            Trunk (1.1, Four39PmOn20May2013, [Seq [1.1;2.2;3.3]; Seq [4.4]])
+                            Trunk (12.345, DateTimeOffset(2013, 5, 20, 16, 39, 00, TimeSpan.FromHours 9.5), [Leaf 12.345; Leaf 12.345])
+                            Trunk (1.1, DateTimeOffset(2013, 5, 20, 16, 39, 00, TimeSpan.FromHours 9.5), [Seq [1.1;2.2;3.3]; Seq [4.4]])
                          |]
     let expected = "I like Leaf { Item: 12,345 }
 and Leaf { Item: 12,345 }
@@ -217,7 +216,7 @@ and Trunk { Item1: 1,1, Item2: 20/05/2013 16:39:00 +09:30, Item3: [Seq { nums: [
 
 open FsMessageTemplates.Capturing
 
-[<LangTheory; LangCsFsData>]
+[<LangTheory; CSharpAndFSharp>]
 let ``Destructred F# objects via the built-in F# types destructurer render with format provider`` (lang) =
     let provider = CultureInfo("fr-FR")
     let template = "I like {@item1}
@@ -226,8 +225,8 @@ and {@item3}
 and {@item4}"
     let values : obj[] = [| Leaf 12.345
                             Leaf 12.345
-                            Trunk (12.345, Four39PmOn20May2013, [Leaf 12.345; Leaf 12.345])
-                            Trunk (1.1, Four39PmOn20May2013, [Seq [1.1;2.2;3.3]; Seq [4.4]])
+                            Trunk (12.345, DateTimeOffset(2013, 5, 20, 16, 39, 00, TimeSpan.FromHours 9.5), [Leaf 12.345; Leaf 12.345])
+                            Trunk (1.1, DateTimeOffset(2013, 5, 20, 16, 39, 00, TimeSpan.FromHours 9.5), [Seq [1.1;2.2;3.3]; Seq [4.4]])
                          |]
     let expected = "I like Leaf { Item: 12,345 }
 and Leaf { Item: 12,345 }
@@ -237,8 +236,9 @@ and Trunk { Item1: 1,1, Item2: 20/05/2013 16:39:00 +09:30, Item3: [Seq { nums: [
     let destr = createCustomDestructurer None (Some builtInFSharpTypesDestructurer)
     MtAssert.RenderedAs(lang, template, values, expected, provider, additionalDestrs=[destr])
 
-type Size = Large = 1
-type SizeFormatter(innerFormatProvider : IFormatProvider) =
+type Size = Regular = 1 | Large = 2
+
+type BernieSandersSizeFormatter (innerFormatProvider : IFormatProvider) =
   interface IFormatProvider with
     member this.GetFormat ty =
       match ty with
@@ -248,16 +248,16 @@ type SizeFormatter(innerFormatProvider : IFormatProvider) =
     member this.Format (format : string, arg : obj, provider : IFormatProvider) =
       match arg with
       | :? Size as s ->
-        match s with Size.Large -> "HUUGE" | _ -> s.ToString()
+        match s with Size.Large -> "YUUUGE" | _ -> sprintf "%A" s
       | :? IFormattable as f ->
         f.ToString(format, innerFormatProvider)
       | _ ->
         arg.ToString()
 
-[<LangTheory; LangCsFsData>]
+[<LangTheory; CSharpAndFSharp>]
 let ``Applies custom formatter to enums`` (lang) =
-    let provider = (SizeFormatter CultureInfo.InvariantCulture) :> IFormatProvider
+    let provider = (BernieSandersSizeFormatter CultureInfo.InvariantCulture) :> IFormatProvider
     let template = "Size {size}"
     let values : obj[] = [| Size.Large |]
-    let expected = "Size HUUGE"
+    let expected = "Size YUUUGE"
     MtAssert.RenderedAs(lang, template, values, expected, provider)

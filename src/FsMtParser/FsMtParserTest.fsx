@@ -14,7 +14,9 @@ let foundProp prop =
 ;;
 
 tokens.Clear()
-FsMtParser.parseParts "Hello {{@adam:blah}}, how are {{you}}?" foundText foundProp
+FsMtParser.parseParts "This {{adam:blah}}, is all text {{you}}?" foundText foundProp
+FsMtParser.parseParts "This {{@adam:blah}}, is all text {{you}}?" foundText foundProp
+FsMtParser.parseParts "This {adam:blah}, has actual valid properties?" foundText foundProp
 tokens
 
 for i = 0 to 1000000 do

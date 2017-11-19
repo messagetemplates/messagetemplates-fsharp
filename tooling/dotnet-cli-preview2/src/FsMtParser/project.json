@@ -13,19 +13,19 @@
         "compilerName": "fsc",
         "compile": {
           "includeFiles": [
-            "FsMtParser.fs"
+            "../../../../src/FsMtParser/FsMtParser.fs"
           ]
         }
     },
     "tools": {
-        "dotnet-compile-fsc": {
-            "version": "1.0.0-preview2-*",
-            "imports": [
-                "dnxcore50",
-                "portable-net45+win81",
-                "netstandard1.3"
-            ]
-        }
+      "dotnet-compile-fsc": {
+        "version": "1.0.0-preview2-*",
+        "imports": [
+          "dnxcore50",
+          "portable-net45+win81",
+          "netstandard1.3"
+        ]
+      }
     },
     "frameworks": {
         "net45": {

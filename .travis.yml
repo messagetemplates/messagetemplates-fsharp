@@ -1,0 +1,42 @@
+language: csharp
+mono: none
+# we install dotnet SDK manually
+
+env:
+  matrix:
+    - CLI_VERSION=2.0.2
+
+#Ubuntu 14.04
+sudo: required
+dist: trusty
+
+#OS X 10.12
+osx_image: xcode9
+
+addons:
+  apt:
+    packages:
+    - gettext
+    - libcurl4-openssl-dev
+    - libicu-dev
+    - libssl-dev
+    - libunwind8
+    - zlib1g
+
+os:
+  - osx
+  - linux
+
+
+before_install:
+  - if test "$TRAVIS_OS_NAME" == "osx"; then ./tooling/configure-dotnet-cli-osx.sh; fi
+  # Download script to install dotnet cli
+  - curl -L --create-dirs https://raw.githubusercontent.com/dotnet/cli/release/2.0.0/scripts/obtain/dotnet-install.sh -o ./scripts/obtain/install.sh
+  - find ./scripts -name "*.sh" -exec chmod +x {} \;
+  - export DOTNET_INSTALL_DIR="$PWD/.dotnetcli"
+  - ./scripts/obtain/install.sh --version "$CLI_VERSION" --install-dir "$DOTNET_INSTALL_DIR" --no-path
+  # add dotnet to PATH
+  - export PATH="$DOTNET_INSTALL_DIR:$PATH"
+
+script:
+  - ./build.sh

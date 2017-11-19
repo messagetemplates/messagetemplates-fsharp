@@ -194,4 +194,7 @@ FakesAssemblies/
 GeneratedArtifacts/
 _Pvt_Extensions/
 ModelManifest.xml
+
 /.dotnetcli
+/tooling/net45/packages
+*.userprefs

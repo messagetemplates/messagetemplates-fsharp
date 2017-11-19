@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.25420.1
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FsMtParser", "FsMtParser\FsMtParser.fsproj", "{6B24ACE8-3A8E-43AE-8CFF-772B0164B245}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Tests", "Tests\Tests.fsproj", "{FCEAAD62-96CB-48A7-90AB-EE0ADDCC59DD}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FsMessageTemplates", "FsMessageTemplates\FsMessageTemplates.fsproj", "{236CC78B-681C-488D-B76D-2EB15DCE5687}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6B24ACE8-3A8E-43AE-8CFF-772B0164B245}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6B24ACE8-3A8E-43AE-8CFF-772B0164B245}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6B24ACE8-3A8E-43AE-8CFF-772B0164B245}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6B24ACE8-3A8E-43AE-8CFF-772B0164B245}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FCEAAD62-96CB-48A7-90AB-EE0ADDCC59DD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FCEAAD62-96CB-48A7-90AB-EE0ADDCC59DD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FCEAAD62-96CB-48A7-90AB-EE0ADDCC59DD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FCEAAD62-96CB-48A7-90AB-EE0ADDCC59DD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{236CC78B-681C-488D-B76D-2EB15DCE5687}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{236CC78B-681C-488D-B76D-2EB15DCE5687}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{236CC78B-681C-488D-B76D-2EB15DCE5687}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{236CC78B-681C-488D-B76D-2EB15DCE5687}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

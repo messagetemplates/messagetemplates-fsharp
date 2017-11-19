@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.3.0-preview-20170628-02" />
+    <PackageReference Include="xunit" Version="2.2.0" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.2.0" />
+    <PackageReference Include="MessageTemplates" Version="1.0.0-rc-*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/FsMessageTemplates/FsMessageTemplates.fsproj" />
+    <ProjectReference Include="../../src/FsMtParser/FsMtParser.fsproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="FSharpTypesDestructuringPolicy.fs" />
+    <Compile Include="Tk.fs" />
+    <Compile Include="CsToFs.fs" />
+    <Compile Include="XunitSupport.fs" />
+    <Compile Include="MtAssert.fs" />
+    <Compile Include="FsTests.Parser.fs" />
+    <Compile Include="FsTests.Capture.fs" />
+    <Compile Include="FsTests.Format.fs" />
+  </ItemGroup>
+
+</Project>
+
+

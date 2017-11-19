@@ -5,16 +5,16 @@ open Tk
 open FsMessageTemplates
 open Asserts
 
-[<LangTheory; LangCsFsData>]
+[<LangTheory; CSharpAndFSharp>]
 let ``no values provided yields no properties`` (lang) =
     MtAssert.DestructuredAs(lang, "this {will} {capture} {nothing}, I hope", [||], [])
 
-[<LangTheory; LangCsFsData>]
+[<LangTheory; CSharpAndFSharp>]
 let ``one named property and one value yields the correct named property`` (lang) =
     MtAssert.DestructuredAs(lang, "this {will} work, I hope", [|"might"|],
         expected = [ PropertyNameAndValue("will", ScalarValue "might") ])
 
-[<LangTheory; LangCsFsData>]
+[<LangTheory; CSharpAndFSharp>]
 let ``one enumerable property yeilds a sequence value`` (lang) =
     MtAssert.DestructuredAs(lang, "this {will} work, I hope", [|[|1..3|]|],
         expected = [ PropertyNameAndValue("will", SequenceValue
@@ -31,13 +31,13 @@ let chairStructureValue =
                              ]
     StructureValue ("Chair", propNamesAndValues)
 
-[<LangTheory; LangCsFsData>]
+[<LangTheory; CSharpAndFSharp>]
 let ``a destructured dictionary yeilds dictionary values`` (lang) =
     let inputDictionary = System.Collections.Generic.Dictionary(dict [| "key", Chair(); |])
     MtAssert.DestructuredAs(lang, "this {@will} work, I hope", [| inputDictionary |],
         expected = [ PropertyNameAndValue("will", DictionaryValue [ ScalarValue "key", chairStructureValue ]) ])
 
-[<LangTheory; LangCsFsData>]
+[<LangTheory; CSharpAndFSharp>]
 let ``an F# 'dict' (which is not Dictionary<_,_>) yeilds a sequence->structure value`` (lang) =
     let inputDictionary = dict [| "firstDictEntryKey", Chair(); |]
     MtAssert.DestructuredAs(lang, "this {@will} work, I hope", [| inputDictionary |],
@@ -50,16 +50,16 @@ let ``an F# 'dict' (which is not Dictionary<_,_>) yeilds a sequence->structure v
                 ])
             ])
 
-[<LangTheory; LangCsFsData>]
+[<LangTheory; CSharpAndFSharp>]
 let ``a class instance is captured as a structure value`` (lang) =
     MtAssert.DestructuredAs(lang, "I sat at {@Chair}", [|Chair()|],
         [ PropertyNameAndValue("Chair", chairStructureValue) ])
 
-[<LangTheory; LangCsFsData>]
+[<LangTheory; CSharpAndFSharp>]
 let ``one positional property and one value yields the correct positional property`` (lang) =
     MtAssert.DestructuredAs(lang, "this {0} work, I hope", [|"will"|], [ PropertyNameAndValue("0", ScalarValue "will") ])
 
-[<LangTheory; LangCsFsData>]
+[<LangTheory; CSharpAndFSharp>]
 let ``multiple positional property and the same number of values yields the correct positional properties`` (lang) =
     MtAssert.DestructuredAs(lang, "{0} {1} {2} {3} {4} {5}, I hope", [|"this"; 10; true;"this"; 10; true|],
         [ PropertyNameAndValue("0", ScalarValue ("this"))
@@ -105,14 +105,14 @@ let scalarInputAsObj (v:obj, e:ExpectedScalarResult) =
 let getScalarExpected (v:obj, e:ExpectedScalarResult) =
     match e with Same -> v | Different de -> de
 
-[<LangTheory; LangCsFsData>]
+[<LangTheory; CSharpAndFSharp>]
 let ``scalar types are captured correctly when positional`` (lang) =
     let positionalFmtString = String.Join(" ", (scalars |> Seq.mapi (fun i _ -> "{" + string i + "}")))
     let valuesArray = scalars |> Seq.map (scalarInputAsObj) |> Seq.toArray
     let expected = scalars |> List.mapi (fun i s -> PropertyNameAndValue(string i, ScalarValue (getScalarExpected s)))
     MtAssert.DestructuredAs(lang, positionalFmtString, valuesArray, expected)
 
-[<LangTheory; LangCsFsData>]
+[<LangTheory; CSharpAndFSharp>]
 let ``scalar types are captured correctly when positionally out of order`` (lang) =
     let numberedOutOfOrder = scalars |> List.mapi (fun i items -> i, items) |> List.sortBy (fun x -> x.GetHashCode())
     let posTokensStringsOutOfOrder = numberedOutOfOrder |> Seq.map (fun (i, _) -> "{" + string i + "}")
@@ -122,14 +122,14 @@ let ``scalar types are captured correctly when positionally out of order`` (lang
     let expected = outOfOrder |> List.mapi (fun i s -> PropertyNameAndValue(string i, ScalarValue (getScalarExpected s)))
     MtAssert.DestructuredAs(lang, positionalFmtString, values, expected)
 
-[<LangTheory; LangCsFsData>]
+[<LangTheory; CSharpAndFSharp>]
 let ``scalar types are captured correctly when named`` (lang) =
     let namedFmtString = String.Join(" ", (scalars |> Seq.mapi (fun i v -> "{named" + (string i) + "}")))
     let values = scalars |> Seq.map (fun s -> (scalarInputAsObj s)) |> Seq.toArray
     let expected = scalars |> List.mapi (fun i s -> PropertyNameAndValue("named" + string i, ScalarValue (getScalarExpected s)))
     MtAssert.DestructuredAs(lang, namedFmtString, values, expected)
 
-[<LangTheory; LangCsFsData>]
+[<LangTheory; CSharpAndFSharp>]
 let ``multiple positional property capture the correct integral scalar types`` (lang) =
     let values : obj[] = [| 1s; 2us; 3; 4u; 5L; 6UL |]
     MtAssert.DestructuredAs(lang, "{0} {1} {2}, I hope, {3} {4} {5}", values,
@@ -140,7 +140,7 @@ let ``multiple positional property capture the correct integral scalar types`` (
           PropertyNameAndValue("4", ScalarValue (box 5L))
           PropertyNameAndValue("5", ScalarValue (box 6UL)) ])
 
-[<LangTheory; LangCsFsData>]
+[<LangTheory; CSharpAndFSharp>]
 let ``multiple positional nullable properties capture the correct integral scalar types`` (lang) =
     let values : obj[] = [|
         (Nullable 1s)
@@ -171,7 +171,7 @@ module St =
     /// property name and value
     let pnv (name, value) = PropertyNameAndValue(name, value)
     
-[<LangTheory; LangCsFsData>]
+[<LangTheory; CSharpAndFSharp>]
 let ``Default destructuring an F# union works`` (lang) =
     // Both cases have no properties/attributes
     MtAssert.DestructuredAs(lang, "I like {@first} and {@second}", [| Case1; Case2 |],
@@ -208,7 +208,7 @@ let ``Default destructuring an F# union works`` (lang) =
     MtAssert.DestructuredAs(lang, "I like {@first} and {@second}",
                             [| Case1AB(1,"2"); Case2AB |], expected)
 
-[<LangTheory; LangCsFsData>]
+[<LangTheory; CSharpAndFSharp>]
 let ``Default destructuring an F# tuple works`` (lang) =
     
     let values : obj[] = [| 123,"abc"; 456, "def" |]
