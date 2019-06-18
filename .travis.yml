@@ -4,7 +4,7 @@ mono: none
 
 env:
   matrix:
-    - CLI_VERSION=2.0.2
+    - CLI_VERSION=2.2.300
 
 #Ubuntu 14.04
 sudo: required
@@ -31,7 +31,7 @@ os:
 before_install:
   - if test "$TRAVIS_OS_NAME" == "osx"; then ./tooling/configure-dotnet-cli-osx.sh; fi
   # Download script to install dotnet cli
-  - curl -L --create-dirs https://raw.githubusercontent.com/dotnet/cli/release/2.0.0/scripts/obtain/dotnet-install.sh -o ./scripts/obtain/install.sh
+  - curl -L --create-dirs https://dot.net/v1/dotnet-install.sh -o ./scripts/obtain/install.sh
   - find ./scripts -name "*.sh" -exec chmod +x {} \;
   - export DOTNET_INSTALL_DIR="$PWD/.dotnetcli"
   - ./scripts/obtain/install.sh --version "$CLI_VERSION" --install-dir "$DOTNET_INSTALL_DIR" --no-path
